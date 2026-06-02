@@ -120,5 +120,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "bugs": {
+    "url": "https://github.com/swift-rust/swift-rust/issues"
   }
 }

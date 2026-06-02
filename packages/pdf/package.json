@@ -40,5 +40,14 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/swift-rust/swift-rust.git",
+    "directory": "packages/pdf"
+  },
+  "bugs": {
+    "url": "https://github.com/swift-rust/swift-rust/issues"
+  },
+  "homepage": "https://swift-rust.dev"
 }
