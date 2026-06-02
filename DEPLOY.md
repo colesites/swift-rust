@@ -4,108 +4,87 @@ You have **13 public npm packages** and **2 Vercel apps** to ship. This is the e
 
 ## Before you start (one-time, manual)
 
-You need to do these 3 things by hand because they require your accounts:
+### 1. Create the npm org
+1. Browser → https://www.npmjs.com/org/create → create org **`swift-rust`** (free)
+2. The org is created automatically on first scoped publish too, so this step is optional but recommended
 
-### A. Create the npm org and names
-1. Go to https://www.npmjs.com/org/create and create org **`swift-rust`**
-2. Go to https://www.npmjs.com and confirm `swift-rust`, `create-swift-rust` are still free
-3. `npm login` on your machine with the account that owns the org
-4. Generate an **Automation** token at https://www.npmjs.com/settings/\<your-username\>/tokens (type = `Automation`, not `Publish`)
+### 2. Get an npm Automation token
+1. Browser → https://www.npmjs.com → click your avatar → **Access Tokens** → **Generate New Token**
+2. Choose **Automation** (NOT "Publish" — that's interactive and won't work in CI)
+3. Set expiration to your preference (90 days / 1 year)
+4. **Copy the token** — npm only shows it once. It looks like `npm_xxxxxxxxxxxxxxxxxxxxxxxx`
 
-### B. Push the repo to GitHub
-This local checkout has no commits yet:
+### 3. Add the token to GitHub
+1. Browser → your GitHub repo → **Settings** → **Secrets and variables** → **Actions**
+2. Click **New repository secret**
+3. Name: `NPM_TOKEN`
+4. Value: paste the token from step 2
+5. Click **Add secret**
+
+That's it for auth. No need to create a separate "canary" branch — changesets is configured to release on push to `main`.
+
+## Releasing v0.1.0 to npm
+
+### First release: do it locally
+The CI workflow needs the GitHub + npm auth to be wired up first. The simplest first-release path is local:
+
 ```bash
-git add -A
-git commit -m "chore: initial commit"
-gh repo create swift-rust/swift-rust --public --source=. --remote=origin --push
-```
-If you don't have `gh`, create the repo in the GitHub web UI and add the remote manually.
-
-### C. Add `NPM_TOKEN` to GitHub secrets
-GitHub → repo → Settings → Secrets and variables → Actions → **New repository secret**:
-- Name: `NPM_TOKEN`
-- Value: the Automation token from step A
-
-Then push the new files:
-```bash
-git add -A
-git commit -m "chore: add release workflow, vercel configs, v0.1.0 changeset"
-git push
-```
-
-## Releasing v0.1.0 to npm (semi-automated)
-
-Once the above is done:
-
-### Option 1 — let CI do it (recommended)
-The `release.yml` workflow is now in place. When you push to `canary`, the `@changesets/action` step will:
-- If there are pending changesets → open a PR titled "chore(release): version packages" with version bumps applied
-- When that PR is merged → run `bun run release` (which is `turbo run build && changeset publish`) and push all 13 packages to npm
-
-So your flow is:
-1. Cut a `canary` branch off `main`
-2. `git push origin main:canary` (or merge main into canary)
-3. CI opens the version PR — merge it
-4. CI publishes v0.1.0 to npm
-
-### Option 2 — publish locally
-```bash
-git checkout main
-npm login
+git pull                         # make sure you're on the latest main
+npm login                        # log in as the account that owns @swift-rust
 bun install --frozen-lockfile
 bun run build
 bun run test
-bunx changeset version    # bumps package versions per .changeset/v0.1.0-initial-release.md
-bunx changeset publish    # publishes all 13 packages in topological order
+bunx changeset version           # applies the bumps from .changeset/v0.1.0-initial-release.md
+bunx changeset publish           # publishes all 13 packages to npm in dep order
 git push --follow-tags
 ```
 
-The order is determined by `turbo` based on internal dependencies, so the `swift-rust` main package will publish last (after `@swift-rust/image`, `@swift-rust/font`, etc. are live).
+Watch the output — it'll show 13 publishes (or 12 if `swift-rust` fails on postinstall).
+
+### After the first release: CI takes over
+The `.github/workflows/release.yml` workflow runs on every push to `main`. The `@changesets/action` step will:
+- If you added new `.changeset/*.md` files → open a "chore(release): version packages" PR
+- When that PR is merged → run `bun run release` and publish to npm
+
+So the ongoing flow is:
+1. Make code changes
+2. `bunx changeset` → write a changeset describing the change
+3. Commit + push to a branch → open PR → merge to `main`
+4. CI opens the version PR → merge it
+5. CI publishes the new version to npm
 
 ## Vercel — 2 projects
 
-### Project 1: `swift-rust-docs` (the documentation site)
-
-1. https://vercel.com/new → Import `swift-rust/swift-rust`
+### Project 1: `swift-rust-docs`
+1. https://vercel.com/new → **Import** your `swift-rust/swift-rust` repo
 2. Configure:
    - **Project Name:** `swift-rust-docs`
    - **Root Directory:** `docs`
-   - **Build Command:** `bun run build` (from `vercel.json`)
-   - **Install Command:** `bun install --frozen-lockfile` (from `vercel.json`)
-   - **Output Directory:** `.swift-rust` (from `vercel.json`)
-   - **Framework Preset:** Other
-3. Add custom domain `swift-rust.dev` (Vercel → Settings → Domains → Add)
+   - Framework Preset: **Other** (the `vercel.json` in `docs/` already specifies build/install/output)
+3. **Settings → Domains → Add** `swift-rust.dev`
 
-### Project 2: `full-demo`
-
+### Project 2: `web`
 1. Add New Project again, same repo
 2. Configure:
-   - **Project Name:** `full-demo`
-   - **Root Directory:** `examples/full-demo`
-   - Build/Install/Output: same as above (from its own `vercel.json`)
-3. Add custom domain `demo.swift-rust.dev`
+   - **Project Name:** `web`
+   - **Root Directory:** `apps/web`
+   - Framework Preset: **Other** (`apps/web/vercel.json` is preconfigured)
+3. **Settings → Domains → Add** `swift-rust.dev` as an alias (or a subdomain like `app.swift-rust.dev`)
 
-## After first release
+Both projects share the same GitHub repo. Vercel detects them as monorepo subprojects automatically because of the `vercel.json` per-root.
 
-- Tag the commit `v0.1.0`
-- Draft GitHub release notes (changesets auto-generates CHANGELOG.md entries)
-- Announce on Twitter/social with the install command:
-  ```bash
-  bun create swift-rust my-app
-  cd my-app && bun dev
-  ```
+## What I already did locally
 
-## What I already did locally (you don't need to redo)
+- Added `repository` + `bugs` + `homepage` to all 13 packages
+- Created `.github/workflows/release.yml` (triggers on push to `main`)
+- Created `docs/vercel.json` and `apps/web/vercel.json`
+- Created `.changeset/v0.1.0-initial-release.md` to bump all 13 packages
+- Changed `.changeset/config.json` `baseBranch` from `canary` → `main`
+- Removed the `vercel.json` from `examples/full-demo` (since it's just a `create-swift-rust` template, not a deploy target)
 
-- Added `repository` + `bugs` + `homepage` to 8 packages that were missing them
-- Created `.github/workflows/release.yml` (changesets → npm automation)
-- Created `docs/vercel.json` and `examples/full-demo/vercel.json`
-- Created `.changeset/v0.1.0-initial-release.md` so the first release bumps all 13 packages
+## What still needs to be done by you
 
-## What still needs to exist in your hands
-
-- npm account + `@swift-rust` org + `swift-rust` + `create-swift-rust` names
-- GitHub repo (this checkout has zero commits)
-- `NPM_TOKEN` secret on GitHub
-- Vercel account + 2 imported projects
-- DNS for `swift-rust.dev` and `demo.swift-rust.dev`
+- npm account + `@swift-rust` org (optional — created on first scoped publish)
+- `NPM_TOKEN` secret on GitHub (3 clicks)
+- 2 Vercel projects (3 minutes each)
+- DNS for `swift-rust.dev`
