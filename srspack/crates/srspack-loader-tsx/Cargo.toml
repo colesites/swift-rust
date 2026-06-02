@@ -1,0 +1,21 @@
+[package]
+name = "srspack-loader-tsx"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "TSX → Swift-Rust view template loader for srspack."
+
+[dependencies]
+srspack-core = { path = "../srspack-core" }
+
+async-trait = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

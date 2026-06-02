@@ -1,0 +1,19 @@
+[package]
+name = "swift-rust-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Core types, traits, and utilities used across the swift-rust workspace."
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+url = { workspace = true }
+once_cell = { workspace = true }
+tracing = { workspace = true }
+bytes = { workspace = true }

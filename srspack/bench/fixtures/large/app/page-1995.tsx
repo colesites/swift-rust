@@ -1,0 +1,21 @@
+import styles from "./styles-0495.module.css";
+
+export default function Page1995() {
+  return (
+    <main className={styles.root}>
+      <h1>Page 1995</h1>
+      <p>This is page number 1995 of the benchmark fixture.</p>
+      <p>The text below is filler to give the bundler something to do.</p>
+      <ul>
+        <li>Item 1 on page 1995</li>
+        <li>Item 2 on page 1995</li>
+        <li>Item 3 on page 1995</li>
+        <li>Item 4 on page 1995</li>
+        <li>Item 5 on page 1995</li>
+        <li>Item 6 on page 1995</li>
+        <li>Item 7 on page 1995</li>
+        <li>Item 8 on page 1995</li>
+      </ul>
+    </main>
+  );
+}

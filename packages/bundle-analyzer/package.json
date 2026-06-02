@@ -1,0 +1,37 @@
+{
+  "name": "@swift-rust/bundle-analyzer",
+  "version": "0.1.0",
+  "description": "Visualize the size of swift-rust bundles.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "lint": "biome check /Users/admin/Documents/programming/projects/k-bench/swift-rust/packages/bundle-analyzer/src",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "gzip-size": "^7.0.0",
+    "read": "^3.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

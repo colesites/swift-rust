@@ -1,0 +1,22 @@
+{
+  "extends": "swift-rust/tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "baseUrl": ".",
+    "paths": {
+      "@": [
+        "src/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*",
+    ".swift-rust/types/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".swift-rust",
+    ".turbo"
+  ]
+}

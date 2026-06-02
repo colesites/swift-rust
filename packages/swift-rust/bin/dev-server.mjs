@@ -1,0 +1,1360 @@
+#!/usr/bin/env node
+import { existsSync, statSync, readFileSync, readdirSync, watch as fsWatch } from "node:fs";
+import { join, resolve, extname, relative, dirname, sep } from "node:path";
+import { pathToFileURL } from "node:url";
+import { performance } from "node:perf_hooks";
+import { errorOverlayHTML as renderErrorOverlay } from "./error-overlay.mjs";
+
+const cwd = process.cwd();
+const args = process.argv.slice(2);
+
+function getArg(name, fallback) {
+  const flag = `--${name}`;
+  const eq = args.find((a) => a.startsWith(`${flag}=`));
+  if (eq) return eq.slice(flag.length + 1);
+  const i = args.indexOf(flag);
+  if (i >= 0 && args[i + 1]) return args[i + 1];
+  return fallback;
+}
+
+const port = parseInt(getArg("port", process.env.PORT || "3000"), 10);
+const hostname = getArg("hostname", "0.0.0.0");
+
+const c = {
+  reset: "\x1b[0m",
+  bold: "\x1b[1m",
+  dim: "\x1b[2m",
+  red: "\x1b[31m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  blue: "\x1b[34m",
+  magenta: "\x1b[35m",
+  cyan: "\x1b[36m",
+  gray: "\x1b[90m",
+};
+const useColor = process.stdout.isTTY !== false && !process.env.NO_COLOR;
+const paint = (color, s) => (useColor ? `${c[color]}${s}${c.reset}` : s);
+
+const VERSION = "0.1.0";
+const APP_DIR_CANDIDATES = [resolve(cwd, "app", "src"), resolve(cwd, "app")];
+const APP_DIR = APP_DIR_CANDIDATES.find((p) => existsSync(p)) ?? resolve(cwd, "app");
+const PUBLIC_DIR = resolve(cwd, "public");
+const SWIFT_RUST_CONFIG = resolve(cwd, "swift-rust.config.json");
+
+const PAGE_EXTENSIONS = [".tsx", ".ts", ".jsx", ".js"];
+const SPECIAL_FILES = new Set(["layout", "loading", "error", "not-found", "template", "default", "route"]);
+
+const moduleCache = new Map();
+const compileTimings = new Map();
+const lastCompiledAt = new Map();
+const hmrClients = new Set();
+let lastError = null;
+const dynamicParams = new Map();
+
+const startedAt = performance.now();
+const bootTime = Date.now();
+
+function fmtMs(ms) {
+  if (ms < 1) return "<1ms";
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  return `${(ms / 1000).toFixed(2)}s`;
+}
+
+function logLine(parts, indent = 0) {
+  const prefix = `${"│ ".repeat(indent)}`;
+  process.stdout.write(`${prefix}${parts.join("")}\n`);
+}
+
+function logStartupBanner(localUrl, networkUrls) {
+  const lines = [];
+  lines.push("");
+  lines.push(`  ${paint("cyan", "▲")} ${paint("bold", "Swift Rust")} ${paint("dim", `v${VERSION}`)}`);
+  lines.push(`  ${paint("dim", "─".repeat(50))}`);
+  lines.push(`  ${paint("dim", "Local:".padEnd(10))} ${paint("cyan", localUrl)}`);
+  for (const url of networkUrls) {
+    lines.push(`  ${paint("dim", "Network:".padEnd(10))} ${paint("cyan", url)}`);
+  }
+  lines.push(`  ${paint("dim", "─".repeat(50))}`);
+  lines.push("");
+  process.stdout.write(lines.join("\n") + "\n");
+}
+
+function logReady() {
+  const total = performance.now() - startedAt;
+  logLine([` ${paint("green", "✓")} ${paint("bold", "Ready")} ${paint("dim", `in ${fmtMs(total)}`)}`]);
+}
+
+function logCompile(route, ms) {
+  const safe = route || "/";
+  logLine([` ${paint("green", "✓")} ${paint("dim", "Compiled")} ${paint("cyan", safe)} ${paint("dim", `in ${fmtMs(ms)}`)}`]);
+}
+
+function logCompiling(route) {
+  const safe = route || "/";
+  logLine([` ${paint("yellow", "○")} ${paint("dim", "Compiling")} ${paint("cyan", safe)} ${paint("dim", "…")}`]);
+}
+
+function logError(err, context) {
+  const msg = err?.message || String(err);
+  const lines = msg.split("\n");
+  logLine([` ${paint("red", "✗")} ${paint("red", context || "Error")}`]);
+  for (const line of lines) {
+    logLine([paint("red", line)], 1);
+  }
+  if (err?.stack) {
+    const stackLines = err.stack.split("\n").slice(1, 6);
+    for (const line of stackLines) {
+      logLine([paint("dim", line.trim())], 1);
+    }
+  }
+}
+
+function logRequest({ method, url, status, duration, compileMs }) {
+  const statusColor = status < 300 ? "green" : status < 400 ? "cyan" : status < 500 ? "yellow" : "red";
+  const timing = compileMs > 0 ? ` ${paint("dim", `(${fmtMs(compileMs)} compile, ${fmtMs(duration - compileMs)} render)`)}` : "";
+  logLine([
+    `${paint("bold", method.padEnd(6))} `,
+    `${paint("dim", url)} `,
+    `${paint(statusColor, String(status))} `,
+    `${paint("dim", `in ${fmtMs(duration)}`)}`,
+    timing,
+  ]);
+}
+
+function logHmr(file) {
+  logLine([` ${paint("magenta", "↻")} ${paint("dim", "HMR")} ${paint("dim", "│")} ${paint("magenta", relative(cwd, file))}`]);
+}
+
+function logEvent(type, msg) {
+  const colors = { add: "green", change: "yellow", unlink: "red" };
+  const icons = { add: "+", change: "~", unlink: "-" };
+  logLine([` ${paint(colors[type] || "dim", icons[type] || "?")} ${paint("dim", relative(cwd, msg))}`]);
+}
+
+function urlToRouteSegments(urlPath) {
+  const clean = urlPath.split("?")[0].split("#")[0];
+  if (clean === "/" || clean === "") return [];
+  return clean.replace(/^\//, "").split("/").filter(Boolean);
+}
+
+function findFile(dir, basename) {
+  for (const ext of PAGE_EXTENSIONS) {
+    const candidate = join(dir, `${basename}${ext}`);
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+function resolvePageRoute(segments) {
+  if (segments.length === 0) {
+    const file = findFile(APP_DIR, "page");
+    if (file) return { file, params: {}, segments: [] };
+    return null;
+  }
+  return resolveRoute(APP_DIR, segments, 0, {});
+}
+
+function resolveRoute(dir, segments, idx, params) {
+  if (idx === segments.length) {
+    const file = findFile(dir, "page");
+    if (file) return { file, params, segments: segments.slice(0, idx) };
+    return null;
+  }
+  const seg = segments[idx];
+  const directDir = join(dir, seg);
+  if (existsSync(directDir) && statSync(directDir).isDirectory()) {
+    const result = resolveRoute(directDir, segments, idx + 1, params);
+    if (result) return result;
+  }
+  if (existsSync(dir) && statSync(dir).isDirectory()) {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      if (e.name.startsWith("[") && e.name.endsWith("]")) {
+        const paramName = e.name.slice(1, -1);
+        if (paramName.startsWith("...")) continue;
+        const paramDir = join(dir, e.name);
+        const newParams = { ...params, [paramName]: seg };
+        const result = resolveRoute(paramDir, segments, idx + 1, newParams);
+        if (result) return result;
+      }
+    }
+  }
+  return null;
+}
+
+function resolveApiRoute(segments) {
+  if (segments.length === 0 || segments[0] !== "api") return null;
+  const apiDir = join(APP_DIR, "api");
+  if (!existsSync(apiDir)) return null;
+  return resolveApi(apiDir, segments.slice(1), 0, {});
+}
+
+function resolveApi(dir, segments, idx, params) {
+  if (idx === segments.length) {
+    const file = findFile(dir, "route");
+    if (file) return { file, params };
+    return null;
+  }
+  const seg = segments[idx];
+  const directDir = join(dir, seg);
+  if (existsSync(directDir) && statSync(directDir).isDirectory()) {
+    const result = resolveApi(directDir, segments, idx + 1, params);
+    if (result) return result;
+  }
+  if (existsSync(dir) && statSync(dir).isDirectory()) {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      if (e.name.startsWith("[") && e.name.endsWith("]")) {
+        const paramName = e.name.slice(1, -1);
+        if (paramName.startsWith("...")) continue;
+        const paramDir = join(dir, e.name);
+        const newParams = { ...params, [paramName]: seg };
+        const result = resolveApi(paramDir, segments, idx + 1, newParams);
+        if (result) return result;
+      }
+    }
+  }
+  return null;
+}
+
+function findLayoutsFor(segments) {
+  const layouts = [];
+  for (let i = 0; i <= segments.length; i++) {
+    const dir = i === 0 ? APP_DIR : join(APP_DIR, ...segments.slice(0, i));
+    const file = findFile(dir, "layout");
+    if (file) layouts.push({ file, dir });
+  }
+  return layouts;
+}
+
+function findNotFound(segments) {
+  for (let i = segments?.length ?? 0; i >= 0; i--) {
+    const dir = i === 0 ? APP_DIR : join(APP_DIR, ...segments.slice(0, i));
+    const file = findFile(dir, "not-found");
+    if (file) return file;
+  }
+  return findFile(APP_DIR, "not-found");
+}
+
+function findErrorBoundary(segments) {
+  for (let i = segments?.length ?? 0; i >= 0; i--) {
+    const dir = i === 0 ? APP_DIR : join(APP_DIR, ...segments.slice(0, i));
+    const file = findFile(dir, "error");
+    if (file) return file;
+  }
+  return findFile(APP_DIR, "error");
+}
+
+function findLoading(segments) {
+  for (let i = segments?.length ?? 0; i >= 0; i--) {
+    const dir = i === 0 ? APP_DIR : join(APP_DIR, ...segments.slice(0, i));
+    const file = findFile(dir, "loading");
+    if (file) return file;
+  }
+  return findFile(APP_DIR, "loading");
+}
+
+function findRouteSegmentsForDir(dir) {
+  const rel = relative(APP_DIR, dir);
+  if (rel === "" || rel === ".") return [];
+  return rel.split(sep);
+}
+
+function bustCache(file) {
+  const urlPrefix = pathToFileURL(file).href;
+  for (const key of moduleCache.keys()) {
+    if (key === urlPrefix || key.startsWith(`${urlPrefix}?`) || key.startsWith(`${urlPrefix}#`)) {
+      moduleCache.delete(key);
+    }
+  }
+}
+
+async function loadModule(filePath, { bust = false } = {}) {
+  const baseUrl = pathToFileURL(filePath).href;
+  const url = bust ? `${baseUrl}?t=${Date.now()}-${Math.random().toString(36).slice(2)}` : baseUrl;
+  try {
+    const mod = await import(url);
+    moduleCache.set(url, { mod, file: filePath, loadedAt: Date.now() });
+    return mod;
+  } catch (err) {
+    lastError = err;
+    throw err;
+  }
+}
+
+async function compileRoute(urlPath) {
+  const start = performance.now();
+  const segments = urlToRouteSegments(urlPath);
+  const route = resolvePageRoute(segments);
+  if (!route) {
+    compileTimings.set(urlPath, performance.now() - start);
+    return { ok: false, reason: "not_found", pageFile: null, layoutFile: null, params: {}, segments };
+  }
+  const layouts = findLayoutsFor(segments);
+  const notFoundFile = findNotFound(segments);
+  const errorFile = findErrorBoundary(segments);
+  const loadingFile = findLoading(segments);
+
+  if (lastCompiledAt.has(urlPath) && Date.now() - (lastCompiledAt.get(urlPath) || 0) < 100) {
+    return { ok: true, pageFile: route.file, layoutFiles: layouts.map((l) => l.file), notFoundFile, errorFile, loadingFile, params: route.params, segments, cached: true };
+  }
+
+  try {
+    await loadModule(route.file, { bust: true });
+    for (const layout of layouts) await loadModule(layout.file, { bust: true });
+    if (notFoundFile) await loadModule(notFoundFile, { bust: true });
+    if (errorFile) await loadModule(errorFile, { bust: true });
+    if (loadingFile) await loadModule(loadingFile, { bust: true });
+  } catch (err) {
+    compileTimings.set(urlPath, performance.now() - start);
+    return { ok: false, reason: "compile_error", error: err, pageFile: route.file, layoutFile: layouts[0]?.file, params: route.params, segments };
+  }
+
+  const ms = performance.now() - start;
+  compileTimings.set(urlPath, ms);
+  lastCompiledAt.set(urlPath, Date.now());
+  return { ok: true, pageFile: route.file, layoutFiles: layouts.map((l) => l.file), notFoundFile, errorFile, loadingFile, params: route.params, segments };
+}
+
+function escapeForStyleTag(css) {
+  return String(css).replace(/<\/style/gi, "<\\/style").replace(/<!--/g, "<\\!--");
+}
+
+function findAppGlobalsCss() {
+  for (const ext of [".css", ".scss", ".pcss"]) {
+    const candidate = join(APP_DIR, `globals${ext}`);
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+let postcssInstance = null;
+async function getPostcss() {
+  if (postcssInstance !== null) return postcssInstance;
+  try {
+    const candidates = [
+      join(cwd, "node_modules", "postcss"),
+      join(cwd, "node_modules", "postcss", "lib", "postcss.mjs"),
+      join(cwd, "node_modules", "postcss", "lib", "postcss.js"),
+    ];
+    for (const candidate of candidates) {
+      if (existsSync(candidate)) {
+        const mod = await import(pathToFileURL(candidate).href);
+        postcssInstance = { available: true, default: mod.default ?? mod, mod };
+        return postcssInstance;
+      }
+    }
+    const mod = await import("postcss");
+    postcssInstance = { available: true, default: mod.default ?? mod, mod };
+    return postcssInstance;
+  } catch {
+    postcssInstance = { available: false };
+    return postcssInstance;
+  }
+}
+
+async function loadPostcssPluginByName(name) {
+  const candidates = [
+    join(cwd, "node_modules", name),
+    join(cwd, "..", "..", "node_modules", name),
+  ];
+  for (const candidate of candidates) {
+    const pkgJsonPath = join(candidate, "package.json");
+    if (existsSync(pkgJsonPath)) {
+      try {
+        const pkg = JSON.parse(readFileSync(pkgJsonPath, "utf8"));
+        const exportsRoot = pkg.exports?.["."] ?? {};
+        const entry = exportsRoot.import ?? exportsRoot.default ?? pkg.main ?? pkg.module;
+        if (typeof entry === "string") {
+          const entryPath = join(candidate, entry);
+          if (existsSync(entryPath)) {
+            const mod = await import(pathToFileURL(entryPath).href);
+            const result = mod.default ?? mod;
+            logLine([` ${paint("dim", "css plugin loaded:")} ${paint("cyan", name)} ${paint("dim", "from " + relative(cwd, entryPath))}`], 1);
+            return result;
+          }
+        }
+      } catch (err) {
+        logLine([` ${paint("dim", "css plugin error:")} ${paint("red", err.message)}`], 1);
+      }
+    }
+  }
+  logLine([` ${paint("dim", "css plugin not found:")} ${paint("yellow", name)}`], 1);
+  return null;
+}
+
+async function loadPostcssPlugins() {
+  const plugins = [];
+  const tailwind = await loadPostcssPluginByName("@tailwindcss/postcss");
+  if (tailwind) {
+    if (typeof tailwind === "function") {
+      plugins.push(tailwind());
+    } else if (tailwind && typeof tailwind === "object") {
+      if (typeof tailwind.postcss === "function") plugins.push(tailwind.postcss());
+      else if (typeof tailwind.default === "function") plugins.push(tailwind.default());
+      else if (typeof tailwind === "function") plugins.push(tailwind);
+    }
+  }
+  return plugins;
+}
+
+async function processCss(css) {
+  const pc = await getPostcss();
+  if (!pc.available) {
+    logLine([` ${paint("dim", "css: postcss not found, inlining raw")}`], 1);
+    return css;
+  }
+  const plugins = await loadPostcssPlugins();
+  if (plugins.length === 0) {
+    logLine([` ${paint("dim", "css: no plugins loaded, inlining raw")}`], 1);
+    return css;
+  }
+  try {
+    const processor = pc.default(plugins);
+    const result = await processor.process(css, { from: undefined, to: undefined });
+    return result.css;
+  } catch (err) {
+    logLine([` ${paint("dim", "css process:")} ${paint("red", err.message)}`], 1);
+    return css;
+  }
+}
+
+let globalsCssCache = { file: null, mtime: 0, css: "" };
+async function getProcessedGlobalsCss() {
+  const file = findAppGlobalsCss();
+  if (!file) return "";
+  const stat = statSync(file);
+  if (globalsCssCache.file === file && globalsCssCache.mtime === stat.mtimeMs) {
+    return globalsCssCache.css;
+  }
+  const raw = readFileSync(file, "utf8");
+  const processed = await processCss(raw);
+  globalsCssCache = { file, mtime: stat.mtimeMs, css: processed };
+  return processed;
+}
+
+const GOOGLE_FONT_FAMILIES = new Set();
+let fontsScannedFromLayout = false;
+
+const FONT_FAMILY_HINT = /\b(?:Inter|Geist|GeistMono|Geist_Mono|Roboto|Poppins|Manrope|JetBrainsMono|JetbrainsMono|FiraCode|SpaceGrotesk|PlayfairDisplay|Lora|Outfit|Sora|Figtree|PlusJakartaSans|BricolageGrotesque|Cinzel|Caveat|BebasNeue|DmSans|DmSerifDisplay|SourceCodePro|SourceCode3|IBMPlex|IbmPlex|Swift_Rust|Lora|Plus_Jakarta_Sans|Bricolage_Grotesque|Bebas_Neue|DM_Sans|DM_Serif_Display|Source_Code_Pro|IBM_Plex|JetBrains_Mono|Space_Grotesk|Plus_Jakarta_Sans|Bricolage_Grotesque)\b/g;
+const FONT_HUMAN_NAME = {
+  Geist: "Geist", GeistMono: "Geist Mono", Geist_Mono: "Geist Mono",
+  Inter: "Inter", Roboto: "Roboto", Poppins: "Poppins", Manrope: "Manrope",
+  JetBrainsMono: "JetBrains Mono", JetbrainsMono: "JetBrains Mono", JetBrains_Mono: "JetBrains Mono",
+  FiraCode: "Fira Code", Fira_Code: "Fira Code",
+  SpaceGrotesk: "Space Grotesk", Space_Grotesk: "Space Grotesk",
+  PlayfairDisplay: "Playfair Display", Playfair_Display: "Playfair Display",
+  Lora: "Lora", Outfit: "Outfit", Sora: "Sora", Figtree: "Figtree",
+  PlusJakartaSans: "Plus Jakarta Sans", Plus_Jakarta_Sans: "Plus Jakarta Sans",
+  BricolageGrotesque: "Bricolage Grotesque", Bricolage_Grotesque: "Bricolage Grotesque",
+  Cinzel: "Cinzel", Caveat: "Caveat", BebasNeue: "Bebas Neue", Bebas_Neue: "Bebas Neue",
+  DmSans: "DM Sans", DM_Sans: "DM Sans",
+  DmSerifDisplay: "DM Serif Display", DM_Serif_Display: "DM Serif Display",
+  SourceCodePro: "Source Code Pro", Source_Code_Pro: "Source Code Pro", SourceCode3: "Source Code Pro",
+  IBMPlexSans: "IBM Plex Sans", IBM_Plex_Sans: "IBM Plex Sans",
+  IbmPlexSans: "IBM Plex Sans",
+  IBMPlexMono: "IBM Plex Mono", IBM_Plex_Mono: "IBM Plex Mono",
+  IbmPlexMono: "IBM Plex Mono",
+  IBMPlexSerif: "IBM Plex Serif", IBM_Plex_Serif: "IBM Plex Serif",
+  IbmPlexSerif: "IBM Plex Serif",
+};
+
+function scanFontImportsInSource(src) {
+  for (const match of src.matchAll(FONT_FAMILY_HINT)) {
+    const key = match[0];
+    const family = FONT_HUMAN_NAME[key];
+    if (family) GOOGLE_FONT_FAMILIES.add(family);
+  }
+}
+
+async function scanFontsFromLayouts() {
+  if (fontsScannedFromLayout) return;
+  fontsScannedFromLayout = true;
+  const dirs = [APP_DIR, ...(existsSync(join(APP_DIR, "blog")) ? [join(APP_DIR, "blog")] : [])];
+  for (const dir of dirs) {
+    if (!existsSync(dir)) continue;
+    const layoutFile = findFile(dir, "layout");
+    if (layoutFile) {
+      try {
+        const src = readFileSync(layoutFile, "utf8");
+        scanFontImportsInSource(src);
+      } catch {}
+    }
+  }
+}
+
+function buildGoogleFontsLinkTag() {
+  if (GOOGLE_FONT_FAMILIES.size === 0) return "";
+  const families = Array.from(GOOGLE_FONT_FAMILIES)
+    .map((f) => `family=${encodeURIComponent(f).replace(/%20/g, "+")}:wght@300..900`)
+    .join("&");
+  return `<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${families}&display=swap" />`;
+}
+
+function mergeMetadata(...metas) {
+  const out = {};
+  for (const m of metas) {
+    if (!m) continue;
+    if (m.title) {
+      if (typeof m.title === "string") {
+        out.title = m.title;
+      } else if (m.title.template && m.title.default) {
+        out.title = m.title.default;
+      } else if (m.title.default) {
+        out.title = m.title.default;
+      } else if (typeof m.title === "object") {
+        out.title = m.title;
+      }
+    }
+    if (m.description) out.description = m.description;
+    if (m.keywords) out.keywords = m.keywords;
+    if (m.openGraph) out.openGraph = { ...(out.openGraph || {}), ...m.openGraph };
+  }
+  return out;
+}
+
+function metadataToHead(meta) {
+  if (!meta) return "";
+  const parts = [];
+  if (meta.title) {
+    if (typeof meta.title === "string") parts.push(`<title>${escapeHtml(meta.title)}</title>`);
+  }
+  if (meta.description) parts.push(`<meta name="description" content="${escapeHtml(meta.description)}" />`);
+  if (meta.keywords) {
+    const kw = Array.isArray(meta.keywords) ? meta.keywords.join(", ") : meta.keywords;
+    parts.push(`<meta name="keywords" content="${escapeHtml(kw)}" />`);
+  }
+  if (meta.openGraph) {
+    if (meta.openGraph.title) parts.push(`<meta property="og:title" content="${escapeHtml(meta.openGraph.title)}" />`);
+    if (meta.openGraph.description) parts.push(`<meta property="og:description" content="${escapeHtml(meta.openGraph.description)}" />`);
+    if (meta.openGraph.type) parts.push(`<meta property="og:type" content="${escapeHtml(meta.openGraph.type)}" />`);
+    if (meta.openGraph.url) parts.push(`<meta property="og:url" content="${escapeHtml(meta.openGraph.url)}" />`);
+    if (meta.openGraph.images) {
+      for (const img of meta.openGraph.images) {
+        const url = typeof img === "string" ? img : img.url;
+        if (url) parts.push(`<meta property="og:image" content="${escapeHtml(url)}" />`);
+      }
+    }
+  }
+  return parts.join("\n");
+}
+
+function escapeHtml(s) {
+  if (s == null) return "";
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+async function resolveMetadata(layoutFiles, pageFile, params, segments) {
+  const metas = [];
+  for (const layoutFile of layoutFiles || []) {
+    try {
+      const mod = await loadModule(layoutFile, { bust: true });
+      if (mod.metadata) metas.push(mod.metadata);
+    } catch {}
+  }
+  if (pageFile) {
+    try {
+      const mod = await loadModule(pageFile, { bust: true });
+      if (mod.generateMetadata) {
+        const m = await mod.generateMetadata({ params: params || {}, searchParams: {} });
+        if (m) metas.push(m);
+      } else if (mod.metadata) {
+        metas.push(mod.metadata);
+      }
+    } catch {}
+  }
+  return mergeMetadata(...metas);
+}
+
+async function renderToStringCompat(tree) {
+  try {
+    const edge = await import("react-dom/server.edge");
+    if (typeof edge.renderToReadableStream === "function") {
+      const stream = await edge.renderToReadableStream(tree, {
+        signal: AbortSignal.timeout(10000),
+      });
+      if (stream.allReady) await stream.allReady;
+      const reader = stream.getReader();
+      let html = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        html += new TextDecoder().decode(value);
+      }
+      return html;
+    }
+  } catch (err) {
+    if (err?.digest === "NOT_FOUND" || err?.name === "NotFoundError") throw err;
+    if (err?.digest && String(err.digest).startsWith("REDIRECT")) throw err;
+    try {
+      const React = await import("react");
+      const { renderToString } = await import("react-dom/server");
+      return renderToString(tree);
+    } catch (innerErr) {
+      if (innerErr?.digest === "NOT_FOUND" || innerErr?.name === "NotFoundError") throw innerErr;
+      if (innerErr?.digest && String(innerErr.digest).startsWith("REDIRECT")) throw innerErr;
+      throw err;
+    }
+  }
+  const React = await import("react");
+  const { renderToString } = await import("react-dom/server");
+  return renderToString(tree);
+}
+
+async function renderRoute(urlPath) {
+  const segments = urlToRouteSegments(urlPath);
+  const route = resolvePageRoute(segments);
+  if (!route) {
+    return await renderNotFound(segments);
+  }
+  const layouts = findLayoutsFor(segments);
+  const notFoundFile = findNotFound(segments);
+  const errorFile = findErrorBoundary(segments);
+  const loadingFile = findLoading(segments);
+
+  try {
+    const React = await import("react");
+    const pageMod = await loadModule(route.file, { bust: true });
+    const Page = pageMod.default ?? pageMod.Page ?? pageMod.page;
+    if (!Page) {
+      return { status: 500, html: null, error: new Error(`page ${route.file} has no default export`) };
+    }
+
+    const paramsProxy = new Proxy(route.params || {}, {
+      get: (t, k) => (k in t ? t[k] : dynamicParams.get(String(k))),
+    });
+
+    let tree = React.createElement(Page, { params: paramsProxy });
+    for (let i = layouts.length - 1; i >= 0; i--) {
+      const layoutMod = await loadModule(layouts[i].file, { bust: true });
+      const Layout = layoutMod.default ?? layoutMod.Layout ?? layoutMod.layout;
+      if (Layout) tree = React.createElement(Layout, null, tree);
+    }
+    const html = await renderToStringCompat(tree);
+    const metadata = await resolveMetadata(layouts.map((l) => l.file), route.file, route.params, segments);
+    return { status: 200, html, metadata, error: null, pageFile: route.file, layoutFiles: layouts.map((l) => l.file), notFoundFile, errorFile, loadingFile, segments };
+  } catch (err) {
+    if (err?.digest === "NOT_FOUND" || err?.name === "NotFoundError") {
+      return await renderNotFound(segments);
+    }
+    if (err?.digest && String(err.digest).startsWith("REDIRECT")) {
+      const [, statusStr, ...rest] = String(err.digest).split(";");
+      return { status: parseInt(statusStr, 10) || 307, redirect: rest.join(";"), html: null, error: null, segments };
+    }
+    if (errorFile) {
+      try {
+        const React = await import("react");
+        const errorMod = await loadModule(errorFile, { bust: true });
+        const ErrorBoundary = errorMod.default ?? errorMod.ErrorBoundary ?? errorMod.error;
+        if (ErrorBoundary) {
+          const html = await renderToStringCompat(React.createElement(ErrorBoundary, { error: err }));
+          return { status: 500, html, metadata: null, error: err, segments, pageFile: route.file, errorFile };
+        }
+      } catch {}
+    }
+    return { status: 500, html: null, error: err, segments, pageFile: route.file };
+  }
+}
+
+async function renderNotFound(segments) {
+  const notFoundFile = findNotFound(segments);
+  if (!notFoundFile) {
+    return { status: 404, html: null, error: null, segments };
+  }
+  try {
+    const React = await import("react");
+    const layouts = findLayoutsFor(segments || []);
+    const mod = await loadModule(notFoundFile, { bust: true });
+    const NotFound = mod.default ?? mod.NotFound ?? mod.notFound;
+    if (!NotFound) {
+      return { status: 404, html: null, error: null, segments };
+    }
+    let tree = React.createElement(NotFound);
+    for (let i = layouts.length - 1; i >= 0; i--) {
+      const layoutMod = await loadModule(layouts[i].file, { bust: true });
+      const Layout = layoutMod.default ?? layoutMod.Layout ?? layoutMod.layout;
+      if (Layout) tree = React.createElement(Layout, null, tree);
+    }
+    const html = await renderToStringCompat(tree);
+    return { status: 404, html, metadata: null, error: null, pageFile: notFoundFile, layoutFiles: layouts.map((l) => l.file), segments };
+  } catch (err) {
+    return { status: 404, html: null, error: err, segments };
+  }
+}
+
+function errorOverlayHTML(message, stack, extra) {
+  return renderErrorOverlay({ message, stack, ...(extra || {}) });
+}
+
+async function buildHead(head) {
+  const css = await getProcessedGlobalsCss();
+  const fontLink = buildGoogleFontsLinkTag();
+  return [
+    head || "",
+    fontLink,
+    css ? `<style data-swift-rust-globals>${escapeForStyleTag(css)}</style>` : "",
+  ].filter(Boolean).join("\n");
+}
+
+function wrapInDocument({ head, body }) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+${head || ""}
+<script src="/_swift-rust/hmr-client.js" defer></script>
+</head>
+<body>${body}</body>
+</html>`;
+}
+
+async function wrapInDocumentAsync({ head, body }) {
+  const fullHead = await buildHead(head);
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+${fullHead}
+<script src="/_swift-rust/hmr-client.js" defer></script>
+</head>
+<body>${body}</body>
+</html>`;
+}
+
+async function tryHmrClient() {
+  try {
+    const file = join(dirname(new URL(import.meta.url).pathname), "runtime", "hmr-client.js");
+    return readFileSync(file, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+function shouldIgnoreFile(filename) {
+  if (!filename) return true;
+  const base = filename.split(sep).pop();
+  if (!base) return true;
+  if (base.startsWith(".")) return true;
+  if (base.endsWith(".bak") || base.endsWith(".tmp") || base.endsWith("~")) return true;
+  if (base === "node_modules") return true;
+  return false;
+}
+
+function setupWatcher() {
+  if (!existsSync(APP_DIR)) return;
+  const watchers = new Map();
+
+  function walk(dir) {
+    if (watchers.has(dir)) return;
+    try {
+      const entries = readdirSync(dir, { withFileTypes: true });
+      for (const e of entries) {
+        if (e.isDirectory() && !e.name.startsWith(".") && e.name !== "node_modules") {
+          walk(join(dir, e.name));
+        }
+      }
+      let debounce;
+      const w = fsWatch(dir, (event, filename) => {
+        if (shouldIgnoreFile(filename)) return;
+        const full = join(dir, filename.toString());
+        if (debounce) clearTimeout(debounce);
+        debounce = setTimeout(() => {
+          try {
+            const s = statSync(full);
+            if (s.isDirectory()) {
+              walk(full);
+              return;
+            }
+          } catch {}
+          logEvent("change", full);
+          bustCache(full);
+          if (full.includes(`${sep}globals.${"css"}`)) {
+            globalsCssCache = { file: null, mtime: 0, css: "" };
+          }
+          if (full.endsWith(`${sep}layout.tsx`) || full.endsWith(`${sep}layout.ts`)) {
+            fontsScannedFromLayout = false;
+            GOOGLE_FONT_FAMILIES.clear();
+          }
+          const payload = { type: "reload", file: relative(cwd, full), at: Date.now() };
+          for (const send of hmrClients) {
+            try {
+              send(JSON.stringify({ event: "change", data: payload }));
+            } catch {}
+          }
+          logHmr(full);
+        }, 30);
+      });
+      watchers.set(dir, w);
+    } catch (err) {
+      logLine([` ${paint("dim", "watch error:")} ${paint("red", err.message)}`], 1);
+    }
+  }
+  walk(APP_DIR);
+}
+
+const networkUrls = [];
+async function detectNetworkUrls() {
+  const { networkInterfaces } = await import("node:os");
+  const ifaces = networkInterfaces();
+  for (const [name, list] of Object.entries(ifaces)) {
+    for (const iface of list || []) {
+      if (iface.family === "IPv4" && !iface.internal) {
+        networkUrls.push(`http://${iface.address}:${port}`);
+      }
+    }
+  }
+}
+
+async function checkAppDir() {
+  if (!existsSync(APP_DIR)) {
+    process.stdout.write(`\n  ${paint("red", "✗")} ${paint("bold", "No app/ directory found")}\n`);
+    process.stdout.write(`  ${paint("dim", `Create ${paint("cyan", "app/page.tsx")} to get started`)}\n\n`);
+    process.exit(1);
+  }
+}
+
+let serverHandle = null;
+
+async function handleRequest(req, res) {
+  const reqStart = performance.now();
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const pathname = url.pathname;
+  const method = req.method || "GET";
+
+  if (pathname === "/_swift-rust/hmr") {
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    });
+    res.write(": ping\n\n");
+    const send = (data) => res.write(`data: ${data}\n\n`);
+    hmrClients.add(send);
+    const ping = setInterval(() => {
+      try {
+        res.write(": ping\n\n");
+      } catch {
+        clearInterval(ping);
+      }
+    }, 15000);
+    req.on("close", () => {
+      hmrClients.delete(send);
+      clearInterval(ping);
+    });
+    return;
+  }
+
+  if (pathname === "/sw.js" || pathname === "/sw.js.map") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  if (pathname === "/_swift-rust/info") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ version: VERSION, appDir: relative(cwd, APP_DIR), port, uptime: Date.now() - bootTime }));
+    return;
+  }
+
+  if (pathname === "/_swift-rust/health") {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end("ok");
+    return;
+  }
+
+  if (method !== "GET" && method !== "HEAD") {
+    res.writeHead(405);
+    res.end("Method not allowed");
+    return;
+  }
+
+  if (pathname.startsWith("/_swift-rust/")) {
+    res.writeHead(404);
+    res.end("Not found");
+    return;
+  }
+
+  if (pathname === "/_swift-rust/hmr-client.js") {
+    const client = await tryHmrClient();
+    if (client) {
+      res.writeHead(200, { "Content-Type": "application/javascript" });
+      res.end(client);
+      return;
+    }
+    res.writeHead(404);
+    res.end("Not found");
+    return;
+  }
+
+  if (pathname.startsWith("/_swift-rust/fonts/")) {
+    const fontPath = join(
+      import.meta.dirname,
+      "..",
+      "..",
+      "..",
+      "packages",
+      "font",
+      "src",
+      "local",
+      decodeURIComponent(pathname.replace("/_swift-rust/fonts/", ""))
+    );
+    if (existsSync(fontPath) && statSync(fontPath).isFile()) {
+      const ext = extname(fontPath).toLowerCase();
+      const mime = { ".woff2": "font/woff2", ".woff": "font/woff", ".ttf": "font/ttf", ".otf": "font/otf" }[ext] ?? "application/octet-stream";
+      res.writeHead(200, { "Content-Type": mime, "Cache-Control": "public, max-age=31536000, immutable" });
+      res.end(readFileSync(fontPath));
+      return;
+    }
+    res.writeHead(404);
+    res.end("Font not found");
+    return;
+  }
+
+  if (pathname === "/_swift-rust/image") {
+    const target = url.searchParams.get("url");
+    const w = parseInt(url.searchParams.get("w") || "0", 10);
+    if (!target) {
+      res.writeHead(400);
+      res.end("Missing url");
+      return;
+    }
+    const decoded = decodeURIComponent(target);
+    if (existsSync(PUBLIC_DIR)) {
+      const safe = decoded.replace(/\.\.+/g, "").replace(/^\/+/, "");
+      const candidate = join(PUBLIC_DIR, safe);
+      if (existsSync(candidate) && statSync(candidate).isFile()) {
+        const ext = extname(candidate).toLowerCase();
+        const mime = MIME[ext] || "application/octet-stream";
+        const buf = readFileSync(candidate);
+        res.writeHead(200, {
+          "Content-Type": mime,
+          "Cache-Control": "public, max-age=3600",
+          "X-Swift-Rust-Image-Optimization": "passthrough",
+          ...(w > 0 ? { "X-Swift-Rust-Image-Width": String(w) } : {}),
+        });
+        res.end(buf);
+        return;
+      }
+    }
+    res.writeHead(404);
+    res.end("Image not found");
+    return;
+  }
+
+  if (pathname.startsWith("/_static/") || pathname.startsWith("/__swift-rust/")) {
+    res.writeHead(404);
+    res.end("Not found");
+    return;
+  }
+
+  if (existsSync(PUBLIC_DIR)) {
+    const safe = pathname.replace(/\.\.+/g, "").replace(/^\/+/, "");
+    const candidate = join(PUBLIC_DIR, safe);
+    if (existsSync(candidate) && statSync(candidate).isFile()) {
+      const ext = extname(candidate).toLowerCase();
+      const mime = {
+        ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+        ".gif": "image/gif", ".webp": "image/webp", ".avif": "image/avif",
+        ".svg": "image/svg+xml", ".ico": "image/x-icon",
+        ".css": "text/css", ".js": "application/javascript", ".mjs": "application/javascript",
+        ".json": "application/json", ".txt": "text/plain", ".woff": "font/woff",
+        ".woff2": "font/woff2", ".ttf": "font/ttf", ".otf": "font/otf",
+        ".mp4": "video/mp4", ".webm": "video/webm", ".mp3": "audio/mpeg",
+      }[ext] || "application/octet-stream";
+      res.writeHead(200, { "Content-Type": mime });
+      res.end(readFileSync(candidate));
+      return;
+    }
+  }
+
+  const compileStart = performance.now();
+  const compileResult = await compileRoute(pathname);
+  const compileMs = performance.now() - compileStart;
+
+  if (compileResult.ok && !compileResult.cached) {
+    logCompile(pathname, compileMs);
+  }
+
+  if (!compileResult.ok) {
+    if (compileResult.reason === "not_found") {
+      const total = performance.now() - reqStart;
+      logRequest({ method, url: pathname, status: 404, duration: total, compileMs: 0 });
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end(`404 not found: ${pathname}`);
+      return;
+    }
+    if (compileResult.reason === "compile_error") {
+      const err = compileResult.error;
+      logError(err, `Failed to compile ${pathname}`);
+      const total = performance.now() - reqStart;
+      logRequest({ method, url: pathname, status: 500, duration: total, compileMs });
+      res.writeHead(500, { "Content-Type": "text/html" });
+      res.end(errorOverlayHTML(err?.message || "Compilation error", err?.stack || ""));
+      for (const send of hmrClients) {
+        try {
+          send(JSON.stringify({ event: "change", data: { type: "error", message: err?.message || "compile error" } }));
+        } catch {}
+      }
+      return;
+    }
+  }
+
+  const renderStart = performance.now();
+  const renderResult = await renderRoute(pathname);
+  const renderMs = performance.now() - renderStart;
+  const total = performance.now() - reqStart;
+
+  if (renderResult.status === 500) {
+    logError(renderResult.error, `Failed to render ${pathname}`);
+    logRequest({ method, url: pathname, status: 500, duration: total, compileMs });
+    res.writeHead(500, { "Content-Type": "text/html" });
+    res.end(errorOverlayHTML(renderResult.error?.message || "Render error", renderResult.error?.stack || ""));
+    for (const send of hmrClients) {
+      try {
+        send(JSON.stringify({ event: "change", data: { type: "error", message: renderResult.error?.message || "render error" } }));
+      } catch {}
+    }
+    return;
+  }
+
+  if (renderResult.status === 404) {
+    logRequest({ method, url: pathname, status: 404, duration: total, compileMs: 0 });
+    res.writeHead(404, { "Content-Type": "text/html" });
+    res.end(errorOverlayHTML("Not found", `No page found for ${pathname}`));
+    return;
+  }
+
+  logRequest({ method, url: pathname, status: 200, duration: total, compileMs });
+  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+  res.end(await wrapInDocumentAsync({ head: "", body: renderResult.html || "" }));
+}
+
+async function handleFetch(req) {
+  const reqStart = performance.now();
+  const url = new URL(req.url);
+  const pathname = url.pathname;
+  const method = req.method || "GET";
+
+  if (pathname === "/_swift-rust/hmr") {
+    const stream = new ReadableStream({
+      start(controller) {
+        const enc = new TextEncoder();
+        controller.enqueue(enc.encode(": ping\n\n"));
+        const send = (data) => controller.enqueue(enc.encode(`data: ${data}\n\n`));
+        hmrClients.add(send);
+        const ping = setInterval(() => {
+          try {
+            controller.enqueue(enc.encode(": ping\n\n"));
+          } catch {
+            clearInterval(ping);
+            hmrClients.delete(send);
+          }
+        }, 15000);
+        req.signal?.addEventListener("abort", () => {
+          hmrClients.delete(send);
+          clearInterval(ping);
+          try {
+            controller.close();
+          } catch {}
+        });
+      },
+    });
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  }
+
+  if (pathname === "/sw.js" || pathname === "/sw.js.map") {
+    return new Response(null, { status: 204 });
+  }
+
+  if (pathname === "/_swift-rust/info") {
+    return Response.json({ version: VERSION, appDir: relative(cwd, APP_DIR), port, uptime: Date.now() - bootTime });
+  }
+
+  if (pathname === "/_swift-rust/health") {
+    return new Response("ok", { headers: { "Content-Type": "text/plain" } });
+  }
+
+  if (pathname === "/_swift-rust/hmr-client.js") {
+    const client = await tryHmrClient();
+    if (client) {
+      return new Response(client, { headers: { "Content-Type": "application/javascript" } });
+    }
+    return new Response("Not found", { status: 404 });
+  }
+
+  if (pathname === "/_swift-rust/image") {
+    const target = url.searchParams.get("url");
+    const w = parseInt(url.searchParams.get("w") || "0", 10);
+    if (!target) return new Response("Missing url", { status: 400 });
+    const decoded = decodeURIComponent(target);
+    if (existsSync(PUBLIC_DIR)) {
+      const safe = decoded.replace(/\.\.+/g, "").replace(/^\/+/, "");
+      const candidate = join(PUBLIC_DIR, safe);
+      if (existsSync(candidate) && statSync(candidate).isFile()) {
+        const ext = extname(candidate).toLowerCase();
+        const mime = MIME[ext] || "application/octet-stream";
+        const file = Bun?.file ? Bun.file(candidate) : readFileSync(candidate);
+        const headers = {
+          "Content-Type": mime,
+          "Cache-Control": "public, max-age=3600",
+          "X-Swift-Rust-Image-Optimization": "passthrough",
+          ...(w > 0 ? { "X-Swift-Rust-Image-Width": String(w) } : {}),
+        };
+        const total = performance.now() - reqStart;
+        logRequest({ method, url: pathname, status: 200, duration: total, compileMs: 0 });
+        return new Response(file, { headers });
+      }
+    }
+    return new Response("Image not found", { status: 404 });
+  }
+
+  if (pathname.startsWith("/_swift-rust/")) {
+    return new Response("Not found", { status: 404 });
+  }
+
+  if (existsSync(PUBLIC_DIR)) {
+    const safe = pathname.replace(/\.\.+/g, "").replace(/^\/+/, "");
+    const candidate = join(PUBLIC_DIR, safe);
+    if (existsSync(candidate) && statSync(candidate).isFile()) {
+      const ext = extname(candidate).toLowerCase();
+      const mime = MIME[ext] || "application/octet-stream";
+      const file = Bun?.file ? Bun.file(candidate) : readFileSync(candidate);
+      const total = performance.now() - reqStart;
+      logRequest({ method, url: pathname, status: 200, duration: total, compileMs: 0 });
+      return new Response(file, { headers: { "Content-Type": mime } });
+    }
+  }
+
+  const segments = urlToRouteSegments(pathname);
+  if (segments[0] === "api") {
+    return await handleApiRoute(req, segments, method, reqStart);
+  }
+
+  if (method !== "GET" && method !== "HEAD") {
+    return new Response("Method not allowed", { status: 405 });
+  }
+
+  const compileStart = performance.now();
+  const compileResult = await compileRoute(pathname);
+  const compileMs = performance.now() - compileStart;
+
+  if (compileResult.ok && !compileResult.cached) {
+    logCompile(pathname, compileMs);
+  }
+
+  if (!compileResult.ok) {
+    if (compileResult.reason === "not_found") {
+      const notFoundResult = await renderNotFound(segments);
+      const total = performance.now() - reqStart;
+      const status = notFoundResult.html ? 404 : 404;
+      logRequest({ method, url: pathname, status, duration: total, compileMs: 0 });
+      if (notFoundResult.html) {
+        return new Response(await wrapInDocumentAsync({ head: "", body: notFoundResult.html }), {
+          status: 404,
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
+      }
+      return new Response(errorOverlayHTML("Not found", `No page found for ${pathname}`), {
+        status: 404,
+        headers: { "Content-Type": "text/html" },
+      });
+    }
+    if (compileResult.reason === "compile_error") {
+      const err = compileResult.error;
+      logError(err, `Failed to compile ${pathname}`);
+      const total = performance.now() - reqStart;
+      logRequest({ method, url: pathname, status: 500, duration: total, compileMs });
+      const overlay = errorOverlayHTML(err?.message || "Compilation error", err?.stack || "");
+      for (const send of hmrClients) {
+        try {
+          send(JSON.stringify({ event: "change", data: { type: "error", message: err?.message || "compile error" } }));
+        } catch {}
+      }
+      return new Response(overlay, { status: 500, headers: { "Content-Type": "text/html" } });
+    }
+  }
+
+  const renderStart = performance.now();
+  const renderResult = await renderRoute(pathname);
+  const renderMs = performance.now() - renderStart;
+  const total = performance.now() - reqStart;
+
+  if (renderResult.status === 500) {
+    logError(renderResult.error, `Failed to render ${pathname}`);
+    logRequest({ method, url: pathname, status: 500, duration: total, compileMs });
+    const overlay = errorOverlayHTML(renderResult.error?.message || "Render error", renderResult.error?.stack || "");
+    for (const send of hmrClients) {
+      try {
+        send(JSON.stringify({ event: "change", data: { type: "error", message: renderResult.error?.message || "render error" } }));
+      } catch {}
+    }
+    return new Response(overlay, { status: 500, headers: { "Content-Type": "text/html" } });
+  }
+
+  if (renderResult.status === 404) {
+    logRequest({ method, url: pathname, status: 404, duration: total, compileMs: 0 });
+    if (renderResult.html) {
+      return new Response(await wrapInDocumentAsync({ head: "", body: renderResult.html }), {
+        status: 404,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
+    }
+    return new Response(errorOverlayHTML("Not found", `No page found for ${pathname}`), {
+      status: 404,
+      headers: { "Content-Type": "text/html" },
+    });
+  }
+
+  if (renderResult.redirect) {
+    logRequest({ method, url: pathname, status: renderResult.status, duration: total, compileMs });
+    return new Response(null, {
+      status: renderResult.status,
+      headers: { Location: renderResult.redirect },
+    });
+  }
+
+  logRequest({ method, url: pathname, status: 200, duration: total, compileMs });
+  await scanFontsFromLayouts();
+  return new Response(await wrapInDocumentAsync({ head: metadataToHead(renderResult.metadata), body: renderResult.html || "" }), {
+    status: 200,
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
+}
+
+async function handleApiRoute(req, segments, method, reqStart) {
+  const route = resolveApiRoute(segments);
+  if (!route) {
+    const total = performance.now() - reqStart;
+    logRequest({ method, url: "/" + segments.join("/"), status: 404, duration: total, compileMs: 0 });
+    return new Response(JSON.stringify({ error: "Not found" }), {
+      status: 404,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  const handlerName = method.toUpperCase();
+  try {
+    const mod = await loadModule(route.file, { bust: true });
+    const handler = mod[handlerName] || mod[method.toLowerCase()];
+    if (typeof handler !== "function") {
+      const total = performance.now() - reqStart;
+      logRequest({ method, url: "/" + segments.join("/"), status: 405, duration: total, compileMs: 0 });
+      return new Response(JSON.stringify({ error: `Method ${method} not allowed` }), {
+        status: 405,
+        headers: { "Content-Type": "application/json", Allow: Object.keys(mod).filter((k) => typeof mod[k] === "function" && k === k.toUpperCase()).join(", ") },
+      });
+    }
+    const url = new URL(req.url);
+    const body = method === "GET" || method === "HEAD" ? null : await req.text().catch(() => null);
+    let parsedBody = null;
+    if (body) {
+      try {
+        parsedBody = JSON.parse(body);
+      } catch {
+        parsedBody = body;
+      }
+    }
+    const result = await handler({
+      request: req,
+      params: route.params,
+      query: Object.fromEntries(url.searchParams),
+      body: parsedBody,
+      searchParams: Object.fromEntries(url.searchParams),
+    });
+    const total = performance.now() - reqStart;
+    logRequest({ method, url: "/" + segments.join("/"), status: result?.status || 200, duration: total, compileMs: 0 });
+    if (result instanceof Response) return result;
+    if (result && typeof result === "object") {
+      return new Response(JSON.stringify(result), {
+        status: result.status || 200,
+        headers: { "Content-Type": "application/json", ...(result.headers || {}) },
+      });
+    }
+    return new Response(String(result ?? ""), {
+      status: 200,
+      headers: { "Content-Type": "text/plain" },
+    });
+  } catch (err) {
+    logError(err, `Failed to handle ${method} /${segments.join("/")}`);
+    const total = performance.now() - reqStart;
+    logRequest({ method, url: "/" + segments.join("/"), status: 500, duration: total, compileMs: 0 });
+    return new Response(JSON.stringify({ error: err?.message || "Internal error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
+const MIME = {
+  ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+  ".gif": "image/gif", ".webp": "image/webp", ".avif": "image/avif",
+  ".svg": "image/svg+xml", ".ico": "image/x-icon",
+  ".css": "text/css", ".js": "application/javascript", ".mjs": "application/javascript",
+  ".json": "application/json", ".txt": "text/plain", ".woff": "font/woff",
+  ".woff2": "font/woff2", ".ttf": "font/ttf", ".otf": "font/otf",
+  ".mp4": "video/mp4", ".webm": "video/webm", ".mp3": "audio/mpeg",
+};
+
+await checkAppDir();
+await detectNetworkUrls();
+logStartupBanner(`http://localhost:${port}`, networkUrls);
+logLine([` ${paint("dim", "› setupWatcher…")}`]);
+try {
+  setupWatcher();
+  logLine([` ${paint("dim", "› watcher ready")}`]);
+} catch (err) {
+  logLine([` ${paint("red", "watcher error:")} ${err.message}`]);
+}
+
+logLine([` ${paint("dim", `› listen on ${hostname}:${port}…`)}`]);
+try {
+  if (typeof Bun !== "undefined" && typeof Bun.serve === "function") {
+    serverHandle = Bun.serve({
+      port,
+      hostname,
+      async fetch(req) {
+        return await handleFetch(req);
+      },
+    });
+    logReady();
+    await new Promise(() => {});
+  } else {
+    const http = await import("node:http");
+    const srv = http.createServer(async (req, res) => {
+      await handleRequest(req, res);
+    });
+    srv.on("error", (err) => logError(err, "server error"));
+    srv.listen(port, hostname, () => {
+      logReady();
+    });
+    serverHandle = srv;
+  }
+} catch (err) {
+  logError(err, "listen error");
+}
+
+process.on("SIGINT", () => {
+  logLine([`\n ${paint("yellow", "■")} ${paint("dim", "Stopping dev server…")}\n`]);
+  if (serverHandle && typeof serverHandle.close === "function") {
+    serverHandle.close(() => process.exit(0));
+  } else if (serverHandle && typeof serverHandle.stop === "function") {
+    serverHandle.stop();
+    process.exit(0);
+  } else {
+    process.exit(0);
+  }
+  setTimeout(() => process.exit(0), 2000).unref();
+});

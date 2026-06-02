@@ -1,0 +1,46 @@
+[package]
+name = "swift-rust"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "Swift Rust: the full-stack React framework powered with Rust + Bun. CLI entry point and facade crate."
+
+[lib]
+name = "swift_rust"
+path = "src/lib.rs"
+
+[[bin]]
+name = "swift-rust"
+path = "src/main.rs"
+
+[dependencies]
+swift-rust-server = { path = "../server" }
+swift-rust-bundler = { path = "../bundler" }
+swift-rust-runtime = { path = "../runtime" }
+swift-rust-image = { path = "../image" }
+swift-rust-font = { path = "../font" }
+swift-rust-pdf = { path = "../pdf" }
+swift-rust-config = { path = "../config" }
+swift-rust-telemetry = { path = "../telemetry" }
+swift-rust-errors = { path = "../errors" }
+swift-rust-core = { path = "../swift-rust-core" }
+swift-rust-build = { path = "../swift-rust-build" }
+swift-rust-code-frame = { path = "../swift-rust-code-frame" }
+swift-rust-custom-transforms = { path = "../swift-rust-custom-transforms" }
+swift-rust-error-code-swc-plugin = { path = "../swift-rust-error-code-swc-plugin" }
+swift-rust-taskless = { path = "../swift-rust-taskless" }
+swift-rust-api = { path = "../swift-rust-api" }
+swift-rust-build-test = { path = "../swift-rust-build-test" }
+
+clap = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+
+[dev-dependencies]
+insta = { workspace = true }

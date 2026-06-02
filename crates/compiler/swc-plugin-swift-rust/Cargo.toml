@@ -1,0 +1,19 @@
+[package]
+name = "swc-plugin-swift-rust"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "SWC plugin that transforms JSX in swift-rust projects into Rust view! macro calls."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+swc_core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[features]
+default = ["swc_core/common"]
+swc_plugin = ["swc_core/swc_plugin", "swc_core/ecma_plugin_transform"]

@@ -1,0 +1,8 @@
+{
+  "rendering": "ssr",
+  "reactStrictMode": true,
+  "experimental": {
+    "pdf": true,
+    "wasm": true
+  }
+}

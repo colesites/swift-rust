@@ -1,0 +1,21 @@
+{
+  "name": "swift-rust-test",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Integration and end-to-end tests for the swift-rust framework.",
+  "type": "module",
+  "scripts": {
+    "lint": "biome check /Users/admin/Documents/programming/projects/k-bench/swift-rust/test",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test integration",
+    "test:integration": "bun test integration",
+    "test:e2e": "playwright test",
+    "clean": "rm -rf dist .turbo test-results"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0",
+    "@types/bun": "^1.1.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^6.0.0"
+  }
+}

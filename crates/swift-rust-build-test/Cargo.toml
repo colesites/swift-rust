@@ -1,0 +1,16 @@
+[package]
+name = "swift-rust-build-test"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Build-pipeline tests as a library. Lets other crates pull the suite in as a dependency."
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+swift-rust-core = { path = "../swift-rust-core" }
+swift-rust-build = { path = "../swift-rust-build" }
+insta = { workspace = true }
+tempfile = "3"

@@ -1,0 +1,14 @@
+{
+  "name": "swift-rust-changeset",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Internal configuration for Changesets",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "canary",
+  "updateInternalDependencies": "patch",
+  "ignore": ["docs", "examples", "test"]
+}

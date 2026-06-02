@@ -1,0 +1,21 @@
+import styles from "./styles-0003.module.css";
+
+export default function Page0353() {
+  return (
+    <main className={styles.root}>
+      <h1>Page 0353</h1>
+      <p>This is page number 353 of the benchmark fixture.</p>
+      <p>The text below is filler to give the bundler something to do.</p>
+      <ul>
+        <li>Item 1 on page 353</li>
+        <li>Item 2 on page 353</li>
+        <li>Item 3 on page 353</li>
+        <li>Item 4 on page 353</li>
+        <li>Item 5 on page 353</li>
+        <li>Item 6 on page 353</li>
+        <li>Item 7 on page 353</li>
+        <li>Item 8 on page 353</li>
+      </ul>
+    </main>
+  );
+}

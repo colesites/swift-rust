@@ -1,0 +1,6 @@
+[install]
+peer = true
+exact = false
+
+[install.cache]
+disable = false

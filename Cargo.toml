@@ -1,0 +1,118 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/*",
+]
+exclude = [
+    "crates/compiler",
+    "examples/*",
+    "test/fixtures/*",
+]
+
+[workspace.package]
+version = "0.1.0"
+license = "MIT"
+repository = "https://github.com/swift-rust/swift-rust"
+edition = "2021"
+rust-version = "1.85"
+authors = ["Swift Rust Team"]
+homepage = "https://swift-rust.dev"
+
+[workspace.dependencies]
+# Web frameworks
+axum = { version = "0.7", features = ["macros"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["fs", "trace", "cors", "compression-gzip"] }
+hyper = { version = "1", features = ["full"] }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
+async-trait = "0.1"
+futures = "0.3"
+
+# Async I/O
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+serde_yaml = "0.9"
+
+# Templating / HTML
+maud = { version = "0.26", features = ["html5ever"] }
+html5ever = "0.27"
+markup5ever = "0.14"
+lol_html = "1"
+
+# Routing
+matchit = "0.7"
+
+# CLI
+clap = { version = "4", features = ["derive", "cargo"] }
+indicatif = "0.17"
+
+# Logging / telemetry
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Errors
+thiserror = "1"
+anyhow = "1"
+
+# Image processing
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "avif", "gif"] }
+
+# PDF
+printpdf = "0.7"
+lopdf = "0.34"
+
+# Fonts
+fontdb = "0.21"
+ttf-parser = "0.21"
+
+# Config
+config = "0.14"
+
+# Glob / file system
+glob = "0.3"
+walkdir = "2"
+notify = "6"
+notify-debouncer-mini = "0.4"
+
+# Hashing
+blake3 = "1"
+
+# Utilities
+once_cell = "1"
+parking_lot = "0.12"
+bytes = "1"
+url = "2"
+percent-encoding = "2"
+mime = "0.3"
+mime_guess = "2"
+http = "1"
+http-body-util = "0.1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+rustc-hash = "2"
+
+# Testing
+insta = "1"
+proptest = "1"
+mockall = "0.13"
+
+[profile.dev]
+opt-level = 0
+debug = 1
+incremental = true
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"

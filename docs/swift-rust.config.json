@@ -1,0 +1,6 @@
+{
+  "rendering": "ssr",
+  "image": { "domains": [], "formats": ["image/webp"] },
+  "font": { "subsets": ["latin"], "display": "swap" },
+  "pdf": { "defaultPageSize": "A4" }
+}

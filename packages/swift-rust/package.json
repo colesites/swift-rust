@@ -1,0 +1,124 @@
+{
+  "name": "swift-rust",
+  "version": "0.1.0",
+  "description": "The full-stack React framework powered with Rust + Bun. TSX-first, Rust rendering, 10x faster than Next.js, single binary deploy.",
+  "license": "MIT",
+  "homepage": "https://swift-rust.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/swift-rust/swift-rust.git",
+    "directory": "packages/swift-rust"
+  },
+  "keywords": [
+    "swift-rust",
+    "framework",
+    "rust",
+    "ssr",
+    "react"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./image": {
+      "types": "./dist/image.d.ts",
+      "import": "./dist/image.js"
+    },
+    "./font": {
+      "types": "./dist/font.d.ts",
+      "import": "./dist/font.js"
+    },
+    "./font/google": {
+      "types": "./dist/font-google.d.ts",
+      "import": "./dist/font-google.js"
+    },
+    "./font/local": {
+      "types": "./dist/font-local.d.ts",
+      "import": "./dist/font-local.js"
+    },
+    "./pdf": {
+      "types": "./dist/pdf.d.ts",
+      "import": "./dist/pdf.js"
+    },
+    "./env": {
+      "types": "./dist/env.d.ts",
+      "import": "./dist/env.js"
+    },
+    "./router": {
+      "types": "./dist/router.d.ts",
+      "import": "./dist/router.js"
+    },
+    "./head": {
+      "types": "./dist/head.d.ts",
+      "import": "./dist/head.js"
+    },
+    "./link": {
+      "types": "./dist/link.d.ts",
+      "import": "./dist/link.js"
+    },
+    "./video": {
+      "types": "./dist/video.d.ts",
+      "import": "./dist/video.js"
+    }
+  },
+  "bin": {
+    "swift-rust": "./bin/swift-rust.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "scripts",
+    "native"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "lint": "biome check /Users/admin/Documents/programming/projects/k-bench/swift-rust/packages/swift-rust/src",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "clean": "rm -rf dist .turbo native",
+    "prepublishOnly": "bun run build && bun run scripts/package-native.ts",
+    "postinstall": "node ./scripts/postinstall.js"
+  },
+  "dependencies": {
+    "@dotenvx/dotenvx": "^1.0.0",
+    "@swift-rust/env": "0.1.0",
+    "@swift-rust/font": "0.1.0",
+    "@swift-rust/image": "0.1.0",
+    "@swift-rust/pdf": "0.1.0",
+    "@swift-rust/video": "0.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "peerDependencies": {
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^6.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "bun": ">=1.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

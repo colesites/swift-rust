@@ -1,0 +1,18 @@
+{
+  "name": "swift-rust-scripts",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Internal build and release scripts for the Swift Rust monorepo.",
+  "type": "module",
+  "scripts": {
+    "lint": "biome check /Users/admin/Documents/programming/projects/k-bench/swift-rust/scripts/src",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "clean": "rm -rf dist .turbo"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^6.0.0"
+  }
+}

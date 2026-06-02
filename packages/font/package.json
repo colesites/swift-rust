@@ -1,0 +1,47 @@
+{
+  "name": "@swift-rust/font",
+  "version": "0.1.0",
+  "description": "Font component for swift-rust.",
+  "license": "MIT",
+  "homepage": "https://swift-rust.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/swift-rust/swift-rust.git",
+    "directory": "packages/font"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./google": {
+      "types": "./dist/google.d.ts",
+      "import": "./dist/google.js"
+    },
+    "./local": {
+      "types": "./dist/local.d.ts",
+      "import": "./dist/local.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "lint": "biome check /Users/admin/Documents/programming/projects/k-bench/swift-rust/packages/font/src",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist .turbo"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

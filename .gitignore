@@ -1,0 +1,84 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# Test outputs
+coverage/
+.nyc_output/
+*.lcov
+
+# Cargo / Rust
+target/
+**/*.rs.bk
+Cargo.lock.bak
+
+# Bun
+bun.lockb
+bun.lock
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Editor
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun-debug.log
+logs/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Cargo cache from CI
+.cargo/
+
+# Local swift-rust dev
+.swift-rust/
+.swift-rust-cache/
+
+# Docs
+docs/.cache/
+docs/public/
+
+# Test artifacts
+test/fixtures/**/node_modules
+test/fixtures/**/target
+test/fixtures/**/.turbo
+
+# Misc
+.cache/
+.eslintcache
+.parcel-cache
+.tmp/
+temp/

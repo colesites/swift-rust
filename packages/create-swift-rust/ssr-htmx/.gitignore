@@ -1,0 +1,8 @@
+node_modules/
+.swift-rust/
+dist/
+.turbo/
+.env*.local
+target/
+*.log
+.DS_Store

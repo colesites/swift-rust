@@ -1,0 +1,25 @@
+[package]
+name = "swift-rust-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "HTTP request and response helpers shared between the dev server and the production binary."
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+swift-rust-core = { path = "../swift-rust-core" }
+axum = { workspace = true }
+http = "1"
+http-body-util = "0.1"
+bytes = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+mime = { workspace = true }
+percent-encoding = { workspace = true }
+url = { workspace = true }
+chrono = { workspace = true }

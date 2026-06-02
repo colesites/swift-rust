@@ -1,0 +1,25 @@
+.root {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 4rem 1rem;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.root h1 {
+  font-size: 2.25rem;
+  margin-bottom: 1rem;
+  color: rgb(113, 27, 197);
+}
+
+.root p {
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.root ul {
+  padding-left: 1.5rem;
+}
+
+.root li {
+  margin-bottom: 0.25rem;
+}

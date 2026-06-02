@@ -1,0 +1,6 @@
+{
+  "rendering": "ssr-wasm",
+  "image": { "domains": [] },
+  "font": { "subsets": ["latin"] },
+  "pdf": { "defaultPageSize": "A4" }
+}

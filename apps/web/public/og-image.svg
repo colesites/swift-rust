@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fafaf9" />
+      <stop offset="100%" stop-color="#f5f5f4" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <g transform="translate(80, 80)">
+    <rect width="56" height="56" rx="12" fill="#0a0a0a" />
+    <path d="M14 18h28M14 28h18M14 38h28" stroke="#fff" stroke-width="3" stroke-linecap="round" />
+  </g>
+  <g transform="translate(80, 160)" font-family="ui-sans-serif, system-ui, sans-serif" fill="#0a0a0a">
+    <text x="0" y="0" font-size="20" font-weight="600" fill="#78716c">SWIFT RUST</text>
+    <text x="0" y="100" font-size="96" font-weight="700" letter-spacing="-3">The React framework</text>
+    <text x="0" y="200" font-size="96" font-weight="700" letter-spacing="-3"><tspan fill="#ea580c">Powered</tspan> <tspan fill="#57534e">with Rust +</tspan> <tspan fill="#ea580c">Bun</tspan>.</text>
+    <text x="0" y="280" font-size="28" font-weight="400" fill="#57534e">TSX. 10x faster than Next.js. Single binary.</text>
+  </g>
+</svg>

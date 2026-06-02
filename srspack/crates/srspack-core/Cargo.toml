@@ -1,0 +1,31 @@
+[package]
+name = "srspack-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "Core bundler for Swift-Rust. Thin facade over swift-rust-bundler with a srspack-specific API and a single unified dependency graph."
+
+[dependencies]
+swift-rust-bundler = { workspace = true }
+swift-rust-errors = { workspace = true }
+
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+blake3 = { workspace = true }
+parking_lot = { workspace = true }
+walkdir = { workspace = true }
+notify = { workspace = true }
+notify-debouncer-mini = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+mime_guess = { workspace = true }
+futures = { workspace = true }
+rayon = { workspace = true }
+image = { workspace = true }
+brotli = { workspace = true }

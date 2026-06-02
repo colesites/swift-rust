@@ -1,0 +1,27 @@
+[package]
+name = "swift-rust-pdf"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "PDF generation and the <Document>/<Page>/<Text>/<View> component tree."
+
+[dependencies]
+swift-rust-errors = { path = "../errors" }
+swift-rust-config = { path = "../config" }
+
+printpdf = { workspace = true }
+lopdf = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+bytes = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+
+[dev-dependencies]
+insta = { workspace = true }
+tempfile = "3"

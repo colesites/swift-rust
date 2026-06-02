@@ -1,0 +1,47 @@
+{
+  "name": "create-swift-rust",
+  "version": "0.1.0",
+  "description": "Create a new swift-rust project from a template.",
+  "license": "MIT",
+  "homepage": "https://swift-rust.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/swift-rust/swift-rust.git",
+    "directory": "packages/create-swift-rust"
+  },
+  "bugs": {
+    "url": "https://github.com/swift-rust/swift-rust/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "create-swift-rust": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "lint": "biome check $(pwd)/src",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist .turbo"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.7.0",
+    "picocolors": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^6.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

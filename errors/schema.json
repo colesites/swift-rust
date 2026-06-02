@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Swift Rust Error Documentation",
+  "type": "object",
+  "required": ["code", "title", "summary"],
+  "properties": {
+    "code": {
+      "type": "string",
+      "pattern": "^SR[0-9]{4}$",
+      "description": "Stable error code identifier, e.g. SR0001."
+    },
+    "title": {
+      "type": "string",
+      "description": "Short, human-readable title shown in error messages."
+    },
+    "summary": {
+      "type": "string",
+      "description": "One-line description of when this error occurs."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "config",
+        "routing",
+        "compilation",
+        "bundling",
+        "build",
+        "server",
+        "image",
+        "font",
+        "pdf",
+        "video",
+        "style",
+        "hydration",
+        "runtime",
+        "tooling"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["error", "warning", "deprecation", "info"],
+      "description": "How disruptive this error is. Errors fail the build; warnings print but proceed; deprecations suggest migration; info is purely advisory."
+    },
+    "since": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Swift-Rust version that introduced this code."
+    },
+    "causes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Bullet list of common root causes. Used in CLI help and search."
+    },
+    "fixes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Bullet list of concrete remediation steps. Mirrors the H2 sections of the body."
+    },
+    "related": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^SR[0-9]{4}$"
+      },
+      "description": "Cross-references to other SR codes that frequently appear together with this one."
+    }
+  },
+  "additionalProperties": false
+}

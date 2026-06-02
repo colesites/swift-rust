@@ -1,0 +1,43 @@
+{
+  "name": "@swift-rust/video",
+  "version": "0.1.0",
+  "description": "Video component for swift-rust. HTML5, YouTube, Vimeo, lightbox, and background-video modes.",
+  "license": "MIT",
+  "homepage": "https://swift-rust.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/swift-rust/swift-rust.git",
+    "directory": "packages/video"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "lint": "biome check /Users/admin/Documents/programming/projects/k-bench/swift-rust/packages/video/src",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist .turbo"
+  },
+  "peerDependencies": {
+    "react": "^18 || ^19"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "typescript": "^6.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

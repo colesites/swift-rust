@@ -1,0 +1,29 @@
+[package]
+name = "swift-rust-build"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Build pipeline for swift-rust: bundling, code generation, and asset emission."
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+swift-rust-core = { path = "../swift-rust-core" }
+swift-rust-code-frame = { path = "../swift-rust-code-frame" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+walkdir = { workspace = true }
+glob = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+rustc-hash = { workspace = true }
+once_cell = { workspace = true }
+blake3 = { workspace = true }
+bytes = { workspace = true }
+mime_guess = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

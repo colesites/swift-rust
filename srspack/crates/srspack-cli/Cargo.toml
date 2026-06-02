@@ -1,0 +1,28 @@
+[package]
+name = "srspack-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "Command-line interface for srspack: build, dev, bench."
+
+[[bin]]
+name = "srspack"
+path = "src/main.rs"
+
+[dependencies]
+srspack-core = { path = "../srspack-core" }
+srspack-loader-tsx = { path = "../srspack-loader-tsx" }
+srspack-loader-css = { path = "../srspack-loader-css" }
+
+clap = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }

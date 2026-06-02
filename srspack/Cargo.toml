@@ -1,0 +1,57 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/*",
+]
+exclude = [
+    "examples/*",
+]
+
+[workspace.package]
+version = "0.1.0"
+license = "MIT"
+repository = "https://github.com/swift-rust/swift-rust"
+edition = "2021"
+rust-version = "1.85"
+authors = ["Swift Rust Team"]
+homepage = "https://swift-rust.dev"
+description = "The bundler for Swift-Rust. Native, content-addressed, single-graph."
+
+[workspace.dependencies]
+swift-rust-bundler = { path = "../crates/bundler" }
+swift-rust-errors = { path = "../crates/errors" }
+swift-rust-config = { path = "../crates/config" }
+
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "fs", "time"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+clap = { version = "4", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1"
+thiserror = "1"
+blake3 = "1"
+parking_lot = "0.12"
+rayon = "1"
+walkdir = "2"
+notify = "6"
+notify-debouncer-mini = "0.4"
+async-trait = "0.1"
+futures = { version = "0.3", features = ["executor"] }
+mime_guess = "2"
+image = { version = "0.24", default-features = false, features = ["png", "jpeg", "webp", "gif", "tiff"] }
+brotli = "8"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"
+
+[profile.dev]
+opt-level = 0
+debug = 1
+incremental = true
+
+[profile.dev.package."*"]
+opt-level = 3

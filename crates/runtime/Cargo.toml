@@ -1,0 +1,35 @@
+[package]
+name = "swift-rust-runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "Client-side runtime for hydration, navigation, and event handling."
+
+[dependencies]
+swift-rust-errors = { path = "../errors" }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+gloo = { version = "0.11", features = ["events", "storage", "timers"] }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+serde-wasm-bindgen = "0.6"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["Window", "Document", "Element", "EventTarget", "HtmlElement", "Node"] }
+console_error_panic_hook = "0.1"
+console_log = "1"
+log = "0.4"
+once_cell = { workspace = true }
+parking_lot = { workspace = true }
+url = { workspace = true }
+futures = { workspace = true }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[lib]
+crate-type = ["cdylib", "rlib"]

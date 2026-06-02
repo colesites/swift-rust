@@ -1,0 +1,19 @@
+[package]
+name = "swift-rust-taskless"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Task scheduling and background work primitives — the work the build pipeline forgot to do."
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+tokio = { workspace = true }
+futures = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+async-trait = { workspace = true }
+once_cell = { workspace = true }
+parking_lot = { workspace = true }

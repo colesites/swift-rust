@@ -1,0 +1,23 @@
+.layout-0095 {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: rgba(21, 79, 137, 0.05);
+}
+
+.layout-0095 header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  font-weight: 600;
+}
+
+.layout-0095 main {
+  flex: 1;
+}
+
+.layout-0095 footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  color: rgb(115, 115, 115);
+  font-size: 0.875rem;
+}

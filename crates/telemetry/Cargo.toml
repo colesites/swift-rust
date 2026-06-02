@@ -1,0 +1,21 @@
+[package]
+name = "swift-rust-telemetry"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "Telemetry, metrics, and tracing for Swift Rust."
+
+[dependencies]
+swift-rust-errors = { path = "../errors" }
+
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+insta = { workspace = true }

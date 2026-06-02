@@ -1,0 +1,35 @@
+[package]
+name = "swift-rust-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "HTTP server, routing, and SSR engine for Swift Rust."
+
+[dependencies]
+swift-rust-errors = { path = "../errors" }
+swift-rust-config = { path = "../config" }
+swift-rust-bundler = { path = "../bundler" }
+swift-rust-telemetry = { path = "../telemetry" }
+
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+hyper = { workspace = true }
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+matchit = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+mime = { workspace = true }
+url = { workspace = true }
+http = "1"
+bytes = { workspace = true }
+
+[dev-dependencies]
+insta = { workspace = true }

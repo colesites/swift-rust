@@ -1,0 +1,19 @@
+{
+  "rendering": "ssr-wasm",
+  "image": {
+    "domains": [],
+    "formats": [
+      "image/avif",
+      "image/webp"
+    ]
+  },
+  "font": {
+    "subsets": [
+      "latin"
+    ],
+    "display": "swap"
+  },
+  "pdf": {
+    "defaultPageSize": "A4"
+  }
+}

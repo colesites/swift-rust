@@ -1,0 +1,13 @@
+[package]
+name = "swift-rust-error-code-swc-plugin"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SWC plugin that injects error codes into compiled output for fast runtime lookup."
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+thiserror = { workspace = true }
