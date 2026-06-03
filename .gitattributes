@@ -1,9 +1,27 @@
-target/
-**/*.rs.bk
-Cargo.lock
+# GitHub Linguist configuration.
+#
+# This project's engine is Rust (crates/, srspack/) with a thin TypeScript API
+# surface. The language bar was dominated by *generated* files — benchmark
+# fixtures and a generated font registry — not hand-written source. The rules
+# below exclude generated and vendored files from language statistics so the
+# bar reflects the real codebase. (linguist-generated also collapses these in
+# diffs.)
 
-dist/
-build/
-out/
-.turbo/
-*.tsbuildinfo
+# ── Generated benchmark & example fixtures (machine-emitted .tsx/.css) ──
+srspack/bench/**            linguist-generated=true
+srspack/examples/**         linguist-generated=true
+
+# ── Generated data registry: 2,071 Google font definitions (data, not logic) ──
+packages/font/src/google.ts linguist-generated=true
+
+# ── Committed build artifacts ──
+**/dist/**                  linguist-generated=true
+*.d.ts                      linguist-generated=true
+*.jsx                       linguist-generated=true
+*.jsx.map                   linguist-generated=true
+*.js.map                    linguist-generated=true
+*.map                       linguist-generated=true
+
+# ── Lockfiles (vendored, not authored) ──
+bun.lock                    linguist-generated=true
+Cargo.lock                  linguist-generated=true
