@@ -207,6 +207,13 @@ function writeStaticFile(outDir, pathname, html) {
   writeFileSync(outPath, html);
 }
 
+// Writes a literal file (e.g. 404.html) at static/<name>, NOT static/<name>/index.html.
+function writeRawFile(outDir, name, contents) {
+  const outPath = join(outDir, name);
+  mkdirSync(dirname(outPath), { recursive: true });
+  writeFileSync(outPath, contents);
+}
+
 function writeConfigJson(outDir, hasPublic) {
   const config = {
     version: 3,
@@ -221,7 +228,7 @@ function writeConfigJson(outDir, hasPublic) {
       { src: "^(.*)$", status: 404, dest: "/404.html" },
     ],
     overrides: {
-      "404": { path: "404", contentType: "text/html; charset=utf-8" },
+      "404.html": { path: "404", contentType: "text/html; charset=utf-8" },
     },
   };
   if (!hasPublic) config.routes = config.routes.filter((r) => !r["isr-per-page"]);
@@ -319,7 +326,7 @@ async function main() {
         const { status, body } = await fetchRoute("/_not_found_");
         if (status === 200 || status === 404) {
           const html = stripHmrScript(body).replace(/<title>[^<]*<\/title>/, "<title>404 · Swift Rust</title>");
-          writeStaticFile(STATIC_DIR, "/404.html", html);
+          writeRawFile(STATIC_DIR, "404.html", html);
           process.stdout.write(`\n  ${paint("green", "✓")} 404.html\n`);
         }
       } catch (e) {
@@ -327,7 +334,7 @@ async function main() {
       }
     }
     if (!existsSync(join(STATIC_DIR, "404.html"))) {
-      writeStaticFile(STATIC_DIR, "/404.html", `<!DOCTYPE html>
+      writeRawFile(STATIC_DIR, "404.html", `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8" /><title>404 · Swift Rust</title></head>
 <body><main style="font-family:system-ui;padding:4rem;text-align:center">
 <h1>404</h1><p>This page could not be found.</p><a href="/">← Back home</a>
