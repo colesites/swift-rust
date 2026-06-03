@@ -109,8 +109,11 @@ impl Srspack {
         let public_dir = root.join("public");
         if public_dir.exists() {
             profile.begin("compress");
+            let cache_dir = root.join(".srspack-cache");
+            self.compress_cache.load(&cache_dir);
             let compressed =
                 compress_directory(&public_dir, &out_dir, self.compress_cache.as_ref())?;
+            self.compress_cache.save(&cache_dir);
             let summary = compress::summarize(&compressed);
             profile.record_bytes_in(summary.source_bytes);
             profile.record_bytes_out(summary.optimized_bytes);
@@ -174,8 +177,11 @@ impl Srspack {
         let public_dir = root.join("public");
         if public_dir.exists() {
             profile.begin("compress");
+            let cache_dir = root.join(".srspack-cache");
+            self.compress_cache.load(&cache_dir);
             let compressed =
                 compress_directory(&public_dir, &out_dir, self.compress_cache.as_ref())?;
+            self.compress_cache.save(&cache_dir);
             let summary = compress::summarize(&compressed);
             profile.record_bytes_in(summary.source_bytes);
             profile.record_bytes_out(summary.optimized_bytes);

@@ -32,13 +32,17 @@ use std::sync::Arc;
 use blake3::Hash;
 use parking_lot::RwLock;
 use rayon::iter::ParallelIterator;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, trace, warn};
 use walkdir::WalkDir;
 
 use crate::Error;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// Bump when the persisted manifest layout changes (invalidates old files).
+const COMPRESS_MANIFEST_VERSION: u32 = 1;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CompressKind {
     Image,
     Text,
@@ -55,7 +59,7 @@ impl CompressKind {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ImageFormat {
     Png,
     Jpeg,
@@ -132,6 +136,82 @@ impl CompressCache {
     pub fn clear(&self) {
         self.entries.write().clear();
     }
+
+    /// Load a previously persisted manifest from `<cache_dir>/compress.json`
+    /// into memory. Missing/corrupt/old-version files are ignored (cold start).
+    /// This is what lets a *fresh process* (e.g. an incremental `srspack build`)
+    /// skip re-encoding assets it already compressed on a prior run.
+    pub fn load(&self, cache_dir: &Path) {
+        let path = cache_dir.join("compress.json");
+        let Ok(bytes) = std::fs::read(&path) else { return };
+        let Ok(doc) = serde_json::from_slice::<PersistedCompress>(&bytes) else { return };
+        if doc.version != COMPRESS_MANIFEST_VERSION {
+            return;
+        }
+        let mut map = self.entries.write();
+        for e in doc.entries {
+            let Ok(hash) = Hash::from_hex(e.hash.as_bytes()) else { continue };
+            map.insert(
+                hash,
+                CompressedFile {
+                    source: PathBuf::from(e.source),
+                    source_hash: hash,
+                    kind: e.kind,
+                    source_bytes: e.source_bytes,
+                    optimized_bytes: e.optimized_bytes,
+                    output: PathBuf::from(e.output),
+                    format_in: e.format_in,
+                    format_out: e.format_out,
+                },
+            );
+        }
+    }
+
+    /// Persist the in-memory manifest to `<cache_dir>/compress.json`. Best
+    /// effort — failures are swallowed so a read-only cache dir never breaks a
+    /// build.
+    pub fn save(&self, cache_dir: &Path) {
+        let entries: Vec<PersistedEntry> = self
+            .entries
+            .read()
+            .values()
+            .map(|f| PersistedEntry {
+                hash: f.source_hash.to_hex().to_string(),
+                source: f.source.to_string_lossy().into_owned(),
+                kind: f.kind,
+                source_bytes: f.source_bytes,
+                optimized_bytes: f.optimized_bytes,
+                output: f.output.to_string_lossy().into_owned(),
+                format_in: f.format_in,
+                format_out: f.format_out.clone(),
+            })
+            .collect();
+        let doc = PersistedCompress {
+            version: COMPRESS_MANIFEST_VERSION,
+            entries,
+        };
+        let Ok(json) = serde_json::to_vec(&doc) else { return };
+        let _ = std::fs::create_dir_all(cache_dir);
+        let _ = std::fs::write(cache_dir.join("compress.json"), json);
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct PersistedCompress {
+    version: u32,
+    entries: Vec<PersistedEntry>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct PersistedEntry {
+    hash: String,
+    source: String,
+    kind: CompressKind,
+    source_bytes: u64,
+    optimized_bytes: u64,
+    output: String,
+    format_in: Option<ImageFormat>,
+    format_out: Option<String>,
 }
 
 pub fn classify(path: &Path) -> CompressKind {
@@ -195,9 +275,13 @@ pub fn compress_file(
     let source_hash = blake3::hash(&bytes);
     let source_bytes = bytes.len() as u64;
 
+    // Cache hit only counts if the optimized output still exists on disk —
+    // otherwise a cleared dist/ would leave us referencing a missing file.
     if let Some(hit) = cache.get(&source_hash) {
-        trace!(?source, "compress cache hit");
-        return Ok(hit);
+        if hit.kind == CompressKind::Pass || hit.output.exists() {
+            trace!(?source, "compress cache hit");
+            return Ok(hit);
+        }
     }
 
     let kind = classify(source);
@@ -351,15 +435,18 @@ pub fn compress_directory(
     let out_dir_arc = Arc::new(out_dir.to_path_buf());
     let results: Vec<Result<CompressedFile, Error>> = {
         let sources_slice: &[PathBuf] = sources_arc.as_slice();
+        // Use the shared (and now persisted) cache for lookups so unchanged
+        // assets skip re-encoding across runs. CompressCache is internally
+        // synchronized, so it is safe to share across rayon workers.
         rayon::iter::IntoParallelRefIterator::par_iter(sources_slice)
-            .map_init(CompressCache::new, |thread_cache, src| {
+            .map(|src| {
                 let local_out = if src.starts_with(public_dir_arc.as_path()) {
                     let rel = src.strip_prefix(public_dir_arc.as_path()).unwrap();
                     out_dir_arc.join(rel)
                 } else {
                     out_dir_arc.as_path().to_path_buf()
                 };
-                compress_file(src, &local_out, thread_cache)
+                compress_file(src, &local_out, cache)
             })
             .collect()
     };

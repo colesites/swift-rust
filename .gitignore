@@ -88,3 +88,6 @@ temp/
 
 # Swift-Rust build
 .swift-rust/
+
+# srspack on-disk build cache
+.srspack-cache/
