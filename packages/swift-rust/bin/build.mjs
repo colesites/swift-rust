@@ -5,6 +5,7 @@ import {
   mkdirSync,
   readdirSync,
   writeFileSync,
+  readFileSync,
   rmSync,
   cpSync,
   openSync,
@@ -27,9 +28,9 @@ let PORT = PORT_START;
 const ROUTE_TIMEOUT_MS = 30_000;
 const HEALTH_TIMEOUT_MS = 30_000;
 
-const PAGE_EXTENSIONS = new Set(["page.tsx", "page.ts", "page.jsx", "page.js"]);
 const CATCH_PARAM = /^\[\.{3}([^\]]+)\]$/;
 const NAMED_PARAM = /^\[([^\]]+)\]$/;
+const PAGE_EXTENSIONS = ["page.tsx", "page.ts", "page.jsx", "page.js"];
 const NOT_FOUND_FILES = ["not-found.tsx", "not-found.ts", "not-found.jsx", "not-found.js"];
 
 const c = {
@@ -41,6 +42,16 @@ const useColor = process.stdout.isTTY !== false && !process.env.NO_COLOR;
 const paint = (color, s) => (useColor ? `${c[color]}${s}${c.reset}` : s);
 const fmtMs = (ms) => (ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(2)}s`);
 
+let activeLogFile = null;
+
+function findPageFile(dir) {
+  for (const ext of PAGE_EXTENSIONS) {
+    const p = join(dir, ext);
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+
 function discoverPages(dir, base = "") {
   const pages = [];
   if (!existsSync(dir)) return pages;
@@ -48,15 +59,24 @@ function discoverPages(dir, base = "") {
     if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
-      const match = entry.name.match(CATCH_PARAM);
-      if (match) {
-        pages.push({ type: "catchall", dir: full, base, paramName: match[1] });
+      const catchAll = entry.name.match(CATCH_PARAM);
+      if (catchAll) {
+        const pageFile = findPageFile(full);
+        if (pageFile) {
+          pages.push({ type: "catchall", dir: full, file: pageFile, base, paramName: catchAll[1] });
+        }
         continue;
       }
       const named = entry.name.match(NAMED_PARAM);
-      const segment = named ? `[${named[1]}]` : entry.name;
-      pages.push(...discoverPages(full, base + "/" + segment));
-    } else if (PAGE_EXTENSIONS.has(entry.name)) {
+      if (named) {
+        const pageFile = findPageFile(full);
+        if (pageFile) {
+          pages.push({ type: "dynamic", dir: full, file: pageFile, base, paramName: named[1] });
+        }
+        continue;
+      }
+      pages.push(...discoverPages(full, base + "/" + entry.name));
+    } else if (PAGE_EXTENSIONS.includes(entry.name)) {
       pages.push({ type: "static", file: full, route: base || "/" });
     }
   }
@@ -71,9 +91,9 @@ function findNotFoundFile(dir) {
   return null;
 }
 
-async function enumerateCatchAll(page) {
-  for (const ext of ["tsx", "ts", "jsx", "js"]) {
-    const p = join(page.dir, `page.${ext}`);
+async function enumerateParams(page) {
+  for (const ext of PAGE_EXTENSIONS) {
+    const p = join(page.dir, ext);
     if (!existsSync(p)) continue;
     try {
       const mod = await import(`${p}?t=${Date.now()}`);
@@ -85,13 +105,12 @@ async function enumerateCatchAll(page) {
   return [];
 }
 
-function routesFromCatchAllParams(catchall, params) {
+function routesFromParams(base, paramName, params) {
   return params
     .map((p) => {
-      const v = p[catchall.paramName];
-      const arr = Array.isArray(v) ? v : v != null ? [String(v)] : [];
-      if (arr.length === 0) return null;
-      return catchall.base + "/" + arr.join("/");
+      const v = p[paramName];
+      if (v == null) return null;
+      return base + "/" + (Array.isArray(v) ? v.join("/") : String(v));
     })
     .filter(Boolean);
 }
@@ -130,7 +149,7 @@ function startDevServer(port, logFile) {
   const runtime = findBun();
   const stdio = logFile
     ? ["ignore", openSync(logFile, "w"), "inherit"]
-    : ["ignore", "ignore", "inherit"];
+    : ["ignore", "inherit", "inherit"];
   const proc = spawn(runtime, [devServer, "--port", String(port), "--hostname", HOST], {
     stdio,
     env: { ...process.env, NO_COLOR: "1", SWIFT_RUST_BUILD: "1" },
@@ -167,6 +186,16 @@ async function fetchRoute(pathname, timeoutMs = ROUTE_TIMEOUT_MS) {
   }
 }
 
+function tailDevLog(lines = 40) {
+  if (!activeLogFile || !existsSync(activeLogFile)) return [];
+  try {
+    const all = readFileSync(activeLogFile, "utf8").split("\n");
+    return all.slice(-lines);
+  } catch {
+    return [];
+  }
+}
+
 function stripHmrScript(html) {
   return html.replace(/\s*<script src="\/_swift-rust\/hmr-client\.js"[^>]*>\s*<\/script>/g, "");
 }
@@ -179,9 +208,6 @@ function writeStaticFile(outDir, pathname, html) {
 }
 
 function writeConfigJson(outDir, hasPublic) {
-  const headers = [
-    { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
-  ];
   const config = {
     version: 3,
     framework: { slug: "swift-rust", name: "Swift Rust" },
@@ -220,12 +246,24 @@ async function main() {
   const pages = discoverPages(APP_DIR);
   const staticRoutes = pages.filter((p) => p.type === "static").map((p) => p.route);
   const catchalls = pages.filter((p) => p.type === "catchall");
+  const dynamics = pages.filter((p) => p.type === "dynamic");
   process.stdout.write(`  ${paint("dim", "•")} static routes: ${paint("bold", String(staticRoutes.length))}\n`);
+
   for (const ca of catchalls) {
-    const params = await enumerateCatchAll(ca);
-    const routes = routesFromCatchAllParams(ca, params);
+    const params = await enumerateParams(ca);
+    const routes = routesFromParams(ca.base, ca.paramName, params);
     for (const r of routes) staticRoutes.push(r);
     process.stdout.write(`  ${paint("dim", "•")} catch-all ${paint("cyan", ca.base + "/[...]")}: ${paint("bold", String(routes.length))}\n`);
+  }
+  for (const dyn of dynamics) {
+    const params = await enumerateParams(dyn);
+    if (params.length === 0) {
+      process.stdout.write(`  ${paint("dim", "•")} dynamic ${paint("cyan", dyn.base + "/[" + dyn.paramName + "]")}: ${paint("yellow", "needs serverless function (skipped for v0.1.0)")}\n`);
+      continue;
+    }
+    const routes = routesFromParams(dyn.base, dyn.paramName, params);
+    for (const r of routes) staticRoutes.push(r);
+    process.stdout.write(`  ${paint("dim", "•")} dynamic ${paint("cyan", dyn.base + "/[" + dyn.paramName + "]")}: ${paint("bold", String(routes.length))}\n`);
   }
 
   const allRoutes = [...new Set(staticRoutes)].sort();
@@ -234,7 +272,9 @@ async function main() {
   process.stdout.write(`  ${paint("dim", "starting dev server on " + HOST + ":" + PORT_START + "…")}\n`);
   PORT = await findFreePort(PORT_START);
   process.stdout.write(`  ${paint("dim", "using port " + PORT + "\n")}\n`);
-  const proc = startDevServer(PORT, null);
+  activeLogFile = process.env.SWIFT_RUST_BUILD_LOG || "/tmp/swift-rust-build-dev.log";
+  try { unlinkSync(activeLogFile); } catch {}
+  const proc = startDevServer(PORT, activeLogFile);
   let okCount = 0;
   let skipCount = 0;
   let failCount = 0;
@@ -255,11 +295,21 @@ async function main() {
           process.stdout.write(`  ${paint("dim", "○")} ${route} ${paint("dim", "(404, skipped)")}\n`);
         } else {
           failCount++;
+          const snippet = body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
           process.stdout.write(`  ${paint("yellow", "!")} ${route} ${paint("dim", `(${status})`)}\n`);
+          if (snippet) process.stdout.write(`      ${paint("dim", snippet)}\n`);
         }
       } catch (e) {
         failCount++;
         process.stdout.write(`  ${paint("red", "✗")} ${route} ${paint("dim", e.name === "AbortError" ? "timeout" : e.message)}\n`);
+      }
+    }
+
+    if (failCount > 0) {
+      const tail = tailDevLog(30);
+      if (tail.length) {
+        process.stdout.write(`\n  ${paint("dim", "dev server tail:")}\n`);
+        for (const line of tail) process.stdout.write(`    ${paint("dim", line)}\n`);
       }
     }
 
