@@ -351,7 +351,7 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
       format: linter === "biome" ? "biome format --write ." : "prettier --write .",
     },
     dependencies: {
-      "swift-rust": "0.1.0",
+      "swift-rust": "^0.2.0",
       react: "^19.0.0",
       "react-dom": "^19.0.0",
       ...(useShadcn
@@ -417,6 +417,7 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
   const gitignore = [
     "node_modules/",
     ".swift-rust/",
+    ".vercel/",
     "dist/",
     ".turbo/",
     ".env*.local",
@@ -425,6 +426,31 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
     ".DS_Store",
   ].join("\n");
   await writeFile(join(target, ".gitignore"), `${gitignore}\n`);
+
+  const vercelConfig = {
+    $schema: "https://openapi.vercel.sh/vercel.json",
+    buildCommand: "bun run build",
+    installCommand: "bun install --frozen-lockfile",
+    outputDirectory: ".vercel/output",
+    framework: null,
+    trailingSlash: false,
+    cleanUrls: true,
+    headers: [
+      {
+        source: "/_swift-rust/static/(.*)",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        source: "/fonts/(.*)",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+    ],
+  };
+  await writeFile(join(target, "vercel.json"), `${JSON.stringify(vercelConfig, null, 2)}\n`);
 
   if (tailwind) {
     const postcss = `const config = {
@@ -754,6 +780,20 @@ Built with [swift-rust](https://swift-rust.dev) — the React framework powered 
 - [Documentation](https://swift-rust.dev/docs)
 - [Examples](https://github.com/swift-rust/swift-rust/tree/main/examples)
 - [Discord](https://discord.gg/swift-rust)
+
+## Deploy to Vercel
+
+The fastest way to deploy is to push to GitHub and import the repo on Vercel:
+
+\`\`\`bash
+git init && git add -A && git commit -m "init"
+git remote add origin https://github.com/you/${projectName}.git
+git push -u origin main
+\`\`\`
+
+Then on [vercel.com/new](https://vercel.com/new), import the repo. No configuration needed — \`vercel.json\` is included. Your site will be live at \`https://${projectName}.vercel.app\`.
+
+For custom domains and ISR / serverless functions, see the [deploy guide](https://swift-rust.dev/docs/guides/deploying).
 `;
   await writeFile(join(target, "README.md"), readme);
 

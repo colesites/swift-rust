@@ -70,6 +70,30 @@ CMD ["/usr/local/bin/app"]`}</code>
         etc.).
       </p>
 
+      <h2>Deploy to Vercel</h2>
+      <p>
+        Every new app from <code>create-swift-rust</code> ships with a <code>vercel.json</code>
+        preconfigured for the Swift Rust build output. To deploy:
+      </p>
+      <ol>
+        <li>Push your project to a GitHub repository.</li>
+        <li>
+          Go to <a href="https://vercel.com/new" target="_blank" rel="noopener">vercel.com/new</a>
+          {" "}and import the repo.
+        </li>
+        <li>Click <strong>Deploy</strong>. Vercel will run <code>bun run build</code> which produces <code>.vercel/output/</code> and serves it on the CDN.</li>
+      </ol>
+      <p>
+        The static export supports pre-rendered pages, 404 handling, immutable asset caching, and
+        <code>generateStaticParams</code> for catch-all routes. Serverless functions, ISR, and Edge
+        runtime are planned for v0.2.0.
+      </p>
+      <p>
+        To deploy the same project to a different provider, run <code>bun run build</code> locally
+        and upload the contents of <code>.vercel/output/static/</code> to any static host (Netlify,
+        Cloudflare Pages, S3 + CloudFront, GitHub Pages).
+      </p>
+
       <h2>Next steps</h2>
       <p>
         Continue to <a href="/docs/guides/migrating-from-nextjs">Migrating from Next.js</a> if
