@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "prebuild": "bun run --filter 'swift-rust' build",
+    "prebuild": "bunx turbo run build --filter='swift-rust...'",
     "dev": "swift-rust dev",
     "build": "swift-rust build",
     "start": "swift-rust start",
