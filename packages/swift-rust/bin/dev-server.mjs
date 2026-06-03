@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, statSync, readFileSync, readdirSync, watch as fsWatch } from "node:fs";
+import { existsSync, statSync, readFileSync, readdirSync, writeFileSync, unlinkSync, watch as fsWatch } from "node:fs";
 import { join, resolve, extname, relative, dirname, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { performance } from "node:perf_hooks";
@@ -605,6 +605,63 @@ async function renderToStringCompat(tree) {
   return renderToString(tree);
 }
 
+// ── Client islands: page-level "use client" hydration ──────────────────────
+// A page whose first meaningful line is `"use client"` is bundled for the
+// browser and hydrated, so interactive components (e.g. the Pdf viewer) run.
+// Static pages are untouched and ship zero JS.
+
+const islandBundleCache = new Map(); // pageFile -> { mtime, code }
+
+export function isClientPage(file) {
+  try {
+    for (const raw of readFileSync(file, "utf8").split("\n")) {
+      const t = raw.trim();
+      if (!t || t.startsWith("//") || t.startsWith("/*") || t.startsWith("*")) continue;
+      return /^["']use client["'];?$/.test(t);
+    }
+  } catch {}
+  return false;
+}
+
+async function buildIslandBundle(pageFile) {
+  if (typeof Bun === "undefined" || typeof Bun.build !== "function") {
+    throw new Error("client islands require the Bun runtime");
+  }
+  const mtime = statSync(pageFile).mtimeMs;
+  const cached = islandBundleCache.get(pageFile);
+  if (cached && cached.mtime === mtime) return cached.code;
+
+  // Temp hydration entry, written next to the page so module resolution works.
+  const entryPath = join(dirname(pageFile), `.__sr_island_${process.pid}_${Date.now()}.js`);
+  const entry = `import { hydrateRoot } from "react-dom/client";
+import { createElement } from "react";
+import Page from ${JSON.stringify(pageFile)};
+const el = document.getElementById("__sr_island_root");
+if (el) {
+  let params = {};
+  try { params = JSON.parse(el.getAttribute("data-sr-params") || "{}"); } catch {}
+  hydrateRoot(el, createElement(Page, { params }));
+}
+`;
+  writeFileSync(entryPath, entry);
+  try {
+    const result = await Bun.build({
+      entrypoints: [entryPath],
+      target: "browser",
+      minify: true,
+      define: { "process.env.NODE_ENV": '"production"' },
+    });
+    if (!result.success) {
+      throw new Error(result.logs.map((l) => l.message).join("\n"));
+    }
+    const code = await result.outputs[0].text();
+    islandBundleCache.set(pageFile, { mtime, code });
+    return code;
+  } finally {
+    try { unlinkSync(entryPath); } catch {}
+  }
+}
+
 async function renderRoute(urlPath) {
   const segments = urlToRouteSegments(urlPath);
   const route = resolvePageRoute(segments);
@@ -628,7 +685,16 @@ async function renderRoute(urlPath) {
       get: (t, k) => (k in t ? t[k] : dynamicParams.get(String(k))),
     });
 
+    const clientPage = isClientPage(route.file);
     let tree = React.createElement(Page, { params: paramsProxy });
+    if (clientPage) {
+      // Wrap in a hydration root so the client bundle can mount into it.
+      tree = React.createElement(
+        "div",
+        { id: "__sr_island_root", "data-sr-params": JSON.stringify(route.params || {}) },
+        tree,
+      );
+    }
     for (let i = layouts.length - 1; i >= 0; i--) {
       const layoutMod = await loadModule(layouts[i].file, { bust: true });
       const Layout = layoutMod.default ?? layoutMod.Layout ?? layoutMod.layout;
@@ -636,7 +702,7 @@ async function renderRoute(urlPath) {
     }
     const html = await renderToStringCompat(tree);
     const metadata = await resolveMetadata(layouts.map((l) => l.file), route.file, route.params, segments);
-    return { status: 200, html, metadata, error: null, pageFile: route.file, layoutFiles: layouts.map((l) => l.file), notFoundFile, errorFile, loadingFile, segments };
+    return { status: 200, html, metadata, error: null, clientPage, pageFile: route.file, layoutFiles: layouts.map((l) => l.file), notFoundFile, errorFile, loadingFile, segments };
   } catch (err) {
     if (err?.digest === "NOT_FOUND" || err?.name === "NotFoundError") {
       return await renderNotFound(segments);
@@ -1165,6 +1231,26 @@ async function handleFetch(req) {
     return new Response("Image not found", { status: 404 });
   }
 
+  // Client-island hydration bundle for a "use client" page.
+  if (pathname === "/_swift-rust/island.js") {
+    const p = url.searchParams.get("p");
+    if (p && existsSync(p)) {
+      try {
+        const code = await buildIslandBundle(p);
+        return new Response(code, {
+          headers: { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "no-cache" },
+        });
+      } catch (e) {
+        logError(e, `island bundle failed for ${p}`);
+        return new Response(`/* island build error: ${String(e?.message || e).replace(/\*\//g, "* /")} */`, {
+          status: 500,
+          headers: { "Content-Type": "application/javascript; charset=utf-8" },
+        });
+      }
+    }
+    return new Response("// island not found", { status: 404, headers: { "Content-Type": "application/javascript" } });
+  }
+
   if (pathname.startsWith("/_swift-rust/")) {
     return new Response("Not found", { status: 404 });
   }
@@ -1290,7 +1376,12 @@ async function handleFetch(req) {
 
   logRequest({ method, url: pathname, status: 200, duration: total, compileMs });
   await scanFontsFromLayouts();
-  return new Response(await wrapInDocumentAsync({ head: metadataToHead(renderResult.metadata), body: renderResult.html || "" }), {
+  let doc = await wrapInDocumentAsync({ head: metadataToHead(renderResult.metadata), body: renderResult.html || "" });
+  if (renderResult.clientPage && renderResult.pageFile) {
+    const src = `/_swift-rust/island.js?p=${encodeURIComponent(renderResult.pageFile)}`;
+    doc = doc.replace("</body>", `<script type="module" src="${src}"></script>\n</body>`);
+  }
+  return new Response(doc, {
     status: 200,
     headers: { "Content-Type": "text/html; charset=utf-8" },
   });

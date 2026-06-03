@@ -91,3 +91,6 @@ temp/
 
 # srspack on-disk build cache
 .srspack-cache/
+
+# transient client-island build entries
+.__sr_island_*

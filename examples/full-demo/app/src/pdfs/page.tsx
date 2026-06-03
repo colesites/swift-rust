@@ -1,3 +1,4 @@
+"use client";
 import type { Metadata } from "swift-rust";
 import { Pdf } from "swift-rust/pdf";
 

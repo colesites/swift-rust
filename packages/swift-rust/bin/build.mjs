@@ -214,6 +214,41 @@ function writeRawFile(outDir, name, contents) {
   writeFileSync(outPath, contents);
 }
 
+// Client-island hydration: a "use client" page's HTML references the dev-only
+// bundle at /_swift-rust/island.js?p=<file>. For the static export we fetch
+// that bundle, write it as a real file, and rewrite the script src to point at
+// it — so hydration works on the deployed site, not just in `bun dev`.
+const islandWritten = new Map();
+function simpleHash(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(36);
+}
+async function localizeIslands(html) {
+  const re = /\/_swift-rust\/island\.js\?p=([^"]+)/g;
+  const found = new Set();
+  let m;
+  while ((m = re.exec(html)) !== null) found.add(m[1]);
+  if (found.size === 0) return html;
+  let out = html;
+  for (const enc of found) {
+    let staticUrl = islandWritten.get(enc);
+    if (!staticUrl) {
+      const { status, body } = await fetchRoute(`/_swift-rust/island.js?p=${enc}`);
+      if (status !== 200) continue;
+      const rel = `_swift-rust/island/${simpleHash(enc)}.js`;
+      writeRawFile(STATIC_DIR, rel, body);
+      staticUrl = `/${rel}`;
+      islandWritten.set(enc, staticUrl);
+    }
+    out = out.split(`/_swift-rust/island.js?p=${enc}`).join(staticUrl);
+  }
+  return out;
+}
+
 function writeConfigJson(outDir, _hasPublic) {
   // Build Output API v3 config. Only schema-valid fields here — unknown
   // top-level fields or route properties are rejected at "Deploying outputs".
@@ -290,7 +325,7 @@ async function main() {
       try {
         const { status, body } = await fetchRoute(route);
         if (status === 200) {
-          const cleaned = stripHmrScript(body);
+          const cleaned = await localizeIslands(stripHmrScript(body));
           writeStaticFile(STATIC_DIR, route, cleaned);
           okCount++;
           process.stdout.write(`  ${paint("green", "✓")} ${route}\n`);
