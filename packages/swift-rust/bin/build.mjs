@@ -214,16 +214,14 @@ function writeRawFile(outDir, name, contents) {
   writeFileSync(outPath, contents);
 }
 
-function writeConfigJson(outDir, hasPublic) {
+function writeConfigJson(outDir, _hasPublic) {
+  // Build Output API v3 config. Only schema-valid fields here — unknown
+  // top-level fields or route properties are rejected at "Deploying outputs".
   const config = {
     version: 3,
-    framework: { slug: "swift-rust", name: "Swift Rust" },
     routes: [
       { src: "/_swift-rust/static/(.*)", headers: { "Cache-Control": "public, max-age=31536000, immutable" } },
       { src: "/fonts/(.*)", headers: { "Cache-Control": "public, max-age=31536000, immutable" } },
-      ...(hasPublic
-        ? [{ src: "/(.*)", headers: { "Cache-Control": "public, max-age=31536000, immutable" }, "isr-per-page": false }]
-        : []),
       { handle: "filesystem" },
       { src: "^(.*)$", status: 404, dest: "/404.html" },
     ],
@@ -231,7 +229,6 @@ function writeConfigJson(outDir, hasPublic) {
       "404.html": { path: "404", contentType: "text/html; charset=utf-8" },
     },
   };
-  if (!hasPublic) config.routes = config.routes.filter((r) => !r["isr-per-page"]);
   writeFileSync(join(outDir, "config.json"), `${JSON.stringify(config, null, 2)}\n`);
 }
 
