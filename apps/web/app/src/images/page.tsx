@@ -1,6 +1,6 @@
 import type { Metadata } from "swift-rust";
 import Image from "swift-rust/image";
-import { BLUR_WHITE } from "@/lib/blur";
+import { BLUR } from "@/lib/blur";
 
 export const metadata: Metadata = { title: "Images" };
 
@@ -38,7 +38,7 @@ export default function ImagesPage() {
                 width={img.w}
                 height={img.h}
                 placeholder="blur"
-                blurDataURL={BLUR_WHITE}
+                blurDataURL={BLUR}
                 className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
             </div>
