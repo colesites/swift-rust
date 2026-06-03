@@ -1,5 +1,11 @@
 # swift-rust
 
+## 0.2.1
+
+### Patch Changes
+
+- 15da4e2: Add `swift-rust build` command (Vercel Build Output API v3 adapter). Emits `.vercel/output/` with `config.json` + static HTML for Vercel deployment. Works with `bun run build` in the docs site.
+
 ## 0.2.0
 
 ### Minor Changes
