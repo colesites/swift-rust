@@ -82,3 +82,9 @@ test/fixtures/**/.turbo
 .parcel-cache
 .tmp/
 temp/
+
+# Vercel output
+.vercel/
+
+# Swift-Rust build
+.swift-rust/

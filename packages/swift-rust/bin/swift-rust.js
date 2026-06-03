@@ -41,6 +41,20 @@ if (cmd === "dev") {
   process.exit(code);
 }
 
+if (cmd === "build") {
+  const buildScript = join(here, "build.mjs");
+  const runtime = findBun();
+  const child = spawn(runtime, [buildScript, ...process.argv.slice(3)], {
+    stdio: "inherit",
+    env: process.env,
+  });
+  const code = await new Promise((r) => {
+    child.on("exit", (c) => r(c ?? 1));
+    child.on("error", () => r(1));
+  });
+  process.exit(code);
+}
+
 function getBinaryName() {
   if (process.platform === "win32") return "swift-rust.exe";
   return "swift-rust";

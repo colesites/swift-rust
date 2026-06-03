@@ -1,0 +1,318 @@
+#!/usr/bin/env node
+import { spawn } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  writeFileSync,
+  rmSync,
+  cpSync,
+  openSync,
+  unlinkSync,
+} from "node:fs";
+import { join, resolve, dirname, sep } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const cwd = process.cwd();
+const APP_DIR_CANDIDATES = [resolve(cwd, "app", "src"), resolve(cwd, "app")];
+const APP_DIR = APP_DIR_CANDIDATES.find((p) => existsSync(p)) ?? resolve(cwd, "app");
+const PUBLIC_DIR = resolve(cwd, "public");
+const OUT_DIR = resolve(cwd, ".vercel", "output");
+const STATIC_DIR = join(OUT_DIR, "static");
+const RUNTIME_DIR = resolve(fileURLToPath(import.meta.url), "..", "runtime");
+
+const PORT_START = parseInt(process.env.SWIFT_RUST_BUILD_PORT || "47321", 10);
+const HOST = "127.0.0.1";
+let PORT = PORT_START;
+const ROUTE_TIMEOUT_MS = 30_000;
+const HEALTH_TIMEOUT_MS = 30_000;
+
+const PAGE_EXTENSIONS = new Set(["page.tsx", "page.ts", "page.jsx", "page.js"]);
+const CATCH_PARAM = /^\[\.{3}([^\]]+)\]$/;
+const NAMED_PARAM = /^\[([^\]]+)\]$/;
+const NOT_FOUND_FILES = ["not-found.tsx", "not-found.ts", "not-found.jsx", "not-found.js"];
+
+const c = {
+  reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[2m",
+  red: "\x1b[31m", green: "\x1b[32m", yellow: "\x1b[33m",
+  cyan: "\x1b[36m", gray: "\x1b[90m",
+};
+const useColor = process.stdout.isTTY !== false && !process.env.NO_COLOR;
+const paint = (color, s) => (useColor ? `${c[color]}${s}${c.reset}` : s);
+const fmtMs = (ms) => (ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(2)}s`);
+
+function discoverPages(dir, base = "") {
+  const pages = [];
+  if (!existsSync(dir)) return pages;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      const match = entry.name.match(CATCH_PARAM);
+      if (match) {
+        pages.push({ type: "catchall", dir: full, base, paramName: match[1] });
+        continue;
+      }
+      const named = entry.name.match(NAMED_PARAM);
+      const segment = named ? `[${named[1]}]` : entry.name;
+      pages.push(...discoverPages(full, base + "/" + segment));
+    } else if (PAGE_EXTENSIONS.has(entry.name)) {
+      pages.push({ type: "static", file: full, route: base || "/" });
+    }
+  }
+  return pages;
+}
+
+function findNotFoundFile(dir) {
+  for (const name of NOT_FOUND_FILES) {
+    const p = join(dir, name);
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+
+async function enumerateCatchAll(page) {
+  for (const ext of ["tsx", "ts", "jsx", "js"]) {
+    const p = join(page.dir, `page.${ext}`);
+    if (!existsSync(p)) continue;
+    try {
+      const mod = await import(`${p}?t=${Date.now()}`);
+      if (typeof mod.generateStaticParams === "function") {
+        return await mod.generateStaticParams();
+      }
+    } catch {}
+  }
+  return [];
+}
+
+function routesFromCatchAllParams(catchall, params) {
+  return params
+    .map((p) => {
+      const v = p[catchall.paramName];
+      const arr = Array.isArray(v) ? v : v != null ? [String(v)] : [];
+      if (arr.length === 0) return null;
+      return catchall.base + "/" + arr.join("/");
+    })
+    .filter(Boolean);
+}
+
+function findBun() {
+  if (process.env.SWIFT_RUST_RUNTIME) return process.env.SWIFT_RUST_RUNTIME;
+  if (process.versions?.bun) return process.execPath;
+  const candidates = [
+    process.env.BUN_INSTALL ? join(process.env.BUN_INSTALL, "bin", "bun") : null,
+    join(process.env.HOME || "", ".bun", "bin", "bun"),
+    "/usr/local/bin/bun",
+    "/opt/homebrew/bin/bun",
+  ].filter(Boolean);
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  return process.execPath;
+}
+
+async function findFreePort(start) {
+  const net = await import("node:net");
+  for (let p = start; p < start + 50; p++) {
+    const ok = await new Promise((resolve) => {
+      const sock = net.createServer();
+      sock.once("error", () => resolve(false));
+      sock.once("listening", () => sock.close(() => resolve(true)));
+      sock.listen(p, HOST);
+    });
+    if (ok) return p;
+  }
+  throw new Error(`no free port in range ${start}..${start + 50}`);
+}
+
+function startDevServer(port, logFile) {
+  const devServer = resolve(fileURLToPath(import.meta.url), "..", "dev-server.mjs");
+  const runtime = findBun();
+  const stdio = logFile
+    ? ["ignore", openSync(logFile, "w"), "inherit"]
+    : ["ignore", "ignore", "inherit"];
+  const proc = spawn(runtime, [devServer, "--port", String(port), "--hostname", HOST], {
+    stdio,
+    env: { ...process.env, NO_COLOR: "1", SWIFT_RUST_BUILD: "1" },
+    cwd,
+  });
+  proc.on("error", (e) => process.stderr.write(`  ${paint("red", "dev server spawn error:")} ${e.message}\n`));
+  return proc;
+}
+
+async function waitForServer(timeoutMs = HEALTH_TIMEOUT_MS) {
+  const start = Date.now();
+  const url = `http://${HOST}:${PORT}/_swift-rust/health`;
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return;
+    } catch {}
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  throw new Error(`dev server did not become ready at ${url} within ${timeoutMs}ms`);
+}
+
+async function fetchRoute(pathname, timeoutMs = ROUTE_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`http://${HOST}:${PORT}${pathname}`, {
+      signal: controller.signal,
+      redirect: "manual",
+    });
+    return { status: res.status, body: await res.text() };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function stripHmrScript(html) {
+  return html.replace(/\s*<script src="\/_swift-rust\/hmr-client\.js"[^>]*>\s*<\/script>/g, "");
+}
+
+function writeStaticFile(outDir, pathname, html) {
+  const rel = pathname === "/" ? "index.html" : `${pathname.replace(/^\//, "")}/index.html`;
+  const outPath = join(outDir, rel);
+  mkdirSync(dirname(outPath), { recursive: true });
+  writeFileSync(outPath, html);
+}
+
+function writeConfigJson(outDir, hasPublic) {
+  const headers = [
+    { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
+  ];
+  const config = {
+    version: 3,
+    framework: { slug: "swift-rust", name: "Swift Rust" },
+    routes: [
+      { src: "/_swift-rust/static/(.*)", headers: { "Cache-Control": "public, max-age=31536000, immutable" } },
+      { src: "/fonts/(.*)", headers: { "Cache-Control": "public, max-age=31536000, immutable" } },
+      ...(hasPublic
+        ? [{ src: "/(.*)", headers: { "Cache-Control": "public, max-age=31536000, immutable" }, "isr-per-page": false }]
+        : []),
+      { handle: "filesystem" },
+      { src: "^(.*)$", status: 404, dest: "/404.html" },
+    ],
+    overrides: {
+      "404": { path: "404", contentType: "text/html; charset=utf-8" },
+    },
+  };
+  if (!hasPublic) config.routes = config.routes.filter((r) => !r["isr-per-page"]);
+  writeFileSync(join(outDir, "config.json"), `${JSON.stringify(config, null, 2)}\n`);
+}
+
+async function main() {
+  const start = Date.now();
+  process.stdout.write(`\n  ${paint("cyan", "▲")} ${paint("bold", "swift-rust build")} ${paint("dim", "→ .vercel/output (BOA v3)")}\n`);
+
+  if (!existsSync(APP_DIR)) {
+    process.stderr.write(`\n  ${paint("red", "✗")} No app/ directory found in ${cwd}\n\n`);
+    process.exit(1);
+  }
+
+  process.stdout.write(`  ${paint("dim", "app:   ")} ${paint("cyan", APP_DIR.replace(cwd + sep, ""))}\n`);
+  process.stdout.write(`  ${paint("dim", "out:   ")} ${paint("cyan", ".vercel/output")}\n\n`);
+
+  rmSync(OUT_DIR, { recursive: true, force: true });
+  mkdirSync(STATIC_DIR, { recursive: true });
+
+  const pages = discoverPages(APP_DIR);
+  const staticRoutes = pages.filter((p) => p.type === "static").map((p) => p.route);
+  const catchalls = pages.filter((p) => p.type === "catchall");
+  process.stdout.write(`  ${paint("dim", "•")} static routes: ${paint("bold", String(staticRoutes.length))}\n`);
+  for (const ca of catchalls) {
+    const params = await enumerateCatchAll(ca);
+    const routes = routesFromCatchAllParams(ca, params);
+    for (const r of routes) staticRoutes.push(r);
+    process.stdout.write(`  ${paint("dim", "•")} catch-all ${paint("cyan", ca.base + "/[...]")}: ${paint("bold", String(routes.length))}\n`);
+  }
+
+  const allRoutes = [...new Set(staticRoutes)].sort();
+  process.stdout.write(`  ${paint("dim", "•")} total: ${paint("bold", String(allRoutes.length))}\n\n`);
+
+  process.stdout.write(`  ${paint("dim", "starting dev server on " + HOST + ":" + PORT_START + "…")}\n`);
+  PORT = await findFreePort(PORT_START);
+  process.stdout.write(`  ${paint("dim", "using port " + PORT + "\n")}\n`);
+  const proc = startDevServer(PORT, null);
+  let okCount = 0;
+  let skipCount = 0;
+  let failCount = 0;
+  try {
+    await waitForServer();
+    process.stdout.write(`  ${paint("green", "✓")} server ready\n\n`);
+
+    for (const route of allRoutes) {
+      try {
+        const { status, body } = await fetchRoute(route);
+        if (status === 200) {
+          const cleaned = stripHmrScript(body);
+          writeStaticFile(STATIC_DIR, route, cleaned);
+          okCount++;
+          process.stdout.write(`  ${paint("green", "✓")} ${route}\n`);
+        } else if (status === 404) {
+          skipCount++;
+          process.stdout.write(`  ${paint("dim", "○")} ${route} ${paint("dim", "(404, skipped)")}\n`);
+        } else {
+          failCount++;
+          process.stdout.write(`  ${paint("yellow", "!")} ${route} ${paint("dim", `(${status})`)}\n`);
+        }
+      } catch (e) {
+        failCount++;
+        process.stdout.write(`  ${paint("red", "✗")} ${route} ${paint("dim", e.name === "AbortError" ? "timeout" : e.message)}\n`);
+      }
+    }
+
+    const notFoundFile = findNotFoundFile(APP_DIR);
+    if (notFoundFile) {
+      try {
+        const { status, body } = await fetchRoute("/_not_found_");
+        if (status === 200 || status === 404) {
+          const html = stripHmrScript(body).replace(/<title>[^<]*<\/title>/, "<title>404 · Swift Rust</title>");
+          writeStaticFile(STATIC_DIR, "/404.html", html);
+          process.stdout.write(`\n  ${paint("green", "✓")} 404.html\n`);
+        }
+      } catch (e) {
+        process.stdout.write(`\n  ${paint("yellow", "!")} 404.html ${paint("dim", "fallback to minimal page")}\n`);
+      }
+    }
+    if (!existsSync(join(STATIC_DIR, "404.html"))) {
+      writeStaticFile(STATIC_DIR, "/404.html", `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8" /><title>404 · Swift Rust</title></head>
+<body><main style="font-family:system-ui;padding:4rem;text-align:center">
+<h1>404</h1><p>This page could not be found.</p><a href="/">← Back home</a>
+</main></body></html>`);
+    }
+
+    if (existsSync(RUNTIME_DIR)) {
+      cpSync(RUNTIME_DIR, join(STATIC_DIR, "_swift-rust"), { recursive: true });
+    }
+    const hasPublic = existsSync(PUBLIC_DIR);
+    if (hasPublic) {
+      cpSync(PUBLIC_DIR, STATIC_DIR, { recursive: true });
+      process.stdout.write(`  ${paint("green", "✓")} copied public/\n`);
+    }
+
+    writeConfigJson(OUT_DIR, hasPublic);
+
+    const total = Date.now() - start;
+    const outRel = OUT_DIR.startsWith(cwd + sep) ? OUT_DIR.slice(cwd.length + 1) : OUT_DIR;
+    const skippedPart = skipCount > 0 ? paint("dim", `${skipCount} skipped`) : "";
+    const failedPart = failCount > 0 ? paint("yellow", `${failCount} failed`) : paint("dim", "0 failed");
+    const summary = `  ${paint("green", "✓")} ${okCount} ok  ${skippedPart}  ${failedPart}\n`;
+    process.stdout.write(`\n  ${paint("bold", "done")} ${paint("dim", "in " + fmtMs(total))}\n`);
+    process.stdout.write(summary);
+    process.stdout.write(`  ${paint("dim", "output: " + outRel)}\n\n`);
+
+    const treatFailuresAsWarning = okCount > 0;
+    process.exit(treatFailuresAsWarning || failCount === 0 ? 0 : 1);
+  } finally {
+    try { proc.kill("SIGTERM"); } catch {}
+    setTimeout(() => { try { proc.kill("SIGKILL"); } catch {} process.exit(0); }, 2000).unref();
+  }
+}
+
+main().catch((e) => {
+  process.stderr.write(`\n  ${paint("red", "✗")} ${e?.stack || e?.message || String(e)}\n\n`);
+  process.exit(1);
+});

@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "swift-rust dev --port 3001",
+    "build": "swift-rust build",
+    "start": "swift-rust dev --port 3001",
     "lint": "biome check --no-errors-on-unmatched $(pwd)/app",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf .swift-rust .turbo dist"
