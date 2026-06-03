@@ -1,10 +1,8 @@
 import type { Metadata } from "swift-rust";
 import Image from "swift-rust/image";
+import { BLUR_WHITE } from "@/lib/blur";
 
 export const metadata: Metadata = { title: "Images" };
-
-const TRANSPARENT_PNG =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
 const IMAGES = [
   { src: "/samples/axelborg-towers-modern-architecture.jpg", alt: "Modern architecture towers", w: 3456, h: 2635, label: "4:3" },
@@ -40,7 +38,7 @@ export default function ImagesPage() {
                 width={img.w}
                 height={img.h}
                 placeholder="blur"
-                blurDataURL={TRANSPARENT_PNG}
+                blurDataURL={BLUR_WHITE}
                 className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
             </div>

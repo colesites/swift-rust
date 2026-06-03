@@ -1169,6 +1169,24 @@ async function handleFetch(req) {
     return new Response("Not found", { status: 404 });
   }
 
+  // App-directory metadata icons (app/favicon.ico, app/favicon.svg, …) served
+  // from the site root, Next.js style.
+  {
+    const iconName = pathname.replace(/^\/+/, "");
+    if (APP_ICON_FILES.includes(iconName)) {
+      const candidate = join(APP_DIR, iconName);
+      if (existsSync(candidate) && statSync(candidate).isFile()) {
+        const ext = extname(candidate).toLowerCase();
+        const mime =
+          { ".ico": "image/x-icon", ".svg": "image/svg+xml", ".png": "image/png" }[ext] ||
+          "application/octet-stream";
+        const file = Bun?.file ? Bun.file(candidate) : readFileSync(candidate);
+        logRequest({ method, url: pathname, status: 200, duration: performance.now() - reqStart, compileMs: 0 });
+        return new Response(file, { headers: { "Content-Type": mime } });
+      }
+    }
+  }
+
   if (existsSync(PUBLIC_DIR)) {
     const safe = pathname.replace(/\.\.+/g, "").replace(/^\/+/, "");
     const candidate = join(PUBLIC_DIR, safe);

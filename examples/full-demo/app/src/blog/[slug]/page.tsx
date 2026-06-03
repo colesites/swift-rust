@@ -1,6 +1,8 @@
 import { formatDate } from "@/lib/format";
+import { BLUR_WHITE } from "@/lib/blur";
 import { getPost, posts } from "@/lib/posts";
 import type { Metadata } from "swift-rust";
+import Image from "swift-rust/image";
 import { Link } from "swift-rust";
 import { notFound } from "swift-rust/router";
 
@@ -65,9 +67,13 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
       </header>
 
       {post.cover ? (
-        <img
+        <Image
           src={post.cover}
           alt={post.title}
+          width={1200}
+          height={630}
+          placeholder="blur"
+          blurDataURL={BLUR_WHITE}
           className="mt-10 aspect-[1200/630] w-full rounded-2xl border border-[var(--color-border)] object-cover"
         />
       ) : null}

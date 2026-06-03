@@ -1,3 +1,5 @@
+import Image from "swift-rust/image";
+import { BLUR_WHITE } from "../blur";
 import { siteConfig } from "../site.config";
 import { MobileNav } from "./mobile-nav";
 
@@ -8,7 +10,15 @@ export function Header() {
         <div className="docs-header-left">
           <MobileNav />
           <a href="/" className="docs-logo">
-          <img src="/favicon.svg" width="24" height="24" alt="Swift Rust" />
+          <Image
+            src="/favicon.svg"
+            alt="Swift Rust"
+            width={24}
+            height={24}
+            placeholder="blur"
+            blurDataURL={BLUR_WHITE}
+            loader={({ src }) => src}
+          />
           <span>Swift Rust</span>
           <span className="badge">v{siteConfig.version}</span>
           </a>
