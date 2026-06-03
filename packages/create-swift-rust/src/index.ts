@@ -351,7 +351,7 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
       format: linter === "biome" ? "biome format --write ." : "prettier --write .",
     },
     dependencies: {
-      "swift-rust": "^0.2.0",
+      "swift-rust": "^1.0.0",
       react: "^19.0.0",
       "react-dom": "^19.0.0",
       ...(useShadcn
