@@ -1,0 +1,15 @@
+[package]
+name = "swift-rust-video"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "Video provider detection, embeds, and the <Video> component (server side)."
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+url = { workspace = true }

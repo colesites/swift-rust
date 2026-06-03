@@ -130,6 +130,7 @@ const YOUTUBE_HOSTS = new Set([
   "www.youtube.com",
   "m.youtube.com",
   "youtube-nocookie.com",
+  "www.youtube-nocookie.com",
 ]);
 const VIMEO_HOSTS = new Set(["vimeo.com", "www.vimeo.com", "player.vimeo.com"]);
 
