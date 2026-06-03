@@ -1,4 +1,5 @@
 import type { Metadata } from "swift-rust";
+import { Pdf } from "swift-rust/pdf";
 
 export const metadata: Metadata = { title: "PDFs" };
 
@@ -72,22 +73,46 @@ export default function PdfsPage() {
         </ul>
       </div>
 
-      <div className="mt-12 grid gap-6 lg:grid-cols-2">
-        <div className="card overflow-hidden p-0">
-          <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-2.5 text-[0.75rem]">
-            <span className="font-mono text-[var(--color-fg-subtle)]">
-              {PREVIEW_PDF.split("/").pop()}
-            </span>
-            <span className="badge">live preview</span>
+      <h2 className="mt-20 text-2xl font-semibold tracking-tight">Create a PDF</h2>
+      <p className="mt-2 max-w-2xl text-[var(--color-fg-muted)]">
+        Build a document tree with <code>Document</code>, <code>Page</code>, <code>Text</code>, and{" "}
+        <code>View</code>, then stream it as a PDF response.
+      </p>
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <div className="card aspect-[1/1.41] overflow-hidden p-0">
+          <div className="flex h-full flex-col">
+            <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-2.5 text-[0.75rem]">
+              <span className="font-mono text-[var(--color-fg-subtle)]">page-1.pdf</span>
+              <span className="badge">A4</span>
+            </div>
+            <div className="flex-1 space-y-3 p-8">
+              <p className="text-2xl font-bold text-[var(--color-fg)]">Invoice #4218</p>
+              <p className="text-[0.75rem] text-[var(--color-fg-subtle)]">Issued May 28, 2026</p>
+              <hr className="my-4" />
+              <div className="space-y-1.5 text-[0.75rem]">
+                <div className="flex justify-between">
+                  <span>Engineering — May</span>
+                  <span className="font-mono">$ 12,400.00</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Design — May</span>
+                  <span className="font-mono">$ 4,200.00</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Hosting</span>
+                  <span className="font-mono">$ 312.00</span>
+                </div>
+              </div>
+              <hr className="my-4" />
+              <div className="flex justify-between text-[0.875rem] font-semibold">
+                <span>Total</span>
+                <span className="font-mono">$ 16,912.00</span>
+              </div>
+            </div>
           </div>
-          <iframe
-            src={PREVIEW_PDF}
-            title="PDF preview"
-            className="aspect-[1/1.3] w-full bg-[var(--color-surface-2)]"
-          />
         </div>
         <div className="flex flex-col justify-center">
-          <h2 className="text-2xl font-semibold tracking-tight">Generated on every request.</h2>
+          <h3 className="text-xl font-semibold tracking-tight">Generated on every request.</h3>
           <p className="mt-4 text-[var(--color-fg-muted)]">
             The Pdf component is an intermediate representation, not a React element. It gets passed
             to a renderer that streams a PDF response. Use it in an API route, behind a download
@@ -139,6 +164,32 @@ export default function PdfsPage() {
             </code>
           </pre>
         </div>
+      </div>
+
+      <h2 className="mt-20 text-2xl font-semibold tracking-tight">View a PDF</h2>
+      <p className="mt-2 max-w-2xl text-[var(--color-fg-muted)]">
+        The <code>Pdf</code> viewer renders an existing document — all pages, with navigation and
+        zoom — without depending on the browser&apos;s built-in PDF plugin.
+      </p>
+      <div className="mt-8 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+        <Pdf
+          src={PREVIEW_PDF}
+          width="100%"
+          height={820}
+          initialScale="fit-width"
+          showControls
+          showPageNumbers
+          fallback={
+            <a
+              href={PREVIEW_PDF}
+              target="_blank"
+              rel="noreferrer"
+              className="flex h-40 items-center justify-center text-[var(--color-accent)] underline"
+            >
+              Download {PREVIEW_PDF.split("/").pop()}
+            </a>
+          }
+        />
       </div>
     </div>
   );
