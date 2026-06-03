@@ -690,11 +690,38 @@ function errorOverlayHTML(message, stack, extra) {
   return renderErrorOverlay({ message, stack, ...(extra || {}) });
 }
 
+// Metadata icon files looked up at the root of the app directory (app/ or
+// app/src/), Next.js App Router style. Found files are served from the site
+// root and auto-linked in <head>.
+const APP_ICON_FILES = ["favicon.ico", "favicon.svg", "icon.svg", "icon.png", "apple-icon.png"];
+
+function discoverAppIcons() {
+  const icons = [];
+  for (const name of APP_ICON_FILES) {
+    const file = join(APP_DIR, name);
+    if (existsSync(file) && statSync(file).isFile()) icons.push({ name, file });
+  }
+  return icons;
+}
+
+function buildAppIconsLinkTags() {
+  return discoverAppIcons()
+    .map(({ name }) => {
+      const ext = extname(name).toLowerCase();
+      if (name.startsWith("apple-icon")) return `<link rel="apple-touch-icon" href="/${name}" />`;
+      if (ext === ".ico") return `<link rel="icon" href="/${name}" sizes="any" />`;
+      if (ext === ".svg") return `<link rel="icon" href="/${name}" type="image/svg+xml" />`;
+      return `<link rel="icon" href="/${name}" />`;
+    })
+    .join("\n");
+}
+
 async function buildHead(head) {
   const css = await getProcessedGlobalsCss();
   const fontLink = buildGoogleFontsLinkTag();
   return [
     head || "",
+    buildAppIconsLinkTags(),
     fontLink,
     css ? `<style data-swift-rust-globals>${escapeForStyleTag(css)}</style>` : "",
   ].filter(Boolean).join("\n");
@@ -952,6 +979,22 @@ async function handleRequest(req, res) {
     res.writeHead(404);
     res.end("Not found");
     return;
+  }
+
+  // App-directory metadata icons (app/favicon.ico, app/icon.svg, …) served
+  // from the site root, Next.js style.
+  {
+    const iconName = pathname.replace(/^\/+/, "");
+    if (APP_ICON_FILES.includes(iconName)) {
+      const candidate = join(APP_DIR, iconName);
+      if (existsSync(candidate) && statSync(candidate).isFile()) {
+        const ext = extname(candidate).toLowerCase();
+        const mime = { ".ico": "image/x-icon", ".svg": "image/svg+xml", ".png": "image/png" }[ext] || "application/octet-stream";
+        res.writeHead(200, { "Content-Type": mime });
+        res.end(readFileSync(candidate));
+        return;
+      }
+    }
   }
 
   if (existsSync(PUBLIC_DIR)) {

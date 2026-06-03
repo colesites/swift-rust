@@ -347,6 +347,17 @@ async function main() {
       process.stdout.write(`  ${paint("green", "✓")} copied public/\n`);
     }
 
+    // App-directory metadata icons (app/favicon.ico, app/icon.svg, …) → static root.
+    // The <link> tags are already baked into the rendered HTML by the dev server.
+    const APP_ICON_FILES = ["favicon.ico", "favicon.svg", "icon.svg", "icon.png", "apple-icon.png"];
+    for (const name of APP_ICON_FILES) {
+      const src = join(APP_DIR, name);
+      if (existsSync(src)) {
+        cpSync(src, join(STATIC_DIR, name));
+        process.stdout.write(`  ${paint("green", "✓")} ${name}\n`);
+      }
+    }
+
     writeConfigJson(OUT_DIR, hasPublic);
 
     const total = Date.now() - start;

@@ -804,13 +804,15 @@ For custom domains and ISR / serverless functions, see the [deploy guide](https:
 
   const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#0070f3"/><path d="M8 8L16 24L24 8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="16" r="2.5" fill="white"/></svg>
 `;
-  await writeFile(join(target, "public", "favicon.svg"), favicon);
+  // Metadata icons live in the app directory (Next.js style): swift-rust
+  // serves app/favicon.* from the site root and auto-links them in <head>.
+  await writeFile(join(appDir, "favicon.svg"), favicon);
 
   // 32x32 favicon.ico (PNG-encoded) matching favicon.svg, so browsers that
   // request /favicon.ico get a real icon instead of a 404.
   const faviconIco =
     "AAABAAEAICAAAAEAIAAJAwAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAgAAAAIAgGAAAAc3p69AAAAAZiS0dEAP8A/wD/oL2nkwAAAr5JREFUWIXFl8FPE0EUxn8zU40GS5cDGg8kJlIkARNDevBPIKEHDkob0AuHnkA5eEISa/QoCUlPNfFmoyTEmIgJ+g80HKzcEJQD9IZEoBUxpdv1sHQt4MLOAvU7bfbNzPd9b97M7hPU4kHxImXuAT0gwmA1cCIQW1jWIpL3KFI8C646EWfM/eJtBC+A4MmQuqIIDDIRnPorwCaf3CPodGEBfUwEp8Ru2r9x+s73o4BJq9zd83qTAzSiGJZA9D+Q27CISuCqW7zFELQY/sviyPmCVglccJu8MNrAwmgDbc1Sm7ytWTrzDxERDLhFpICzCpSER1feMvBwQEvAo0yG82f6MSv2Wq48boHldYvJuTIAsViM9vZ2z+ThcJhYLAbA689lltctfQEAyZkSZgWUUoyNjXkWkEwmUUphVuDpx9KhYw8V8PV7xclCPB73lIX97r+sVvwLAP0s6Lj3JMAtC4ZhkEgkSCQShEIhQN+9JwFwMAuGYZDL5Uin06TTaXK5HKFQSNs9gOLmaPKoQT9+WVy7JLl+WdLR0UGpVKK3t9eJNzU1sbW1xdDQEFJKXuXKPM/ueBLg+YapzUJ3d/eBeDQa1XavJaC2FiKRCPl83omtrKwQiUQA73uvLQD2ZiGbzTpFODs768s9gGCk6H5N/QOZu+fo7wpgmiadnZ2Ypsn8/DxKKTKfytx5+VtLgOu3wA3JmRKxGwHnRAghfLv3JaBaC/1dAeLxuPN+ck5v76vQ/86ytxaq7p980HfvW0DtiQD/7n0LAHg8U2J7B7Z37Ge/EIwUC/j8Ka3+6eQ3tA5SLQoSWPI7O79hHYccLJYkgmn/KxwTkncSRQq7Xao3NpFWSu42ioPY7VK9YAGDjDeu2afAbhT7gEIdyDeBW0wE38D+ZnS42IxiGOgB2nDpGXzgJ7CIYBpppRhvXKsG/gDYRSdUVzOcWwAAAABJRU5ErkJggg==";
-  await writeFile(join(target, "public", "favicon.ico"), Buffer.from(faviconIco, "base64"));
+  await writeFile(join(appDir, "favicon.ico"), Buffer.from(faviconIco, "base64"));
 
   if (useShadcn) {
     await scaffoldShadcn({ target, uiDir, libDir, componentExt: componentExt(language), srcDir });
