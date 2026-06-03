@@ -1,4 +1,4 @@
-const NAV = [
+export const NAV = [
   {
     title: "Getting Started",
     items: [

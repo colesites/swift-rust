@@ -22,12 +22,10 @@ const SAMPLE_CODE = `import { Video, isYouTubeUrl, getYouTubeId } from "swift-ru
 
 const url = "https://youtu.be/rTJzsHwpZko?si=dyq6s5btq7MnASdS";
 
-<Video
-  src={url}
-  width={960}
-  height={540}
-  className="w-full overflow-hidden rounded-xl"
-/>
+// Responsive: a fixed-ratio wrapper, video fills 100%.
+<div className="aspect-video w-full">
+  <Video src={url} aspectRatio="16 / 9" className="h-full w-full rounded-xl" />
+</div>
 
 isYouTubeUrl(url);   // → true
 getYouTubeId(url);   // → "rTJzsHwpZko"`;
@@ -48,16 +46,18 @@ export default function VideosPage() {
       </p>
 
       <div className="mt-12 grid items-start gap-12 lg:grid-cols-[1.6fr_1fr]">
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-          <Video
-            src={YOUTUBE_URL}
-            width={960}
-            height={540}
-            className="w-full overflow-hidden rounded-xl"
-          />
+        <div className="min-w-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+          <div className="aspect-video w-full overflow-hidden rounded-xl">
+            <Video
+              src={YOUTUBE_URL}
+              aspectRatio="16 / 9"
+              className="h-full w-full rounded-xl"
+              style={{ width: "100%", height: "100%" }}
+            />
+          </div>
         </div>
 
-        <div>
+        <div className="min-w-0">
           <h2 className="text-xl font-semibold tracking-tight">YouTube embed, auto-detected</h2>
           <p className="mt-3 text-[0.95rem] leading-relaxed text-[var(--color-fg-muted)]">
             The component inspects the URL, extracts the video ID, and switches to a

@@ -134,7 +134,7 @@ export default function FontsPage() {
             {filteredGoogle.map((entry) => {
               const font = entry.factory();
               return (
-                <div key={entry.name} className="font-preview-item">
+                <div key={entry.name} className="font-preview-item" style={font.style}>
                   <div className="font-preview-name">{entry.name}</div>
                   <div className="font-preview-sample" style={font.style}>
                     {HEADLINE}
@@ -162,7 +162,7 @@ export default function FontsPage() {
             {filteredLocal.map((entry) => {
               const font = entry.factory();
               return (
-                <div key={entry.name} className="font-preview-item">
+                <div key={entry.name} className="font-preview-item" style={font.style}>
                   <div className="font-preview-name">{entry.name}</div>
                   <div className="font-preview-sample" style={font.style}>
                     {HEADLINE}

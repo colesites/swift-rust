@@ -1,8 +1,13 @@
+import { siteConfig } from "../site.config";
+import { MobileNav } from "./mobile-nav";
+
 export function Header() {
   return (
     <header className="docs-header">
       <div className="container docs-header-inner">
-        <a href="/" className="docs-logo">
+        <div className="docs-header-left">
+          <MobileNav />
+          <a href="/" className="docs-logo">
           <svg
             width="24"
             height="24"
@@ -24,13 +29,14 @@ export function Header() {
           </svg>
           <span>Swift Rust</span>
           <span className="badge">v0.1.0</span>
-        </a>
+          </a>
+        </div>
         <nav className="docs-nav">
           <a href="/docs">Docs</a>
           <a href="/components/image">Components</a>
           <a href="/fonts">Fonts</a>
           <a href="/videos">Videos</a>
-          <a href="https://github.com/swift-rust/swift-rust">GitHub</a>
+          <a href={siteConfig.githubUrl}>GitHub</a>
         </nav>
       </div>
     </header>

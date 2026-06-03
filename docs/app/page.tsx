@@ -29,7 +29,7 @@ export default function HomePage() {
           <a href="/docs/getting-started/installation" className="btn btn-primary">
             Get started →
           </a>
-          <a href="https://github.com/swift-rust/swift-rust" className="btn btn-outline">
+          <a href="https://github.com/colesites/swift-rust" className="btn btn-outline">
             View on GitHub
           </a>
         </div>

@@ -3369,6 +3369,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "swift-rust-video"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "url",
+]
+
+[[package]]
 name = "syn"
 version = "2.0.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"

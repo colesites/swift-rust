@@ -231,18 +231,14 @@ export default function FontsPage() {
                   <div
                     key={f.name}
                     className="group flex flex-col gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-colors hover:border-[var(--color-border-strong)]"
+                    style={font.style}
                   >
                     <div className="flex items-baseline justify-between gap-2">
                       <h4 className="text-sm font-medium text-[var(--color-fg)]">{f.name}</h4>
                       <span className="text-xs text-[var(--color-fg-subtle)]">{f.blurb}</span>
                     </div>
-                    <div
-                      className="truncate text-2xl text-[var(--color-fg)]"
-                      style={font.style}
-                    >
-                      Beautiful type
-                    </div>
-                    <code className="mt-auto truncate font-mono text-[11px] text-[var(--color-fg-muted)]">
+                    <div className="truncate text-2xl text-[var(--color-fg)]">Beautiful type</div>
+                    <code className="mt-auto truncate font-mono text-[11px] text-[var(--color-fg-muted)]" style={{ fontFamily: "ui-monospace, monospace" }}>
                       import {"{ "}{f.importName}{" }"} from &quot;swift-rust/font/google&quot;
                     </code>
                   </div>
@@ -276,21 +272,17 @@ export default function FontsPage() {
               <div
                 key={f.name}
                 className="flex flex-col gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6"
+                style={font.style}
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <h4 className="text-sm font-medium text-[var(--color-fg)]">{f.name}</h4>
-                  <span className="font-mono text-[11px] text-[var(--color-fg-subtle)]">
+                  <span className="font-mono text-[11px] text-[var(--color-fg-subtle)]" style={{ fontFamily: "ui-monospace, monospace" }}>
                     {f.weights}
                   </span>
                 </div>
-                <div
-                  className="text-3xl text-[var(--color-fg)]"
-                  style={font.style}
-                >
-                  Aa Bb Cc 123
-                </div>
+                <div className="text-3xl text-[var(--color-fg)]">Aa Bb Cc 123</div>
                 <p className="text-xs text-[var(--color-fg-muted)]">{f.blurb}</p>
-                <code className="mt-auto truncate font-mono text-[11px] text-[var(--color-fg-muted)]">
+                <code className="mt-auto truncate font-mono text-[11px] text-[var(--color-fg-muted)]" style={{ fontFamily: "ui-monospace, monospace" }}>
                   import {"{ "}{f.importName}{" }"} from &quot;swift-rust/font&quot;
                 </code>
               </div>

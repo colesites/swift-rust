@@ -1,5 +1,6 @@
 import type { Metadata } from "swift-rust";
 import { Link } from "swift-rust";
+import { siteConfig } from "@/lib/site.config";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -9,8 +10,8 @@ export const metadata: Metadata = {
 const CHANNELS = [
   {
     name: "GitHub",
-    handle: "swift-rust/swift-rust",
-    href: "https://github.com/swift-rust/swift-rust",
+    handle: "colesites/swift-rust",
+    href: siteConfig.githubUrl,
     description: "Issues, PRs, and discussion.",
   },
   {

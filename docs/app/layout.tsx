@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Geist, GeistMono } from "swift-rust/font/google";
 import { Header } from "./components/header";
 import { Sidebar } from "./components/sidebar";
+import { TableOfContents } from "./components/toc";
 
 const geist = Geist({ subsets: ["latin"], display: "swap", variable: true });
 const geistMono = GeistMono({ subsets: ["latin"], display: "swap", variable: true });
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <div className="docs-shell">
           <Sidebar />
           <main className="docs-main">{children}</main>
+          <TableOfContents />
         </div>
       </body>
     </html>
