@@ -8,7 +8,13 @@
   <rect width="1200" height="630" fill="url(#bg)" />
   <g transform="translate(80, 80)">
     <rect width="56" height="56" rx="12" fill="#0a0a0a" />
-    <path d="M14 18h28M14 28h18M14 38h28" stroke="#fff" stroke-width="3" stroke-linecap="round" />
+    <g transform="scale(1.75)">
+      <g stroke="#fff" stroke-width="1.9" stroke-linecap="round" fill="none">
+        <circle cx="16" cy="16" r="6.4" />
+        <path d="M16 4.4v2.6M16 25v2.6M4.4 16h2.6M25 16h2.6M7.9 7.9l1.8 1.8M22.3 22.3l1.8 1.8M7.9 24.1l1.8-1.8M22.3 9.7l1.8-1.8" />
+      </g>
+      <path d="M17.8 9.3 L11.6 17 H15.2 L14.2 22.8 L20.4 15 H16.8 Z" fill="#fb923c" />
+    </g>
   </g>
   <g transform="translate(80, 160)" font-family="ui-sans-serif, system-ui, sans-serif" fill="#0a0a0a">
     <text x="0" y="0" font-size="20" font-weight="600" fill="#78716c">SWIFT RUST</text>

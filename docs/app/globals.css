@@ -258,6 +258,7 @@ button.outline:hover {
   align-items: center;
   justify-content: space-between;
   height: 3.5rem;
+  padding: 0 1.5rem;
 }
 
 .docs-logo {
@@ -308,26 +309,28 @@ button.outline:hover {
   }
 }
 
-/* Per-page layout: centered content column + "On this page" rail (shadcn). */
+/* Per-page layout: centered content + "On this page" rail pinned to the far
+   right (mirroring the flush-left sidebar). The grid fills the whole content
+   area so the TOC reaches the right edge. */
 .doc-article {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 16rem;
-  gap: 3.5rem;
-  max-width: 70rem;
-  margin: 0 auto;
+  grid-template-columns: minmax(0, 1fr) 15rem;
+  gap: 3rem;
+  align-items: start;
 }
 
 /* Drop the TOC rail on smaller screens; content goes full width of its column. */
 @media (max-width: 1279px) {
   .doc-article {
     grid-template-columns: minmax(0, 1fr);
-    max-width: 48rem;
   }
 }
 
+/* Content sits centered in its (wide) column. */
 .doc-article .prose {
   min-width: 0;
-  max-width: 44rem;
+  max-width: 46rem;
+  margin: 0 auto;
 }
 
 .docs-sidebar {

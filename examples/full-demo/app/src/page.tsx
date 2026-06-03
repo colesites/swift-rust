@@ -71,7 +71,7 @@ export default function HomePage() {
               className="badge badge-accent mb-8 inline-flex hover:opacity-90"
             >
               <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-current" />
-              v0.1.0 — first public preview
+              v{siteConfig.version} — first public preview
               <svg
                 viewBox="0 0 24 24"
                 className="h-3 w-3"

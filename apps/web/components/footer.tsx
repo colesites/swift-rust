@@ -68,7 +68,7 @@ export function Footer() {
         </div>
         <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-[var(--color-border)] pt-8 text-[0.8125rem] text-[var(--color-fg-subtle)] sm:flex-row sm:items-center">
           <p>© {year} swift-rust. Built with Rust + Bun.</p>
-          <p className="font-mono">v0.1.0 · MIT</p>
+          <p className="font-mono">v{siteConfig.version} · MIT</p>
         </div>
       </div>
     </footer>

@@ -1,3 +1,5 @@
+import { siteConfig } from "@/app/site.config";
+
 export default function HomePage() {
   return (
     <div>
@@ -12,7 +14,7 @@ export default function HomePage() {
               background: "var(--accent)",
             }}
           />
-          v0.1.0 — Now in beta
+          v{siteConfig.version} — Now in beta
         </div>
         <h1>
           The React framework
