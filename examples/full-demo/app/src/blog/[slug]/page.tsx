@@ -64,6 +64,14 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
         </div>
       </header>
 
+      {post.cover ? (
+        <img
+          src={post.cover}
+          alt={post.title}
+          className="mt-10 aspect-[1200/630] w-full rounded-2xl border border-[var(--color-border)] object-cover"
+        />
+      ) : null}
+
       <div className="prose prose-stone mt-10 max-w-none text-[1.0625rem] leading-[1.8] text-[var(--color-fg)]">
         {post.body.split("\n\n").map((paragraph, i) => (
           <p key={i} className="mb-6">

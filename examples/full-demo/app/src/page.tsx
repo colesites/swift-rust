@@ -67,7 +67,7 @@ export default function HomePage() {
         <div className="container-page pt-20 pb-24 sm:pt-28 sm:pb-32">
           <div className="mx-auto max-w-3xl text-center">
             <Link
-              href="/blog/swift-rust-0-1"
+              href="/blog/introducing-swift-rust"
               className="badge badge-accent mb-8 inline-flex hover:opacity-90"
             >
               <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-current" />

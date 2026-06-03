@@ -7,24 +7,12 @@ const TRANSPARENT_PNG =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
 const IMAGES = [
-  {
-    src: "/samples/landscape-1.svg",
-    alt: "Mountain landscape at dawn",
-    w: 1600,
-    h: 900,
-    label: "16:9",
-  },
-  { src: "/samples/portrait-1.svg", alt: "Forest portrait", w: 800, h: 1200, label: "2:3" },
-  {
-    src: "/samples/square-1.svg",
-    alt: "Geometric square composition",
-    w: 1000,
-    h: 1000,
-    label: "1:1",
-  },
-  { src: "/samples/landscape-2.svg", alt: "Ocean horizon", w: 1600, h: 900, label: "16:9" },
-  { src: "/samples/square-2.svg", alt: "Abstract gradient", w: 1000, h: 1000, label: "1:1" },
-  { src: "/samples/portrait-2.svg", alt: "City portrait", w: 800, h: 1200, label: "2:3" },
+  { src: "/samples/axelborg-towers-modern-architecture.jpg", alt: "Modern architecture towers", w: 3456, h: 2635, label: "4:3" },
+  { src: "/samples/full-shot-woman-taking-selfie.jpg", alt: "Woman taking a selfie", w: 5327, h: 7990, label: "2:3" },
+  { src: "/samples/metaverse-concept-collage-design.jpg", alt: "Metaverse concept collage", w: 6000, h: 4000, label: "3:2" },
+  { src: "/samples/happy-black-parents-with-kids-making-video-call-smart-phone-home.jpg", alt: "Family on a video call at home", w: 6000, h: 4000, label: "3:2" },
+  { src: "/samples/brown-high-skyscrapers.jpg", alt: "Tall brown skyscrapers", w: 4000, h: 5000, label: "4:5" },
+  { src: "/samples/close-up-portrait-gorgeous-young-woman.jpg", alt: "Close-up portrait of a young woman", w: 8494, h: 5663, label: "3:2" },
 ];
 
 export default function ImagesPage() {
@@ -35,8 +23,8 @@ export default function ImagesPage() {
       </p>
       <h1 className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl">Images</h1>
       <p className="mt-4 max-w-2xl text-[var(--color-fg-muted)]">
-        The Image component handles sizing, format negotiation, and lazy loading. SVGs are local
-        samples — replace with your own.
+        The Image component handles sizing, format negotiation, and lazy loading. These are local
+        sample photos — replace with your own.
       </p>
 
       <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

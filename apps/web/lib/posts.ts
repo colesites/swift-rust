@@ -7,12 +7,14 @@ export type Post = {
   author: { name: string; role: string };
   tags: string[];
   body: string;
+  cover?: string;
 };
 
 export const posts: Post[] = [
   {
     slug: "introducing-swift-rust",
     title: "Introducing Swift Rust",
+    cover: "/blog/introducing-swift-rust.svg",
     excerpt:
       "A full-stack React framework powered with Rust + Bun, designed to feel as familiar as the one you already use.",
     date: "2026-05-28",

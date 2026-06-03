@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <rect width="1200" height="630" fill="#0a0a0a"/>
+  <rect x="0" y="0" width="1200" height="630" fill="url(#g)" opacity="0.18"/>
+  <defs>
+    <radialGradient id="g" cx="50%" cy="38%" r="60%">
+      <stop offset="0%" stop-color="#fb923c"/>
+      <stop offset="100%" stop-color="#0a0a0a"/>
+    </radialGradient>
+  </defs>
+  <text x="600" y="320" font-family="ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="150" font-weight="800" letter-spacing="-6" fill="#fb923c" text-anchor="middle">swift rust</text>
+  <text x="600" y="400" font-family="ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="32" font-weight="500" letter-spacing="6" fill="#a8a29e" text-anchor="middle">FIRST PUBLIC PREVIEW</text>
+</svg>

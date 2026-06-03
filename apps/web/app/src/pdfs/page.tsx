@@ -1,13 +1,26 @@
 import type { Metadata } from "swift-rust";
-import { Link } from "swift-rust";
 
 export const metadata: Metadata = { title: "PDFs" };
 
 const DOCS = [
-  { name: "Swift Rust — Architecture overview", size: "12 pages", updated: "2026-05-28" },
-  { name: "Migration guide: Next.js to Swift Rust", size: "8 pages", updated: "2026-05-21" },
-  { name: "Renderer reference", size: "24 pages", updated: "2026-05-12" },
+  {
+    name: "Large-Scale Apps with React and TypeScript",
+    href: "/samples/Large-Scale-Apps-with-React-and-TypeScript.pdf",
+    size: "4.4 MB",
+  },
+  {
+    name: "Fluent React — build fast, performant & intuitive",
+    href: "/samples/Fluent_react_build_fast_performant_and_intuitive.pdf",
+    size: "4.0 MB",
+  },
+  {
+    name: "React Interview Guide",
+    href: "/samples/React%20Interview%20Guide.pdf",
+    size: "3.8 MB",
+  },
 ];
+
+const PREVIEW_PDF = "/samples/Large-Scale-Apps-with-React-and-TypeScript.pdf";
 
 export default function PdfsPage() {
   return (
@@ -24,8 +37,10 @@ export default function PdfsPage() {
         <ul className="divide-y divide-[var(--color-border)]">
           {DOCS.map((doc) => (
             <li key={doc.name} className="group">
-              <Link
-                href="#"
+              <a
+                href={doc.href}
+                target="_blank"
+                rel="noreferrer"
                 className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-[var(--color-surface-2)]"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface-2)]">
@@ -39,7 +54,7 @@ export default function PdfsPage() {
                     {doc.name}
                   </p>
                   <p className="text-[0.8125rem] text-[var(--color-fg-muted)]">
-                    {doc.size} · updated {doc.updated}
+                    {doc.size} · PDF
                   </p>
                 </div>
                 <svg
@@ -51,44 +66,25 @@ export default function PdfsPage() {
                 >
                   <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-              </Link>
+              </a>
             </li>
           ))}
         </ul>
       </div>
 
       <div className="mt-12 grid gap-6 lg:grid-cols-2">
-        <div className="card aspect-[1/1.41] overflow-hidden p-0">
-          <div className="flex h-full flex-col">
-            <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-2.5 text-[0.75rem]">
-              <span className="font-mono text-[var(--color-fg-subtle)]">page-1.pdf</span>
-              <span className="badge">A4</span>
-            </div>
-            <div className="flex-1 space-y-3 p-8">
-              <p className="text-2xl font-bold text-[var(--color-fg)]">Invoice #4218</p>
-              <p className="text-[0.75rem] text-[var(--color-fg-subtle)]">Issued May 28, 2026</p>
-              <hr className="my-4" />
-              <div className="space-y-1.5 text-[0.75rem]">
-                <div className="flex justify-between">
-                  <span>Engineering — May</span>
-                  <span className="font-mono">$ 12,400.00</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Design — May</span>
-                  <span className="font-mono">$ 4,200.00</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Hosting</span>
-                  <span className="font-mono">$ 312.00</span>
-                </div>
-              </div>
-              <hr className="my-4" />
-              <div className="flex justify-between text-[0.875rem] font-semibold">
-                <span>Total</span>
-                <span className="font-mono">$ 16,912.00</span>
-              </div>
-            </div>
+        <div className="card overflow-hidden p-0">
+          <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-2.5 text-[0.75rem]">
+            <span className="font-mono text-[var(--color-fg-subtle)]">
+              {PREVIEW_PDF.split("/").pop()}
+            </span>
+            <span className="badge">live preview</span>
           </div>
+          <iframe
+            src={PREVIEW_PDF}
+            title="PDF preview"
+            className="aspect-[1/1.3] w-full bg-[var(--color-surface-2)]"
+          />
         </div>
         <div className="flex flex-col justify-center">
           <h2 className="text-2xl font-semibold tracking-tight">Generated on every request.</h2>
