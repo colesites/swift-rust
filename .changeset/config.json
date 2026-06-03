@@ -10,5 +10,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["docs", "examples", "test"]
+  "ignore": ["web", "swift-rust-docs", "swift-rust-scripts", "swift-rust-test", "full-demo"]
 }

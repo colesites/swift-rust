@@ -1,6 +1,6 @@
 {
   "name": "@swift-rust/ui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "shadcn-style component registry for swift-rust.",
   "license": "MIT",
   "homepage": "https://swift-rust.dev",
