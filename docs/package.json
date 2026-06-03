@@ -5,12 +5,12 @@
   "description": "Documentation site for the swift-rust framework.",
   "type": "module",
   "scripts": {
-    "dev": "swift-rust dev --port 3001",
-    "build": "swift-rust build",
-    "start": "swift-rust dev --port 3001",
+    "dev": "bun ../packages/swift-rust/bin/dev-server.mjs --port 3001",
+    "build": "bun ../packages/swift-rust/bin/build.mjs",
+    "start": "bun ../packages/swift-rust/bin/dev-server.mjs --port 3001",
     "lint": "biome check --no-errors-on-unmatched $(pwd)/app",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf .swift-rust .turbo dist"
+    "clean": "rm -rf .swift-rust .vercel .turbo dist"
   },
   "dependencies": {
     "react": "^19.0.0",
