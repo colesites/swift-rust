@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Errors" };
 
 export default function ErrorsRefPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Errors</h1>
       <p>
         Swift Rust uses the <code>SR-E</code> error code prefix. Each code has a dedicated page in
@@ -54,6 +55,6 @@ export default function ErrorsRefPage() {
         Each error code has a page at <code>/errors/SR-Exxxx</code>. For example:{" "}
         <a href="/errors/SR-E0001">/errors/SR-E0001</a>.
       </p>
-    </article>
+    </DocArticle>
   );
 }

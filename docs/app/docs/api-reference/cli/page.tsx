@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "CLI" };
 
 export default function CliRefPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>CLI</h1>
       <p>
         The Swift Rust CLI is a single <code>swift-rust</code> binary that does everything: dev
@@ -84,6 +85,6 @@ bunx swift-rust init --dir src/lib`}</code>
         <code>swift-rust list</code>
       </h2>
       <p>List all 35 available UI components.</p>
-    </article>
+    </DocArticle>
   );
 }

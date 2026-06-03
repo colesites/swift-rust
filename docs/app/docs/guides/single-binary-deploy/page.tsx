@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Single binary deploy" };
 
 export default function SingleBinaryPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Single binary deploy</h1>
       <p>
         Swift Rust compiles your app into a single statically-linked binary. The output is portable
@@ -90,6 +91,6 @@ Environment=PORT=3000
 WantedBy=multi-user.target`}</code>
         </pre>
       </div>
-    </article>
+    </DocArticle>
   );
 }

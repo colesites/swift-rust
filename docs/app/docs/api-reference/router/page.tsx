@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Router" };
 
 export default function RouterRefPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Router</h1>
       <p>
         Imports for the router, available from <code>swift-rust/router</code>.
@@ -52,6 +53,6 @@ export default function RouterRefPage() {
           <code>RouteHandlerContext</code>
         </li>
       </ul>
-    </article>
+    </DocArticle>
   );
 }

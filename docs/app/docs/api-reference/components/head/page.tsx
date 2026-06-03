@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Head & Meta" };
 
 export default function HeadRefPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Head &amp; Meta</h1>
       <p>
         For custom meta tags not covered by the <code>metadata</code> export, use <code>Head</code>,{" "}
@@ -42,6 +43,6 @@ export default function HeadRefPage() {
 }`}</code>
         </pre>
       </div>
-    </article>
+    </DocArticle>
   );
 }

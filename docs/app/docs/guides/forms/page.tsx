@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Forms" };
 
 export default function FormsPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Forms</h1>
       <p>
         Forms in Swift Rust work the way you'd expect in React, with one twist: server actions let
@@ -86,6 +87,6 @@ export function NewsletterForm() {
         The framework doesn't ship a validation library. We recommend <code>zod</code> for parsing
         form data and API request bodies.
       </p>
-    </article>
+    </DocArticle>
   );
 }

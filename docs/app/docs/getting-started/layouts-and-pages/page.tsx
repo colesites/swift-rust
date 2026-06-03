@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Layouts & pages" };
 
 export default function LayoutsPagesPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Layouts &amp; pages</h1>
       <p>
         Pages and layouts are just React components. The framework wraps your page with the nearest
@@ -127,6 +128,6 @@ export default function ErrorBoundary({
       <p>
         Continue to <a href="/docs/getting-started/data-fetching">Data fetching</a>.
       </p>
-    </article>
+    </DocArticle>
   );
 }

@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Installation" };
 
 export default function InstallationPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Installation</h1>
       <p>Create a new swift-rust project and run it locally.</p>
 
@@ -160,6 +161,6 @@ Would you like to include AGENTS.md to guide coding agents to write up-to-date s
         Continue to <a href="/docs/getting-started/project-structure">Project structure</a> to learn
         how the file system maps to routes.
       </p>
-    </article>
+    </DocArticle>
   );
 }

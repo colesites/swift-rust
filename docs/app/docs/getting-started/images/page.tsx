@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Images" };
 
 export default function ImagesPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Images</h1>
       <p>
         The <code>&lt;Image&gt;</code> component handles optimization, responsive{" "}
@@ -83,6 +84,6 @@ export default function ImagesPage() {
       <p>
         Continue to <a href="/docs/getting-started/videos">Videos</a>.
       </p>
-    </article>
+    </DocArticle>
   );
 }

@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Project structure" };
 
 export default function ProjectStructurePage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Project structure</h1>
       <p>
         Swift Rust uses a file-based router inspired by Next.js. The directory structure of your
@@ -116,6 +117,6 @@ tsconfig.json`}</code>
       <p>
         Continue to <a href="/docs/getting-started/layouts-and-pages">Layouts &amp; pages</a>.
       </p>
-    </article>
+    </DocArticle>
   );
 }

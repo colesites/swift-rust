@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Rendering modes" };
 
 export default function RenderingModesPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Rendering modes</h1>
       <p>
         Swift Rust supports four rendering modes. You pick one when you scaffold your project, and
@@ -101,6 +102,6 @@ export default function RenderingModesPage() {
       <p>
         Continue to <a href="/docs/getting-started/data-fetching">Data fetching</a>.
       </p>
-    </article>
+    </DocArticle>
   );
 }

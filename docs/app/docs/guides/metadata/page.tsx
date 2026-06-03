@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Metadata & SEO" };
 
 export default function MetadataPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Metadata &amp; SEO</h1>
       <p>
         Pages and layouts can export a <code>metadata</code> object. The framework turns it into{" "}
@@ -78,6 +79,6 @@ export default function AboutPage() {
         <code>Title</code>, <code>Meta</code>, and <code>Style</code> components from{" "}
         <code>swift-rust</code>.
       </p>
-    </article>
+    </DocArticle>
   );
 }

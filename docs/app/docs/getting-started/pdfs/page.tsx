@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "PDFs" };
 
 export default function PdfsPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>PDFs</h1>
       <p>
         Swift Rust includes a declarative PDF component tree. You write{" "}
@@ -63,6 +64,6 @@ export async function GET() {
       <p>
         Continue to <a href="/docs/getting-started/deploying">Deploying</a>.
       </p>
-    </article>
+    </DocArticle>
   );
 }

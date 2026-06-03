@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Migrating from Next.js" };
 
 export default function MigratingPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Migrating from Next.js</h1>
       <p>
         Most Next.js projects will migrate to Swift Rust with minimal effort. The file-based router,
@@ -117,6 +118,6 @@ export default function MigratingPage() {
           Run <code>bun install</code> and <code>bun run dev</code>.
         </li>
       </ol>
-    </article>
+    </DocArticle>
   );
 }

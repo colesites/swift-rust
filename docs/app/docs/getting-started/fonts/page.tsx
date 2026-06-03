@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Fonts" };
 
 export default function FontsPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Fonts</h1>
       <p>
         Swift Rust ships with 2,071 Google fonts and supports self-hosted local fonts (OTF, TTF,
@@ -80,6 +81,6 @@ const myFont = localFont({
       <p>
         Continue to <a href="/docs/getting-started/images">Images</a>.
       </p>
-    </article>
+    </DocArticle>
   );
 }

@@ -1,4 +1,5 @@
 import { Link } from "swift-rust";
+import { siteConfig } from "@/lib/site.config";
 import { Logo } from "./logo";
 
 const COLUMNS: Array<{ title: string; links: Array<{ href: string; label: string }> }> = [
@@ -23,10 +24,10 @@ const COLUMNS: Array<{ title: string; links: Array<{ href: string; label: string
   {
     title: "Resources",
     links: [
-      { href: "https://github.com/swift-rust/swift-rust", label: "GitHub" },
-      { href: "https://swift-rust.dev/docs", label: "Docs" },
+      { href: siteConfig.githubUrl, label: "GitHub" },
+      { href: siteConfig.docsUrl, label: "Docs" },
       { href: "https://discord.gg/swift-rust", label: "Discord" },
-      { href: "https://github.com/swift-rust/swift-rust/issues", label: "Issues" },
+      { href: siteConfig.issuesUrl, label: "Issues" },
     ],
   },
 ];

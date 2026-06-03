@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Videos" };
 
 export default function VideosPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Videos</h1>
       <p>
         The <code>&lt;Video&gt;</code> component supports HTML5 video, YouTube embeds, Vimeo embeds,
@@ -129,6 +130,6 @@ export default function VideosPage() {
       <p>
         Continue to <a href="/docs/getting-started/pdfs">PDFs</a>.
       </p>
-    </article>
+    </DocArticle>
   );
 }

@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Authentication" };
 
 export default function AuthPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Authentication</h1>
       <p>
         Swift Rust doesn't ship with an authentication library. It works with any library that uses
@@ -72,6 +73,6 @@ export const config = {
           <a href="https://www.better-auth.com">Better Auth</a> — modern TypeScript-first auth
         </li>
       </ul>
-    </article>
+    </DocArticle>
   );
 }

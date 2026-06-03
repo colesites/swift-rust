@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Font component" };
 
 export default function FontRefPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Font</h1>
       <p>
         2,071 Google fonts and unlimited local fonts. The <code>FontOptions</code> type configures a
@@ -154,6 +155,6 @@ export default function FontRefPage() {
       <p>
         See the <a href="/fonts">live font preview</a> for the full list.
       </p>
-    </article>
+    </DocArticle>
   );
 }

@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Data fetching" };
 
 export default function DataFetchingPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Data fetching</h1>
       <p>
         Pages can be <code>async</code> functions. The framework awaits them before rendering, which
@@ -90,6 +91,6 @@ export const POST: RouteHandler = async ({ request }) => {
       <p>
         Continue to <a href="/docs/getting-started/styling">Styling</a>.
       </p>
-    </article>
+    </DocArticle>
   );
 }

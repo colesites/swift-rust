@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Configuration" };
 
 export default function ConfigRefPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Configuration</h1>
       <p>
         Swift Rust is configured via <code>swift-rust.config.json</code> at the project root.
@@ -57,6 +58,6 @@ export default defineConfig({
 });`}</code>
         </pre>
       </div>
-    </article>
+    </DocArticle>
   );
 }

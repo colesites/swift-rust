@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Deploying" };
 
 export default function DeployingPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Deploying</h1>
       <p>
         Swift Rust produces a single statically-linked binary. You can deploy it anywhere Linux runs
@@ -99,6 +100,6 @@ CMD ["/usr/local/bin/app"]`}</code>
         Continue to <a href="/docs/guides/migrating-from-nextjs">Migrating from Next.js</a> if
         you're coming from a Next.js project.
       </p>
-    </article>
+    </DocArticle>
   );
 }

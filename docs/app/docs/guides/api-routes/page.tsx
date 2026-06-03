@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "API routes" };
 
 export default function ApiRoutesPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>API routes</h1>
       <p>
         API routes are <code>route.ts</code> files in the <code>app/</code> directory. They export
@@ -83,6 +84,6 @@ export const GET: RouteHandler = async ({ params }) => {
         Return any standard <code>Response</code> object. The framework passes it through unchanged.
         For PDFs, use <code>Response.pdf(tree)</code>.
       </p>
-    </article>
+    </DocArticle>
   );
 }

@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Styling" };
 
 export default function StylingPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Styling</h1>
       <p>
         Swift Rust doesn't lock you into a styling solution. It ships with optional Tailwind CSS
@@ -98,6 +99,6 @@ bunx swift-rust add --all`}</code>
       <p>
         Continue to <a href="/docs/getting-started/fonts">Fonts</a>.
       </p>
-    </article>
+    </DocArticle>
   );
 }

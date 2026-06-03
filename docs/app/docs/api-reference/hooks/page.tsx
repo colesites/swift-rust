@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Hooks" };
 
 export default function HooksRefPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Hooks</h1>
       <p>
         Swift Rust works with the standard React hooks. There are no framework-specific hooks beyond
@@ -66,6 +67,6 @@ export function Component() {
 }`}</code>
         </pre>
       </div>
-    </article>
+    </DocArticle>
   );
 }

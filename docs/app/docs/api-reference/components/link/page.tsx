@@ -1,8 +1,9 @@
+import { DocArticle } from "@/app/components/doc-article";
 export const metadata = { title: "Link component" };
 
 export default function LinkRefPage() {
   return (
-    <article className="prose">
+    <DocArticle>
       <h1>Link</h1>
       <p>
         The <code>&lt;Link&gt;</code> component is the foundation of client-side navigation. It
@@ -103,6 +104,6 @@ export default function LinkRefPage() {
 <Link href="/external" target="_blank" rel="noopener noreferrer">External</Link>`}</code>
         </pre>
       </div>
-    </article>
+    </DocArticle>
   );
 }
