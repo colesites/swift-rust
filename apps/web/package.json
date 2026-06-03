@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prebuild": "bun run --filter 'swift-rust' build",
     "dev": "bun ../../packages/swift-rust/bin/dev-server.mjs",
     "build": "bun ../../packages/swift-rust/bin/build.mjs",
     "start": "bun ../../packages/swift-rust/bin/dev-server.mjs",
