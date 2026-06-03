@@ -22,7 +22,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
-    "lint": "biome check /Users/admin/Documents/programming/projects/k-bench/swift-rust/packages/env/src",
+    "lint": "biome check --no-errors-on-unmatched $(pwd)/src",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist .turbo"

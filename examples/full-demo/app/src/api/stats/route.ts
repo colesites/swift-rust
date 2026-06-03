@@ -1,4 +1,4 @@
-import { stats, trafficSeries, trafficMax } from "@/lib/stats";
+import { stats, trafficMax, trafficSeries } from "@/lib/stats";
 
 export async function GET() {
   return Response.json({

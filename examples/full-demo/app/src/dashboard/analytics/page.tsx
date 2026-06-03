@@ -1,6 +1,6 @@
-import type { Metadata } from "swift-rust";
-import { trafficSeries, trafficMax } from "@/lib/stats";
 import { formatNumber } from "@/lib/format";
+import { trafficMax, trafficSeries } from "@/lib/stats";
+import type { Metadata } from "swift-rust";
 
 export const metadata: Metadata = { title: "Analytics" };
 
@@ -31,7 +31,9 @@ export default function AnalyticsPage() {
       <div className="mt-8 card p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-[0.95rem] font-semibold">Requests over time</h2>
-          <span className="text-[0.75rem] text-[var(--color-fg-subtle)]">Total: {formatNumber(trafficSeries.reduce((s, d) => s + d.requests, 0))}</span>
+          <span className="text-[0.75rem] text-[var(--color-fg-subtle)]">
+            Total: {formatNumber(trafficSeries.reduce((s, d) => s + d.requests, 0))}
+          </span>
         </div>
         <div className="mt-6 flex h-64 items-end gap-3">
           {trafficSeries.map((d) => (
@@ -41,7 +43,9 @@ export default function AnalyticsPage() {
                 style={{ height: `${(d.requests / trafficMax) * 100}%` }}
                 title={`${d.requests.toLocaleString()} requests`}
               />
-              <span className="text-[0.75rem] font-medium text-[var(--color-fg-subtle)]">{d.day}</span>
+              <span className="text-[0.75rem] font-medium text-[var(--color-fg-subtle)]">
+                {d.day}
+              </span>
             </div>
           ))}
         </div>
@@ -74,7 +78,10 @@ export default function AnalyticsPage() {
           <h2 className="text-[0.95rem] font-semibold">Top pages</h2>
           <ul className="mt-5 divide-y divide-[var(--color-border)]">
             {PAGES.map((p) => (
-              <li key={p.path} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+              <li
+                key={p.path}
+                className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+              >
                 <span className="truncate font-mono text-[0.8125rem] text-[var(--color-fg)]">
                   {p.path}
                 </span>
@@ -82,7 +89,9 @@ export default function AnalyticsPage() {
                   <span className="font-mono text-[var(--color-fg-muted)]">
                     {formatNumber(p.views)}
                   </span>
-                  <span className="w-12 text-right font-mono text-[var(--color-fg-subtle)]">{p.avg}</span>
+                  <span className="w-12 text-right font-mono text-[var(--color-fg-subtle)]">
+                    {p.avg}
+                  </span>
                 </div>
               </li>
             ))}

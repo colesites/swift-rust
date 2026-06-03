@@ -33,7 +33,10 @@
       "**/.turbo/**",
       "**/.swift-rust/**",
       "**/target/**",
-      "**/coverage/**"
+      "**/coverage/**",
+      "docs/app/docs/api-reference/components/image/page.tsx",
+      "docs/app/docs/api-reference/components/pdf/page.tsx",
+      "docs/app/docs/api-reference/components/video/page.tsx"
     ]
   },
   "javascript": {

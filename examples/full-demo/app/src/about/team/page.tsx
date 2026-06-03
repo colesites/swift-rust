@@ -4,11 +4,31 @@ import { Link } from "swift-rust";
 export const metadata: Metadata = { title: "Team" };
 
 const TEAM = [
-  { name: "Alex Chen", role: "Founding Engineer", bio: "Previously: framework team at a cloud company you've heard of. Rust since 2017." },
-  { name: "Priya Singh", role: "Runtime Engineer", bio: "Spent five years on the React server renderer. Now she does the same thing in Rust, but faster." },
-  { name: "Jordan Kim", role: "Compiler Engineer", bio: "SWC contributor. Believes that everything that can be a compiler pass, should be." },
-  { name: "Maria Lopez", role: "Design Systems", bio: "Designs the components you will use every day. Wrote the type scale. Picky about kerning." },
-  { name: "Sam Rivera", role: "Infrastructure", bio: "Deploys the binary to the edge. Has strong opinions about Linux distros." },
+  {
+    name: "Alex Chen",
+    role: "Founding Engineer",
+    bio: "Previously: framework team at a cloud company you've heard of. Rust since 2017.",
+  },
+  {
+    name: "Priya Singh",
+    role: "Runtime Engineer",
+    bio: "Spent five years on the React server renderer. Now she does the same thing in Rust, but faster.",
+  },
+  {
+    name: "Jordan Kim",
+    role: "Compiler Engineer",
+    bio: "SWC contributor. Believes that everything that can be a compiler pass, should be.",
+  },
+  {
+    name: "Maria Lopez",
+    role: "Design Systems",
+    bio: "Designs the components you will use every day. Wrote the type scale. Picky about kerning.",
+  },
+  {
+    name: "Sam Rivera",
+    role: "Infrastructure",
+    bio: "Deploys the binary to the edge. Has strong opinions about Linux distros.",
+  },
 ];
 
 export default function TeamPage() {
@@ -18,7 +38,13 @@ export default function TeamPage() {
         href="/about"
         className="inline-flex items-center gap-1.5 text-[0.875rem] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]"
       >
-        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg
+          viewBox="0 0 24 24"
+          className="h-3.5 w-3.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
           <path d="M19 12H5M11 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
         About
@@ -44,7 +70,9 @@ export default function TeamPage() {
                 <p className="text-[0.8125rem] text-[var(--color-fg-muted)]">{person.role}</p>
               </div>
             </div>
-            <p className="mt-4 text-[0.875rem] leading-relaxed text-[var(--color-fg-muted)]">{person.bio}</p>
+            <p className="mt-4 text-[0.875rem] leading-relaxed text-[var(--color-fg-muted)]">
+              {person.bio}
+            </p>
           </li>
         ))}
       </ul>

@@ -1,7 +1,7 @@
+import { formatDate } from "@/lib/format";
+import { getAllTags, posts } from "@/lib/posts";
 import type { Metadata } from "swift-rust";
 import { Link } from "swift-rust";
-import { getAllTags, posts } from "@/lib/posts";
-import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Blog",

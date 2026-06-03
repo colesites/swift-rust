@@ -3,6 +3,9 @@ import Image from "swift-rust/image";
 
 export const metadata: Metadata = { title: "Images" };
 
+const TRANSPARENT_PNG =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
 const IMAGES = [
   { src: "/samples/landscape-1.svg", alt: "Mountain landscape at dawn", w: 1600, h: 900, label: "16:9" },
   { src: "/samples/portrait-1.svg", alt: "Forest portrait", w: 800, h: 1200, label: "2:3" },
@@ -36,6 +39,8 @@ export default function ImagesPage() {
                 alt={img.alt}
                 width={img.w}
                 height={img.h}
+                placeholder="blur"
+                blurDataURL={TRANSPARENT_PNG}
                 className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
             </div>

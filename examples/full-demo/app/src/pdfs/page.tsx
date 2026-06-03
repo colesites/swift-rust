@@ -29,8 +29,17 @@ export default function PdfsPage() {
                 className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-[var(--color-surface-2)]"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface-2)]">
-                  <svg viewBox="0 0 24 24" className="h-5 w-5 text-[var(--color-fg-muted)]" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" strokeLinejoin="round" />
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-5 w-5 text-[var(--color-fg-muted)]"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
+                    <path
+                      d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"
+                      strokeLinejoin="round"
+                    />
                     <path d="M14 3v5h5" />
                   </svg>
                 </div>
@@ -103,7 +112,7 @@ export default function PdfsPage() {
               {"\n"}
               <span className="text-[#7c3aed]">export async function</span>{" "}
               <span className="text-[#0ea5e9]">GET</span>
-              <span className="text-[var(--color-fg-muted)]">() {`{`}</span>
+              <span className="text-[var(--color-fg-muted)]">() {"{"}</span>
               {"\n  "}
               <span className="text-[var(--color-fg-subtle)]">return</span>{" "}
               <span className="text-[#7c3aed]">await</span>{" "}
@@ -139,7 +148,7 @@ export default function PdfsPage() {
               {"\n  "}
               <span className="text-[var(--color-fg-muted)]">{")"}</span>
               {"\n"}
-              <span className="text-[var(--color-fg-muted)]">{`}`}</span>
+              <span className="text-[var(--color-fg-muted)]">{"}"}</span>
             </code>
           </pre>
         </div>

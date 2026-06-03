@@ -1,17 +1,42 @@
+import { formatNumber, formatPercent, relativeTime } from "@/lib/format";
+import { posts } from "@/lib/posts";
+import { stats, trafficMax, trafficSeries } from "@/lib/stats";
 import type { Metadata } from "swift-rust";
 import { Link } from "swift-rust";
-import { posts } from "@/lib/posts";
-import { stats, trafficSeries, trafficMax } from "@/lib/stats";
-import { formatNumber, formatPercent, relativeTime } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
 const ACTIVITY = [
-  { who: "alex@swift-rust.dev", what: "published", target: "Streaming SSR in Rust", when: "2026-06-01T08:32:00Z" },
-  { who: "maria@swift-rust.dev", what: "updated", target: "Geist font spec", when: "2026-05-31T15:10:00Z" },
-  { who: "jordan@swift-rust.dev", what: "deployed", target: "v0.0.9-rc3", when: "2026-05-31T09:45:00Z" },
-  { who: "priya@swift-rust.dev", what: "merged", target: "feat: edge streaming", when: "2026-05-30T18:22:00Z" },
-  { who: "sam@swift-rust.dev", what: "commented on", target: "binary size regression", when: "2026-05-30T11:08:00Z" },
+  {
+    who: "alex@swift-rust.dev",
+    what: "published",
+    target: "Streaming SSR in Rust",
+    when: "2026-06-01T08:32:00Z",
+  },
+  {
+    who: "maria@swift-rust.dev",
+    what: "updated",
+    target: "Geist font spec",
+    when: "2026-05-31T15:10:00Z",
+  },
+  {
+    who: "jordan@swift-rust.dev",
+    what: "deployed",
+    target: "v0.0.9-rc3",
+    when: "2026-05-31T09:45:00Z",
+  },
+  {
+    who: "priya@swift-rust.dev",
+    what: "merged",
+    target: "feat: edge streaming",
+    when: "2026-05-30T18:22:00Z",
+  },
+  {
+    who: "sam@swift-rust.dev",
+    what: "commented on",
+    target: "binary size regression",
+    when: "2026-05-30T11:08:00Z",
+  },
 ];
 
 export default function DashboardOverviewPage() {
@@ -75,7 +100,9 @@ export default function DashboardOverviewPage() {
                   style={{ height: `${(d.requests / trafficMax) * 100}%` }}
                   title={`${d.requests.toLocaleString()} requests`}
                 />
-                <span className="text-[0.7rem] font-medium text-[var(--color-fg-subtle)]">{d.day}</span>
+                <span className="text-[0.7rem] font-medium text-[var(--color-fg-subtle)]">
+                  {d.day}
+                </span>
               </div>
             ))}
           </div>

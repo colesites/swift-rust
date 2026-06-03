@@ -1,3 +1,4 @@
+import { FontStudio } from "@/components/font-studio";
 import type { Metadata } from "swift-rust";
 import { localFontCss } from "swift-rust/font";
 import {
@@ -37,7 +38,6 @@ import {
   SourceCodePro,
   SpaceGrotesk,
 } from "swift-rust/font/google";
-import { FontStudio } from "@/components/font-studio";
 
 export const metadata: Metadata = { title: "Fonts" };
 
@@ -56,31 +56,181 @@ type FeaturedFont = {
 };
 
 const FEATURED: FeaturedFont[] = [
-  { name: "Geist", importName: "Geist", factory: Geist as Factory, category: "Sans", blurb: "Default UI sans, by Vercel" },
-  { name: "Geist Mono", importName: "GeistMono", factory: GeistMono as Factory, category: "Mono", blurb: "Default monospace, by Vercel" },
-  { name: "Inter", importName: "Inter", factory: Inter as Factory, category: "Sans", blurb: "Designed for screens" },
-  { name: "Roboto", importName: "Roboto", factory: Roboto as Factory, category: "Sans", blurb: "Modern, friendly, versatile" },
-  { name: "Poppins", importName: "Poppins", factory: Poppins as Factory, category: "Sans", blurb: "Geometric, warm heart" },
-  { name: "Manrope", importName: "Manrope", factory: Manrope as Factory, category: "Sans", blurb: "Clean for editorial" },
-  { name: "IBM Plex Sans", importName: "IbmPlexSans", factory: IbmPlexSans as Factory, category: "Sans", blurb: "Corporate with character" },
-  { name: "Space Grotesk", importName: "SpaceGrotesk", factory: SpaceGrotesk as Factory, category: "Sans", blurb: "Quirky display" },
-  { name: "Plus Jakarta Sans", importName: "PlusJakartaSans", factory: PlusJakartaSans as Factory, category: "Sans", blurb: "Elegant, modern" },
-  { name: "Outfit", importName: "Outfit", factory: Outfit as Factory, category: "Sans", blurb: "Geometric branding" },
-  { name: "Figtree", importName: "Figtree", factory: Figtree as Factory, category: "Sans", blurb: "Friendly, approachable" },
-  { name: "Sora", importName: "Sora", factory: Sora as Factory, category: "Sans", blurb: "Made for UI" },
-  { name: "DM Sans", importName: "DmSans", factory: DmSans as Factory, category: "Sans", blurb: "Low-contrast geometric" },
-  { name: "Playfair Display", importName: "PlayfairDisplay", factory: PlayfairDisplay as Factory, category: "Serif", blurb: "Editorial elegance" },
-  { name: "Lora", importName: "Lora", factory: Lora as Factory, category: "Serif", blurb: "Balanced for the screen" },
-  { name: "DM Serif Display", importName: "DmSerifDisplay", factory: DmSerifDisplay as Factory, category: "Serif", blurb: "Editorial display" },
-  { name: "IBM Plex Serif", importName: "IbmPlexSerif", factory: IbmPlexSerif as Factory, category: "Serif", blurb: "Corporate serif" },
-  { name: "JetBrains Mono", importName: "JetbrainsMono", factory: JetbrainsMono as Factory, category: "Mono", blurb: "Code editor default" },
-  { name: "Fira Code", importName: "FiraCode", factory: FiraCode as Factory, category: "Mono", blurb: "Monospace ligatures" },
-  { name: "Source Code Pro", importName: "SourceCodePro", factory: SourceCodePro as Factory, category: "Mono", blurb: "Adobe monospace" },
-  { name: "IBM Plex Mono", importName: "IbmPlexMono", factory: IbmPlexMono as Factory, category: "Mono", blurb: "Corporate mono" },
-  { name: "Bricolage Grotesque", importName: "BricolageGrotesque", factory: BricolageGrotesque as Factory, category: "Display", blurb: "Bold contemporary" },
-  { name: "Bebas Neue", importName: "BebasNeue", factory: BebasNeue as Factory, category: "Display", blurb: "All-caps display" },
-  { name: "Cinzel", importName: "Cinzel", factory: Cinzel as Factory, category: "Display", blurb: "Roman capitals" },
-  { name: "Caveat", importName: "Caveat", factory: Caveat as Factory, category: "Script", blurb: "Casual handwriting" },
+  {
+    name: "Geist",
+    importName: "Geist",
+    factory: Geist as Factory,
+    category: "Sans",
+    blurb: "Default UI sans, by Vercel",
+  },
+  {
+    name: "Geist Mono",
+    importName: "GeistMono",
+    factory: GeistMono as Factory,
+    category: "Mono",
+    blurb: "Default monospace, by Vercel",
+  },
+  {
+    name: "Inter",
+    importName: "Inter",
+    factory: Inter as Factory,
+    category: "Sans",
+    blurb: "Designed for screens",
+  },
+  {
+    name: "Roboto",
+    importName: "Roboto",
+    factory: Roboto as Factory,
+    category: "Sans",
+    blurb: "Modern, friendly, versatile",
+  },
+  {
+    name: "Poppins",
+    importName: "Poppins",
+    factory: Poppins as Factory,
+    category: "Sans",
+    blurb: "Geometric, warm heart",
+  },
+  {
+    name: "Manrope",
+    importName: "Manrope",
+    factory: Manrope as Factory,
+    category: "Sans",
+    blurb: "Clean for editorial",
+  },
+  {
+    name: "IBM Plex Sans",
+    importName: "IbmPlexSans",
+    factory: IbmPlexSans as Factory,
+    category: "Sans",
+    blurb: "Corporate with character",
+  },
+  {
+    name: "Space Grotesk",
+    importName: "SpaceGrotesk",
+    factory: SpaceGrotesk as Factory,
+    category: "Sans",
+    blurb: "Quirky display",
+  },
+  {
+    name: "Plus Jakarta Sans",
+    importName: "PlusJakartaSans",
+    factory: PlusJakartaSans as Factory,
+    category: "Sans",
+    blurb: "Elegant, modern",
+  },
+  {
+    name: "Outfit",
+    importName: "Outfit",
+    factory: Outfit as Factory,
+    category: "Sans",
+    blurb: "Geometric branding",
+  },
+  {
+    name: "Figtree",
+    importName: "Figtree",
+    factory: Figtree as Factory,
+    category: "Sans",
+    blurb: "Friendly, approachable",
+  },
+  {
+    name: "Sora",
+    importName: "Sora",
+    factory: Sora as Factory,
+    category: "Sans",
+    blurb: "Made for UI",
+  },
+  {
+    name: "DM Sans",
+    importName: "DmSans",
+    factory: DmSans as Factory,
+    category: "Sans",
+    blurb: "Low-contrast geometric",
+  },
+  {
+    name: "Playfair Display",
+    importName: "PlayfairDisplay",
+    factory: PlayfairDisplay as Factory,
+    category: "Serif",
+    blurb: "Editorial elegance",
+  },
+  {
+    name: "Lora",
+    importName: "Lora",
+    factory: Lora as Factory,
+    category: "Serif",
+    blurb: "Balanced for the screen",
+  },
+  {
+    name: "DM Serif Display",
+    importName: "DmSerifDisplay",
+    factory: DmSerifDisplay as Factory,
+    category: "Serif",
+    blurb: "Editorial display",
+  },
+  {
+    name: "IBM Plex Serif",
+    importName: "IbmPlexSerif",
+    factory: IbmPlexSerif as Factory,
+    category: "Serif",
+    blurb: "Corporate serif",
+  },
+  {
+    name: "JetBrains Mono",
+    importName: "JetbrainsMono",
+    factory: JetbrainsMono as Factory,
+    category: "Mono",
+    blurb: "Code editor default",
+  },
+  {
+    name: "Fira Code",
+    importName: "FiraCode",
+    factory: FiraCode as Factory,
+    category: "Mono",
+    blurb: "Monospace ligatures",
+  },
+  {
+    name: "Source Code Pro",
+    importName: "SourceCodePro",
+    factory: SourceCodePro as Factory,
+    category: "Mono",
+    blurb: "Adobe monospace",
+  },
+  {
+    name: "IBM Plex Mono",
+    importName: "IbmPlexMono",
+    factory: IbmPlexMono as Factory,
+    category: "Mono",
+    blurb: "Corporate mono",
+  },
+  {
+    name: "Bricolage Grotesque",
+    importName: "BricolageGrotesque",
+    factory: BricolageGrotesque as Factory,
+    category: "Display",
+    blurb: "Bold contemporary",
+  },
+  {
+    name: "Bebas Neue",
+    importName: "BebasNeue",
+    factory: BebasNeue as Factory,
+    category: "Display",
+    blurb: "All-caps display",
+  },
+  {
+    name: "Cinzel",
+    importName: "Cinzel",
+    factory: Cinzel as Factory,
+    category: "Display",
+    blurb: "Roman capitals",
+  },
+  {
+    name: "Caveat",
+    importName: "Caveat",
+    factory: Caveat as Factory,
+    category: "Script",
+    blurb: "Casual handwriting",
+  },
 ];
 
 type LocalFont = {
@@ -92,17 +242,69 @@ type LocalFont = {
 };
 
 const LOCAL: LocalFont[] = [
-  { name: "Lausanne", factory: Lausanne as Factory, importName: "Lausanne", weights: "400", blurb: "A precise editorial display" },
-  { name: "DxSlight", factory: DxSlight as Factory, importName: "DxSlight", weights: "500, 800 italic", blurb: "Decorative medium + ultra" },
-  { name: "DxSlight Medium Ultra", factory: DxSlightMediumUltra as Factory, importName: "DxSlightMediumUltra", weights: "500", blurb: "Decorative medium" },
-  { name: "DxSlight ExtBd UltraSlant", factory: DxSlightExtBdUltraSlant as Factory, importName: "DxSlightExtBdUltraSlant", weights: "800 italic", blurb: "Heavy display slant" },
-  { name: "Varent Grotesk", factory: VarentGrotesk as Factory, importName: "VarentGrotesk", weights: "700, 200 italic", blurb: "Modern grotesk" },
-  { name: "Varent Grotesk Bold", factory: VarentGroteskBold as Factory, importName: "VarentGroteskBold", weights: "700", blurb: "Bold variant" },
-  { name: "Varent Grotesk ExtLtIta", factory: VarentGroteskExtLtIta as Factory, importName: "VarentGroteskExtLtIta", weights: "200 italic", blurb: "Extra-light italic" },
-  { name: "Zimula", factory: Zimula as Factory, importName: "Zimula", weights: "100-900 + ink trap + ink spot", blurb: "Full weight ladder" },
+  {
+    name: "Lausanne",
+    factory: Lausanne as Factory,
+    importName: "Lausanne",
+    weights: "400",
+    blurb: "A precise editorial display",
+  },
+  {
+    name: "DxSlight",
+    factory: DxSlight as Factory,
+    importName: "DxSlight",
+    weights: "500, 800 italic",
+    blurb: "Decorative medium + ultra",
+  },
+  {
+    name: "DxSlight Medium Ultra",
+    factory: DxSlightMediumUltra as Factory,
+    importName: "DxSlightMediumUltra",
+    weights: "500",
+    blurb: "Decorative medium",
+  },
+  {
+    name: "DxSlight ExtBd UltraSlant",
+    factory: DxSlightExtBdUltraSlant as Factory,
+    importName: "DxSlightExtBdUltraSlant",
+    weights: "800 italic",
+    blurb: "Heavy display slant",
+  },
+  {
+    name: "Varent Grotesk",
+    factory: VarentGrotesk as Factory,
+    importName: "VarentGrotesk",
+    weights: "700, 200 italic",
+    blurb: "Modern grotesk",
+  },
+  {
+    name: "Varent Grotesk Bold",
+    factory: VarentGroteskBold as Factory,
+    importName: "VarentGroteskBold",
+    weights: "700",
+    blurb: "Bold variant",
+  },
+  {
+    name: "Varent Grotesk ExtLtIta",
+    factory: VarentGroteskExtLtIta as Factory,
+    importName: "VarentGroteskExtLtIta",
+    weights: "200 italic",
+    blurb: "Extra-light italic",
+  },
+  {
+    name: "Zimula",
+    factory: Zimula as Factory,
+    importName: "Zimula",
+    weights: "100-900 + ink trap + ink spot",
+    blurb: "Full weight ladder",
+  },
 ];
 
-const ZIMULA_WEIGHTS: ReadonlyArray<{ weight: number; style: "normal" | "ink-trap" | "ink-spot"; label: string }> = [
+const ZIMULA_WEIGHTS: ReadonlyArray<{
+  weight: number;
+  style: "normal" | "ink-trap" | "ink-spot";
+  label: string;
+}> = [
   { weight: 100, style: "normal", label: "Thin" },
   { weight: 200, style: "normal", label: "ExtraLight" },
   { weight: 300, style: "normal", label: "Light" },
@@ -124,10 +326,7 @@ function ZimulaLadder() {
   return (
     <div className="space-y-2.5">
       {ZIMULA_WEIGHTS.map((w) => (
-        <div
-          key={`${w.weight}-${w.style}`}
-          className="flex items-baseline gap-4"
-        >
+        <div key={`${w.weight}-${w.style}`} className="flex items-baseline gap-4">
           <span className="w-20 shrink-0 font-mono text-xs text-[var(--color-fg-subtle)]">
             {w.weight} {w.label}
           </span>
@@ -152,7 +351,10 @@ const FEATURED_GROUPS: ReadonlyArray<{ name: string; fonts: FeaturedFont[] }> = 
   { name: "Sans-serif", fonts: FEATURED.filter((f) => f.category === "Sans") },
   { name: "Serif", fonts: FEATURED.filter((f) => f.category === "Serif") },
   { name: "Monospace", fonts: FEATURED.filter((f) => f.category === "Mono") },
-  { name: "Display & script", fonts: FEATURED.filter((f) => f.category === "Display" || f.category === "Script") },
+  {
+    name: "Display & script",
+    fonts: FEATURED.filter((f) => f.category === "Display" || f.category === "Script"),
+  },
 ];
 
 export default function FontsPage() {
@@ -236,14 +438,13 @@ export default function FontsPage() {
                       <h4 className="text-sm font-medium text-[var(--color-fg)]">{f.name}</h4>
                       <span className="text-xs text-[var(--color-fg-subtle)]">{f.blurb}</span>
                     </div>
-                    <div
-                      className="truncate text-2xl text-[var(--color-fg)]"
-                      style={font.style}
-                    >
+                    <div className="truncate text-2xl text-[var(--color-fg)]" style={font.style}>
                       Beautiful type
                     </div>
                     <code className="mt-auto truncate font-mono text-[11px] text-[var(--color-fg-muted)]">
-                      import {"{ "}{f.importName}{" }"} from &quot;swift-rust/font/google&quot;
+                      import {"{ "}
+                      {f.importName}
+                      {" }"} from &quot;swift-rust/font/google&quot;
                     </code>
                   </div>
                 );
@@ -263,9 +464,9 @@ export default function FontsPage() {
           </span>
         </div>
         <p className="mb-8 max-w-2xl text-[var(--color-fg-muted)]">
-          Bundled in <code className="font-mono text-xs">packages/font/src/local/</code> and
-          served from <code className="font-mono text-xs">/_swift-rust/fonts/</code>. Use them
-          when you need exact control over weights or want to avoid a network round-trip.
+          Bundled in <code className="font-mono text-xs">packages/font/src/local/</code> and served
+          from <code className="font-mono text-xs">/_swift-rust/fonts/</code>. Use them when you
+          need exact control over weights or want to avoid a network round-trip.
         </p>
         <style dangerouslySetInnerHTML={{ __html: localCss }} />
 
@@ -283,15 +484,14 @@ export default function FontsPage() {
                     {f.weights}
                   </span>
                 </div>
-                <div
-                  className="text-3xl text-[var(--color-fg)]"
-                  style={font.style}
-                >
+                <div className="text-3xl text-[var(--color-fg)]" style={font.style}>
                   Aa Bb Cc 123
                 </div>
                 <p className="text-xs text-[var(--color-fg-muted)]">{f.blurb}</p>
                 <code className="mt-auto truncate font-mono text-[11px] text-[var(--color-fg-muted)]">
-                  import {"{ "}{f.importName}{" }"} from &quot;swift-rust/font&quot;
+                  import {"{ "}
+                  {f.importName}
+                  {" }"} from &quot;swift-rust/font&quot;
                 </code>
               </div>
             );
@@ -306,9 +506,7 @@ export default function FontsPage() {
                 Full weight ladder 100–900 in three styles (normal, ink-trap, ink-spot)
               </p>
             </div>
-            <span className="font-mono text-[11px] text-[var(--color-fg-subtle)]">
-              27 weights
-            </span>
+            <span className="font-mono text-[11px] text-[var(--color-fg-subtle)]">27 weights</span>
           </div>
           <ZimulaLadder />
           <code className="mt-6 block truncate font-mono text-[11px] text-[var(--color-fg-muted)]">

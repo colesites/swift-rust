@@ -3,8 +3,8 @@ import type {
   CSSProperties,
   ChangeEvent,
   FormEvent,
-  KeyboardEvent as ReactKeyboardEvent,
   MouseEvent,
+  KeyboardEvent as ReactKeyboardEvent,
   ReactNode,
   SyntheticEvent,
   VideoHTMLAttributes,
@@ -14,7 +14,7 @@ export type VideoProvider = "html5" | "youtube" | "vimeo";
 export type VideoErrorCode = "SR0154" | "SR0155" | "SR0156";
 
 export class VideoError extends Error {
-  readonly name = "VideoError";
+  override readonly name = "VideoError";
   readonly code: VideoErrorCode;
   readonly kind: "media" | "network" | "decode" | "src-not-supported" | "embed" | "invalid-id";
   readonly mediaErrorCode?: number;
@@ -567,6 +567,7 @@ function VideoSurface({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: values are derived from props
   useEffect(() => {
     setError(null);
     setIsLoading(true);
@@ -581,7 +582,7 @@ function VideoSurface({
   );
 
   const handleMediaError = useCallback(
-    (e: SyntheticEvent<HTMLVideoElement, MediaErrorEvent>) => {
+    (e: SyntheticEvent<HTMLVideoElement>) => {
       const el = e.currentTarget;
       const mediaErr = el.error;
       const code = mediaErr?.code ?? 0;
@@ -629,7 +630,11 @@ function VideoSurface({
   }
 
   if (error) {
-    return createElement("div", { className, style }, renderVideoError(error, errorFallback, className, style));
+    return createElement(
+      "div",
+      { className, style },
+      renderVideoError(error, errorFallback, className, style),
+    );
   }
 
   const sources = resolveSources(src);
@@ -680,26 +685,27 @@ function VideoSurface({
         playsInline,
         preload,
         className: ["__swift_rust_video_media", className].filter(Boolean).join(" "),
-        style: { ...(aspectRatio ? { aspectRatio } : {}), display: "block", width: "100%", height: "auto" },
-        onLoadStart: (e: SyntheticEvent<HTMLVideoElement>) => {
+        style: {
+          ...(aspectRatio ? { aspectRatio } : {}),
+          display: "block",
+          width: "100%",
+          height: "auto",
+        },
+        onLoadStart: () => {
           setIsLoading(true);
           onLoadStart?.();
-          rest.onLoadStart?.(e);
         },
-        onCanPlay: (e: SyntheticEvent<HTMLVideoElement>) => {
+        onCanPlay: () => {
           setIsLoading(false);
           onCanPlay?.();
-          rest.onCanPlay?.(e);
         },
-        onWaiting: (e: SyntheticEvent<HTMLVideoElement>) => {
+        onWaiting: () => {
           setIsLoading(true);
           onWaiting?.();
-          rest.onWaiting?.(e);
         },
-        onLoadedData: (e: SyntheticEvent<HTMLVideoElement>) => {
+        onLoadedData: () => {
           setIsLoading(false);
           onLoadedData?.();
-          rest.onLoadedData?.(e);
         },
         onError: handleMediaError,
       },
@@ -736,10 +742,12 @@ export function BackgroundVideo({
   };
 
   const onSourceError = useCallback(
-    (e: SyntheticEvent<HTMLVideoElement, MediaErrorEvent>) => {
+    (e: SyntheticEvent<HTMLVideoElement>) => {
       const code = e.currentTarget.error?.code ?? 0;
       const src0 = Array.isArray(src) ? src[0]?.src : src;
-      onError?.(new VideoError("media", describeMediaError(code), { mediaErrorCode: code, url: src0 }));
+      onError?.(
+        new VideoError("media", describeMediaError(code), { mediaErrorCode: code, url: src0 }),
+      );
     },
     [src, onError],
   );
@@ -848,7 +856,7 @@ export function VideoLightbox({
   onError,
 }: VideoLightboxProps) {
   const [open, setOpen] = useState(false);
-  const [pageInput, setPageInput] = useState("1");
+  const [_pageInput, _setPageInput] = useState("1");
   const [error, setError] = useState<VideoError | null>(null);
   const close = useCallback(() => setOpen(false), []);
 
@@ -928,7 +936,9 @@ export function VideoLightbox({
               },
             },
             error
-              ? renderVideoError(error, undefined, "__swift_rust_video_lightbox_error", { background: "black" })
+              ? renderVideoError(error, undefined, "__swift_rust_video_lightbox_error", {
+                  background: "black",
+                })
               : createElement(VideoSurface, {
                   src,
                   poster,

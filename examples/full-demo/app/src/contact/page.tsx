@@ -39,8 +39,8 @@ export default function ContactPage() {
             Let&apos;s talk.
           </h1>
           <p className="mt-5 text-pretty text-lg leading-relaxed text-[var(--color-fg-muted)]">
-            Bug reports, feature requests, partnership ideas, or just to say hi. Pick a channel or use
-            the form.
+            Bug reports, feature requests, partnership ideas, or just to say hi. Pick a channel or
+            use the form.
           </p>
 
           <ul className="mt-10 space-y-6">
@@ -57,7 +57,9 @@ export default function ContactPage() {
                     <p className="mt-1 font-mono text-[0.9375rem] text-[var(--color-fg)] group-hover:text-[var(--color-accent)]">
                       {c.handle}
                     </p>
-                    <p className="mt-1 text-[0.875rem] text-[var(--color-fg-muted)]">{c.description}</p>
+                    <p className="mt-1 text-[0.875rem] text-[var(--color-fg-muted)]">
+                      {c.description}
+                    </p>
                   </div>
                   <svg
                     viewBox="0 0 24 24"

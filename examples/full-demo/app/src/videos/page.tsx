@@ -1,7 +1,7 @@
 "use client";
+import { type ChangeEvent, useState } from "react";
 import type { Metadata } from "swift-rust";
 import { Video } from "swift-rust";
-import { type ChangeEvent, useState } from "react";
 
 export const metadata: Metadata = { title: "Videos" };
 

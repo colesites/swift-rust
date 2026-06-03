@@ -4,10 +4,10 @@ import type { CSSProperties, KeyboardEvent, ReactNode } from "react";
 export type PdfErrorKind = "load" | "render" | "invalid" | "network" | "cancelled";
 
 export class PdfError extends Error {
-  readonly name = "PdfError";
+  override readonly name = "PdfError";
   readonly code: "SR0152" | "SR0153";
   readonly kind: PdfErrorKind;
-  readonly cause?: unknown;
+  override readonly cause?: unknown;
   readonly url?: string;
 
   constructor(
@@ -67,7 +67,10 @@ interface PdfDoc {
 
 interface PdfPage {
   getViewport: (opts: { scale: number }) => { width: number; height: number };
-  render: (opts: { canvasContext: CanvasRenderingContext2D; viewport: { width: number; height: number } }) => { promise: Promise<void> };
+  render: (opts: {
+    canvasContext: CanvasRenderingContext2D;
+    viewport: { width: number; height: number };
+  }) => { promise: Promise<void> };
   getTextContent: () => Promise<{ items: Array<{ str: string }> }>;
   cleanup: () => void;
 }
@@ -121,7 +124,7 @@ function clampScale(scale: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, scale));
 }
 
-function useIsomorphicLayoutEffect(fn: () => void | (() => void), deps: unknown[]): void {
+function useIsomorphicLayoutEffect(fn: () => undefined | (() => void), deps: unknown[]): void {
   const isBrowser = typeof window !== "undefined";
   if (isBrowser) {
     useEffect(fn, deps);
@@ -139,6 +142,7 @@ export function Pdf(props: PdfProps) {
     initialScale = "fit-width",
     showControls = true,
     showPageNumbers = true,
+    // biome-ignore lint/correctness/noUnusedVariables: accepted prop, not yet rendered
     showThumbnails = false,
     renderTextLayer = false,
     className,
@@ -175,7 +179,9 @@ export function Pdf(props: PdfProps) {
     (async () => {
       try {
         const pdfjs = await loadPdfJs(workerSrc ?? defaultWorkerSrc());
-        const task = pdfjs.getDocument(typeof src === "string" ? src : { url: src.url, data: src.data });
+        const task = pdfjs.getDocument(
+          typeof src === "string" ? src : { url: src.url, data: src.data },
+        );
         const loaded = await task.promise;
         if (cancelled) {
           await loaded.destroy().catch(() => {});
@@ -213,7 +219,7 @@ export function Pdf(props: PdfProps) {
         d.destroy().catch(() => {});
       }
     };
-  }, [isBrowser, sourceUrl]);
+  }, [isBrowser, sourceUrl, src, workerSrc, onLoad, onError, initialPage]);
 
   useIsomorphicLayoutEffect(() => {
     if (!doc || !canvasRef.current || !isBrowser) return;
@@ -493,14 +499,18 @@ export function Pdf(props: PdfProps) {
           showPageNumbers
             ? createElement(
                 "form",
-                { onSubmit: submitPage, style: { display: "flex", alignItems: "center", gap: "0.25rem" } },
+                {
+                  onSubmit: submitPage,
+                  style: { display: "flex", alignItems: "center", gap: "0.25rem" },
+                },
                 createElement("input", {
                   "aria-label": "Page number",
                   type: "number",
                   min: 1,
                   max: doc.numPages,
                   value: pageInput,
-                  onChange: (e: React.ChangeEvent<HTMLInputElement>) => setPageInput(e.target.value),
+                  onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+                    setPageInput(e.target.value),
                   style: {
                     width: "3.5rem",
                     padding: "0.2rem 0.4rem",
@@ -537,7 +547,10 @@ export function Pdf(props: PdfProps) {
             "button",
             {
               type: "button",
-              onClick: () => setScaleMode((s) => clampScale((typeof s === "number" ? s : actualScale) - 0.25, 0.25, 4)),
+              onClick: () =>
+                setScaleMode((s) =>
+                  clampScale((typeof s === "number" ? s : actualScale) - 0.25, 0.25, 4),
+                ),
               "aria-label": "Zoom out",
               style: btn,
             },
@@ -552,7 +565,10 @@ export function Pdf(props: PdfProps) {
             "button",
             {
               type: "button",
-              onClick: () => setScaleMode((s) => clampScale((typeof s === "number" ? s : actualScale) + 0.25, 0.25, 4)),
+              onClick: () =>
+                setScaleMode((s) =>
+                  clampScale((typeof s === "number" ? s : actualScale) + 0.25, 0.25, 4),
+                ),
               "aria-label": "Zoom in",
               style: btn,
             },
@@ -590,7 +606,11 @@ export function Pdf(props: PdfProps) {
             "aria-label": `Page ${page}`,
           })
         : loading
-          ? createElement("div", { style: { padding: "2rem", color: "rgb(115, 115, 115)" } }, loading)
+          ? createElement(
+              "div",
+              { style: { padding: "2rem", color: "rgb(115, 115, 115)" } },
+              loading,
+            )
           : createElement(
               "div",
               { style: { padding: "2rem", color: "rgb(115, 115, 115)" } },
@@ -615,7 +635,11 @@ function classifyLoadError(err: unknown, url: string): PdfError {
   if (err instanceof PdfError) return err;
   const message = err instanceof Error ? err.message : String(err);
   if (/network|fetch|CORS|InvalidPDF|password/i.test(message)) {
-    return new PdfError(err instanceof Error && /InvalidPDF|password/i.test(message) ? "invalid" : "network", message, { cause: err, url });
+    return new PdfError(
+      err instanceof Error && /InvalidPDF|password/i.test(message) ? "invalid" : "network",
+      message,
+      { cause: err, url },
+    );
   }
   return new PdfError("load", message, { cause: err, url });
 }

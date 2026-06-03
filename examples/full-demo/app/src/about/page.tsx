@@ -28,9 +28,9 @@ export default function AboutPage() {
         Built for people who ship.
       </h1>
       <p className="mt-6 text-pretty text-lg leading-relaxed text-[var(--color-fg-muted)]">
-        Swift Rust is a full-stack React framework powered with Rust + Bun. It exists because the gap between
-        &quot;what JavaScript frameworks can do&quot; and &quot;what a Rust binary can be&quot; was
-        annoying, and we wanted to close it.
+        Swift Rust is a full-stack React framework powered with Rust + Bun. It exists because the
+        gap between &quot;what JavaScript frameworks can do&quot; and &quot;what a Rust binary can
+        be&quot; was annoying, and we wanted to close it.
       </p>
 
       <div className="mt-16">
@@ -39,7 +39,9 @@ export default function AboutPage() {
           {PRINCIPLES.map((p) => (
             <div key={p.title} className="bg-[var(--color-surface)] p-6">
               <h3 className="text-[0.95rem] font-semibold">{p.title}</h3>
-              <p className="mt-2 text-[0.875rem] leading-relaxed text-[var(--color-fg-muted)]">{p.body}</p>
+              <p className="mt-2 text-[0.875rem] leading-relaxed text-[var(--color-fg-muted)]">
+                {p.body}
+              </p>
             </div>
           ))}
         </div>
@@ -48,11 +50,21 @@ export default function AboutPage() {
       <div className="mt-16">
         <h2 className="text-2xl font-semibold tracking-tight">The team</h2>
         <p className="mt-3 text-[var(--color-fg-muted)]">
-          We&apos;re a small group of engineers who have spent the last decade building web frameworks.
+          We&apos;re a small group of engineers who have spent the last decade building web
+          frameworks.
         </p>
-        <Link href="/about/team" className="link mt-4 inline-flex items-center gap-1.5 text-[0.875rem] font-medium">
+        <Link
+          href="/about/team"
+          className="link mt-4 inline-flex items-center gap-1.5 text-[0.875rem] font-medium"
+        >
           Meet the team
-          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            viewBox="0 0 24 24"
+            className="h-3.5 w-3.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </Link>

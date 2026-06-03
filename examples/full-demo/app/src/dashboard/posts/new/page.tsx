@@ -10,7 +10,13 @@ export default function NewPostPage() {
         href="/dashboard/posts"
         className="inline-flex items-center gap-1.5 text-[0.875rem] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]"
       >
-        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg
+          viewBox="0 0 24 24"
+          className="h-3.5 w-3.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
           <path d="M19 12H5M11 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
         All posts
@@ -23,7 +29,10 @@ export default function NewPostPage() {
 
       <form className="mt-8 space-y-6">
         <div>
-          <label htmlFor="title" className="block text-[0.8125rem] font-medium text-[var(--color-fg)]">
+          <label
+            htmlFor="title"
+            className="block text-[0.8125rem] font-medium text-[var(--color-fg)]"
+          >
             Title
           </label>
           <input
@@ -35,7 +44,10 @@ export default function NewPostPage() {
           />
         </div>
         <div>
-          <label htmlFor="slug" className="block text-[0.8125rem] font-medium text-[var(--color-fg)]">
+          <label
+            htmlFor="slug"
+            className="block text-[0.8125rem] font-medium text-[var(--color-fg)]"
+          >
             Slug
           </label>
           <input
@@ -47,7 +59,10 @@ export default function NewPostPage() {
           />
         </div>
         <div>
-          <label htmlFor="excerpt" className="block text-[0.8125rem] font-medium text-[var(--color-fg)]">
+          <label
+            htmlFor="excerpt"
+            className="block text-[0.8125rem] font-medium text-[var(--color-fg)]"
+          >
             Excerpt
           </label>
           <textarea
@@ -58,7 +73,10 @@ export default function NewPostPage() {
           />
         </div>
         <div>
-          <label htmlFor="body" className="block text-[0.8125rem] font-medium text-[var(--color-fg)]">
+          <label
+            htmlFor="body"
+            className="block text-[0.8125rem] font-medium text-[var(--color-fg)]"
+          >
             Body
           </label>
           <textarea

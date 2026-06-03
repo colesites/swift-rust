@@ -55,7 +55,11 @@ export default function SettingsPage() {
           </p>
           <div className="mt-5 grid gap-2">
             {[
-              { id: "ssr-wasm", label: "SSR + WASM", hint: "Default. Server-rendered HTML, WASM-hydrated." },
+              {
+                id: "ssr-wasm",
+                label: "SSR + WASM",
+                hint: "Default. Server-rendered HTML, WASM-hydrated.",
+              },
               { id: "ssr", label: "SSR only", hint: "No client JavaScript." },
               { id: "ssr-htmx", label: "SSR + HTMX", hint: "Progressive enhancement." },
               { id: "wasm", label: "Full WASM SPA", hint: "Single-page app in WebAssembly." },
@@ -91,7 +95,11 @@ export default function SettingsPage() {
                 All posts, settings, and data will be permanently removed.
               </p>
             </div>
-            <button type="button" className="btn btn-sm" style={{ background: "#dc2626", color: "white" }}>
+            <button
+              type="button"
+              className="btn btn-sm"
+              style={{ background: "#dc2626", color: "white" }}
+            >
               Delete
             </button>
           </div>

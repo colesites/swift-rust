@@ -1,8 +1,8 @@
-import type { Metadata } from "swift-rust";
-import { notFound } from "swift-rust/router";
-import { Link } from "swift-rust";
-import { getAllTags, getPostsByTag } from "@/lib/posts";
 import { formatDate } from "@/lib/format";
+import { getAllTags, getPostsByTag } from "@/lib/posts";
+import type { Metadata } from "swift-rust";
+import { Link } from "swift-rust";
+import { notFound } from "swift-rust/router";
 
 export function generateStaticParams() {
   return getAllTags().map((tag) => ({ tag }));
@@ -23,7 +23,13 @@ export default function TagPage({ params }: { params: { tag: string } }) {
         href="/blog"
         className="inline-flex items-center gap-1.5 text-[0.875rem] text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]"
       >
-        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg
+          viewBox="0 0 24 24"
+          className="h-3.5 w-3.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
           <path d="M19 12H5M11 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
         All posts

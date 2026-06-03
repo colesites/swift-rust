@@ -8,5 +8,10 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["app/**/*", "components/**/*", "lib/**/*", "globals.d.ts"]
+  "include": ["app/**/*", "components/**/*", "lib/**/*", "globals.d.ts"],
+  "exclude": [
+    "app/docs/api-reference/components/image/page.tsx",
+    "app/docs/api-reference/components/pdf/page.tsx",
+    "app/docs/api-reference/components/video/page.tsx"
+  ]
 }

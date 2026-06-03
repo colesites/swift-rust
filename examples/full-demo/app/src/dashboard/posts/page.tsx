@@ -1,7 +1,7 @@
+import { formatDate } from "@/lib/format";
+import { posts } from "@/lib/posts";
 import type { Metadata } from "swift-rust";
 import { Link } from "swift-rust";
-import { posts } from "@/lib/posts";
-import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Posts" };
 
@@ -17,7 +17,13 @@ export default function PostsPage() {
           <p className="mt-1 text-[var(--color-fg-muted)]">{posts.length} total</p>
         </div>
         <Link href="/dashboard/posts/new" className="btn btn-primary btn-sm">
-          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            viewBox="0 0 24 24"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <path d="M12 5v14M5 12h14" strokeLinecap="round" />
           </svg>
           New post
@@ -37,7 +43,10 @@ export default function PostsPage() {
           </thead>
           <tbody>
             {posts.map((p) => (
-              <tr key={p.slug} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]">
+              <tr
+                key={p.slug}
+                className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]"
+              >
                 <td className="px-5 py-3.5">
                   <Link
                     href={`/dashboard/posts/${p.slug}`}

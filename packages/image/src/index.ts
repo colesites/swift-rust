@@ -7,12 +7,12 @@ export type ImagePlaceholder = "blur";
 
 export class ImageMissingBlurError extends Error {
   readonly code = "SR0151";
-  readonly name = "ImageMissingBlurError";
+  override readonly name = "ImageMissingBlurError";
 
   constructor(reason: "placeholder" | "blurDataURL" | "dataURL", extra?: string) {
     const message =
       reason === "placeholder"
-        ? "The <Image> component requires `placeholder=\"blur\"`. Pass `placeholder=\"blur\"` and a base64 `blurDataURL` for every <Image>."
+        ? 'The <Image> component requires `placeholder="blur"`. Pass `placeholder="blur"` and a base64 `blurDataURL` for every <Image>.'
         : reason === "blurDataURL"
           ? "The <Image> component requires a `blurDataURL`. Provide a base64-encoded data URL (for example a 20x30 JPEG of the source image at low quality)."
           : "`blurDataURL` must be a base64 data URL (starting with `data:image/...`). Got a plain URL or empty string.";
@@ -47,13 +47,19 @@ const DEFAULT_LOADER = ({
 
 function validate(props: ImageProps): void {
   if (props.placeholder !== "blur") {
-    throw new ImageMissingBlurError("placeholder", `received: ${JSON.stringify(props.placeholder)}`);
+    throw new ImageMissingBlurError(
+      "placeholder",
+      `received: ${JSON.stringify(props.placeholder)}`,
+    );
   }
   if (typeof props.blurDataURL !== "string" || props.blurDataURL.length === 0) {
     throw new ImageMissingBlurError("blurDataURL");
   }
   if (!props.blurDataURL.startsWith("data:image/")) {
-    throw new ImageMissingBlurError("dataURL", `received prefix: ${props.blurDataURL.slice(0, 32)}`);
+    throw new ImageMissingBlurError(
+      "dataURL",
+      `received prefix: ${props.blurDataURL.slice(0, 32)}`,
+    );
   }
 }
 
