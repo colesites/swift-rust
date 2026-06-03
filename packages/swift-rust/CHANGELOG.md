@@ -1,5 +1,11 @@
 # swift-rust
 
+## 1.0.0
+
+### Major Changes
+
+- swift-rust
+
 ## 0.2.1
 
 ### Patch Changes
