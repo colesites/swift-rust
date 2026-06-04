@@ -17,6 +17,10 @@ export const NAV = [
     ],
   },
   {
+    title: "Routing",
+    items: [{ label: "File conventions", href: "/docs/routing/file-conventions" }],
+  },
+  {
     title: "Guides",
     items: [
       { label: "Authentication", href: "/docs/guides/auth" },

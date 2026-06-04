@@ -1,0 +1,300 @@
+import { DocArticle } from "@/app/components/doc-article";
+
+export const metadata = { title: "Routing file conventions" };
+
+function Code({ lang, children }: { lang: string; children: string }) {
+  return (
+    <div className="code-block">
+      <div className="code-block-header">
+        <span>{lang}</span>
+      </div>
+      <pre>
+        <code>{children}</code>
+      </pre>
+    </div>
+  );
+}
+
+export default function RoutingFilesPage() {
+  return (
+    <DocArticle>
+      <h1>Routing file conventions</h1>
+      <p>
+        Swift Rust uses file‑system routing. Beyond <code>page</code> and <code>layout</code>, a set
+        of special files co‑located in a route segment add data loading, access control, mutations,
+        caching, SEO, and more. Every file is <strong>optional</strong> and{" "}
+        <strong>additive</strong> — add one when you need it.
+      </p>
+      <blockquote>
+        Routing files live under your app root — <code>app/src/</code> when you use a{" "}
+        <code>src/</code> directory, otherwise <code>app/</code>. The dev server warns at startup if
+        it finds a routing file placed where it won&apos;t be picked up.
+      </blockquote>
+
+      <h2>Execution order</h2>
+      <p>For each matched route, files run in a fixed pipeline (all optional):</p>
+      <Code lang="lifecycle">{`runtime (config / edge / worker)
+  → proxy            (rewrites, headers, redirects — cheap, no data)
+  → schema / query   (validate + type params & searchParams; may 400)
+  → guard            (auth / roles / flags; outer → inner; may 401 / 403 / redirect)
+  → action           (mutations, on POST/PUT/PATCH/DELETE)   ┐
+  → loader + state   (data, in parallel along the chain)      ├ then render
+  → render           (shell → layout → template → page)       ┘
+  → seo / stream     (head & JSON‑LD; custom streaming)
+  → revalidate       (cache TTL + tags)
+  on throw → error → error-recovery → not-found → global-error`}</Code>
+      <p>
+        Files compose <strong>outermost‑first</strong>: a <code>guard</code> or <code>proxy</code>{" "}
+        in <code>app/dashboard/</code> runs for every route beneath it. A <code>proxy.ts</code> at
+        the app root runs for every request.
+      </p>
+
+      <h2>Existing files</h2>
+      <ul>
+        <li>
+          <code>page.tsx</code> — the route&apos;s UI.
+        </li>
+        <li>
+          <code>layout.tsx</code> — shared UI that wraps child routes.
+        </li>
+        <li>
+          <code>loading.tsx</code> — Suspense fallback during the initial stream.
+        </li>
+        <li>
+          <code>error.tsx</code> · <code>global-error.tsx</code> — error boundaries.
+        </li>
+        <li>
+          <code>not-found.tsx</code> — 404 UI.
+        </li>
+        <li>
+          <code>template.tsx</code> · <code>default.tsx</code> — re‑mounting wrapper / parallel‑slot
+          default.
+        </li>
+        <li>
+          <code>route.ts</code> — API route handler (GET/POST/…).
+        </li>
+      </ul>
+
+      <h2>guard.ts — access control</h2>
+      <p>
+        Runs before loaders and actions. Allow by returning nothing; deny with{" "}
+        <code>redirect()</code>, <code>unauthorized()</code> (401), <code>forbidden()</code> (403),
+        or <code>notFound()</code>. Pass data to downstream files via <code>locals</code>.
+      </p>
+      <Code lang="app/dashboard/guard.ts">{`import { redirect, forbidden } from "swift-rust/router";
+
+export default async function guard(ctx) {
+  const session = await getSession(ctx.cookies.get("sid"));
+  if (!session) return redirect("/login?next=" + ctx.url.pathname);
+  if (!session.user.isAdmin) return forbidden();
+  ctx.locals.set("user", session.user);
+}`}</Code>
+
+      <h2>loader.ts — data loading</h2>
+      <p>
+        Fetches the data a segment needs. Loaders run in parallel along the chain; read the result
+        in your page with <code>useLoaderData&lt;typeof loader&gt;()</code>.
+      </p>
+      <Code lang="app/posts/[slug]/loader.ts">{`import { notFound } from "swift-rust/router";
+
+export default async function loader(ctx) {
+  const post = await db.post.find(ctx.params.slug);
+  if (!post) notFound();
+  return { post };
+}
+export const cache = { revalidate: 60, tags: ["posts"] };`}</Code>
+      <Code lang="app/posts/[slug]/page.tsx">{`import { useLoaderData } from "swift-rust/router";
+import loader from "./loader";
+
+export default function Page() {
+  const { post } = useLoaderData<typeof loader>();
+  return <Article post={post} />;
+}`}</Code>
+
+      <h2>action.ts — mutations</h2>
+      <p>
+        Handles non‑GET requests (form posts, writes). Validate with <code>schema.ts</code>;{" "}
+        <code>redirect()</code> on success (POST‑redirect‑GET). Read the result with{" "}
+        <code>useActionData()</code>.
+      </p>
+      <Code lang="app/posts/new/action.ts">{`import { redirect } from "swift-rust/router";
+import { PostSchema } from "./schema";
+
+export default async function action(ctx) {
+  const form = await ctx.formData();
+  const parsed = PostSchema.safeParse(Object.fromEntries(form));
+  if (!parsed.success) return { errors: parsed.error.flatten() };
+  const post = await db.post.create(parsed.data);
+  return redirect(\`/posts/\${post.slug}\`);
+}`}</Code>
+
+      <h2>schema.ts — typed inputs</h2>
+      <p>
+        The source of truth for <code>params</code>, <code>searchParams</code>, and form data. Any
+        Standard‑Schema library works (Zod, Valibot). Validated values flow to every file in the
+        segment.
+      </p>
+      <Code lang="app/posts/[slug]/schema.ts">{`import { z } from "zod";
+
+export const params = z.object({ slug: z.string().min(1) });
+export const searchParams = z.object({ page: z.coerce.number().default(1) });`}</Code>
+
+      <h2>proxy.ts — request interception</h2>
+      <p>
+        Cheap, data‑free interception scoped to a subtree: rewrites, headers, redirects, A/B
+        buckets. (Formerly <code>middleware.ts</code>, which still works with a warning.) Limit
+        paths with <code>matcher</code>.
+      </p>
+      <Code lang="app/proxy.ts">{`import { rewrite } from "swift-rust/router";
+
+export default function proxy(ctx) {
+  if (ctx.url.pathname === "/old") return rewrite("/new");
+}
+export const matcher = ["/old", "/blog/**"];`}</Code>
+
+      <h2>config.ts — route configuration</h2>
+      <p>
+        Static per‑segment config (merged inner‑over‑outer). Headers and cache settings are applied
+        to the response; <code>runtime</code> selects where the segment executes.
+      </p>
+      <Code lang="app/dashboard/config.ts">{`export const config = {
+  runtime: "node",          // "node" | "edge" | "worker"
+  rendering: "ssr-stream",
+  revalidate: 120,           // seconds
+  headers: { "X-Frame-Options": "DENY" },
+};`}</Code>
+
+      <h2>revalidate.ts — cache control</h2>
+      <p>
+        Decides cache TTL and tags per request/mutation. Emits <code>Cache-Control</code> and cache
+        tags for on‑demand invalidation.
+      </p>
+      <Code lang="app/posts/[slug]/revalidate.ts">{`export default function revalidate(ctx) {
+  return { ttl: 300, tags: ["post:" + ctx.params.slug] };
+}`}</Code>
+
+      <h2>seo.tsx — head &amp; structured data</h2>
+      <p>
+        Runs with loader data; emits title, description, canonical, OpenGraph, and JSON‑LD into{" "}
+        <code>&lt;head&gt;</code>.
+      </p>
+      <Code lang="app/posts/[slug]/seo.tsx">{`export default function seo(ctx) {
+  return {
+    title: ctx.data.post.title,
+    description: ctx.data.post.excerpt,
+    canonical: "https://example.com/posts/" + ctx.params.slug,
+    jsonLd: { "@context": "https://schema.org", "@type": "Article", headline: ctx.data.post.title },
+  };
+}`}</Code>
+
+      <h2>state.ts — client store hydration</h2>
+      <p>
+        Seeds a client store with server data; serialized to <code>window.__SR_STATE__</code>.
+      </p>
+      <Code lang="app/dashboard/state.ts">{`export default function state(ctx) {
+  return { user: ctx.locals.get("user"), theme: ctx.cookies.get("theme") ?? "light" };
+}`}</Code>
+
+      <h2>rpc.ts — typed procedures</h2>
+      <p>
+        Co‑located, validated procedures callable over <code>POST</code>; <code>GET</code> lists
+        them.
+      </p>
+      <Code lang="app/search/rpc.ts">{`import { z } from "zod";
+
+export const procedures = {
+  search: {
+    type: "query",
+    input: z.object({ q: z.string() }),
+    handler: (input, ctx) => db.search(input.q),
+  },
+};
+// POST /search  { "procedure": "search", "input": { "q": "rust" } }`}</Code>
+
+      <h2>stream.ts — streaming responses</h2>
+      <p>
+        A dedicated streaming endpoint (SSE, chunked JSON, token streams) for a route without a
+        page.
+      </p>
+      <Code lang="app/chat/stream.ts">{`export const contentType = "text/event-stream";
+export default function stream(ctx) {
+  return new ReadableStream({
+    start(c) {
+      c.enqueue(new TextEncoder().encode("data: hello\\n\\n"));
+      c.close();
+    },
+  });
+}`}</Code>
+
+      <h2>edge.ts / worker.ts — runtime targeting</h2>
+      <p>
+        Force a segment onto the Edge or a Workers runtime. Equivalent to{" "}
+        <code>config.runtime</code> with runtime‑specific options.
+      </p>
+      <Code lang="app/(edge)/ping/edge.ts">{`export const edge = { regions: ["iad1", "fra1"] };`}</Code>
+
+      <h2>variant.tsx — A/B variants</h2>
+      <p>
+        Render a variant of a segment based on a bucket (from <code>proxy</code>, a cookie, or{" "}
+        <code>assign</code>).
+      </p>
+      <Code lang="app/home/variant.tsx">{`import A from "./home-a";
+import B from "./home-b";
+
+export const variants = {
+  a: async () => ({ default: A }),
+  b: async () => ({ default: B }),
+};
+export const assign = (ctx) => (ctx.cookies.get("exp") === "b" ? "b" : "a");`}</Code>
+
+      <h2>i18n.ts — locale resolution</h2>
+      <p>
+        Resolves the active locale (cookie, <code>Accept-Language</code>, or a custom resolver) into{" "}
+        <code>locals.locale</code> before render.
+      </p>
+      <Code lang="app/i18n.ts">{`export const i18n = {
+  locales: ["en", "fr", "de"],
+  defaultLocale: "en",
+  strategy: "cookie",
+};`}</Code>
+
+      <h2>error-recovery.tsx — retry UI</h2>
+      <p>
+        A richer error boundary with retry/reset, used after <code>error.tsx</code>.
+      </p>
+      <Code lang="app/dashboard/error-recovery.tsx">{`"use client";
+export default function ErrorRecovery({ error, retry, attempt }) {
+  return (
+    <div role="alert">
+      <p>Something went wrong: {error.message}</p>
+      <button onClick={() => retry()}>Retry ({attempt})</button>
+    </div>
+  );
+}`}</Code>
+
+      <h2>Control‑flow helpers</h2>
+      <p>
+        Exported from <code>swift-rust/router</code> and usable from <code>guard</code>,{" "}
+        <code>loader</code>, <code>action</code>, and <code>proxy</code>:
+      </p>
+      <ul>
+        <li>
+          <code>redirect(to, status?)</code> · <code>permanentRedirect(to)</code> ·{" "}
+          <code>rewrite(to)</code>
+        </li>
+        <li>
+          <code>notFound()</code> · <code>unauthorized()</code> (401) · <code>forbidden()</code>{" "}
+          (403)
+        </li>
+      </ul>
+
+      <h2>Coming soon</h2>
+      <p>
+        These conventions are recognized but require the parallel‑routes and client‑navigator
+        subsystems, which are in progress: <code>shell.tsx</code>, <code>fragment.tsx</code>,{" "}
+        <code>fallback.tsx</code>, <code>transition.tsx</code>, <code>pending.tsx</code>,{" "}
+        <code>prefetch.ts</code>.
+      </p>
+    </DocArticle>
+  );
+}
