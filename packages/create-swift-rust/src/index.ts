@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { existsSync } from "node:fs";
 import { mkdir, stat, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 
@@ -33,6 +33,18 @@ async function pathExists(path: string): Promise<boolean> {
 
 function isValidName(name: string): boolean {
   return /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/.test(name);
+}
+
+/** ".", "./", "" all mean "scaffold into the current directory". */
+function isCurrentDir(name: string): boolean {
+  const t = name.trim();
+  return t === "." || t === "./" || t === "";
+}
+/** Normalize a project-name input: current-dir variants → ".", strip trailing slashes. */
+function normalizeProjectName(name: string): string {
+  const t = name.trim();
+  if (isCurrentDir(t)) return ".";
+  return t.replace(/\/+$/, "");
 }
 
 function isValidAlias(alias: string): boolean {
@@ -137,8 +149,8 @@ async function askQuestions(
           defaultValue: "my-swift-rust-app",
           validate: (v) => {
             if (!v) return "Project name is required";
-            if (!isValidName(v))
-              return "Invalid name. Use letters, numbers, dashes, and underscores.";
+            if (!isCurrentDir(v) && !isValidName(normalizeProjectName(v)))
+              return "Invalid name. Use letters, numbers, dashes, and underscores — or \".\" for the current directory.";
             return undefined;
           },
         }));
@@ -304,7 +316,7 @@ async function askQuestions(
   const install: boolean = installAnswer === true;
 
   return {
-    projectName,
+    projectName: normalizeProjectName(String(projectName)),
     language,
     renderer,
     linter,
@@ -317,8 +329,11 @@ async function askQuestions(
 }
 
 async function writeProjectFiles(target: string, answers: Answers): Promise<void> {
-  const { projectName, language, renderer, linter, tailwind, srcDir, importAlias, useShadcn } =
+  const { projectName: rawName, language, renderer, linter, tailwind, srcDir, importAlias, useShadcn } =
     answers;
+  // When scaffolding into the current directory ("."), name the package after
+  // the directory itself (like create-next-app), since "." is not a valid name.
+  const projectName = rawName === "." ? basename(resolve(target)) : rawName;
   const appDir = join(target, srcDir ? "app/src" : "app");
   const componentsDir = join(target, "components");
   const libDir = join(target, "lib");
@@ -366,13 +381,13 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
     },
     devDependencies: {
       ...(language === "ts"
-        ? { typescript: "^5.6.0", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0" }
+        ? { typescript: "^6.0.0", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0" }
         : {}),
       ...(linter === "biome" ? { "@biomejs/biome": "^1.9.0" } : { eslint: "^9.0.0" }),
       ...(tailwind
         ? { tailwindcss: "^4.0.0", "@tailwindcss/postcss": "^4.0.0", postcss: "^8.4.0" }
         : {}),
-      ...(useShadcn ? { shadcn: "^2.0.0" } : {}),
+      ...(useShadcn ? { shadcn: "^4.0.0" } : {}),
     },
   };
   await writeFile(join(target, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
@@ -420,10 +435,14 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
     ".vercel/",
     "dist/",
     ".turbo/",
-    ".env*.local",
     "target/",
     "*.log",
     ".DS_Store",
+    "",
+    "# env files — ignore everything except the example",
+    ".env",
+    ".env.*",
+    "!.env.example",
   ].join("\n");
   await writeFile(join(target, ".gitignore"), `${gitignore}\n`);
 
@@ -797,10 +816,16 @@ For custom domains and ISR / serverless functions, see the [deploy guide](https:
 `;
   await writeFile(join(target, "README.md"), readme);
 
-  const envExample = `# Rename to .env.local to use
+  const envExample = `# Example environment variables. Copy values you need into .env.local.
+# .env.local is git-ignored; .env.example is committed.
 # SWIFT_RUST_RUNTIME=/path/to/bun
 `;
   await writeFile(join(target, ".env.example"), envExample);
+  // Local env file (git-ignored) so the app works out of the box.
+  const envLocal = `# Local environment variables (git-ignored). Not committed.
+# SWIFT_RUST_RUNTIME=/path/to/bun
+`;
+  await writeFile(join(target, ".env.local"), envLocal);
 
   const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#0a0a0a"/><g stroke="#ffffff" stroke-width="1.9" stroke-linecap="round" fill="none"><circle cx="16" cy="16" r="6.4"/><path d="M16 4.4v2.6M16 25v2.6M4.4 16h2.6M25 16h2.6M7.9 7.9l1.8 1.8M22.3 22.3l1.8 1.8M7.9 24.1l1.8-1.8M22.3 9.7l1.8-1.8"/></g><path d="M17.8 9.3 L11.6 17 H15.2 L14.2 22.8 L20.4 15 H16.8 Z" fill="#fb923c"/></svg>
 `;

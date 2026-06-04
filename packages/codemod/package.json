@@ -38,11 +38,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/swift-rust/swift-rust.git",
+    "url": "https://github.com/colesites/swift-rust.git",
     "directory": "packages/codemod"
   },
   "bugs": {
-    "url": "https://github.com/swift-rust/swift-rust/issues"
+    "url": "https://github.com/colesites/swift-rust/issues"
   },
   "homepage": "https://swift-rust.dev"
 }

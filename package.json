@@ -7,7 +7,7 @@
   "homepage": "https://swift-rust.dev",
   "repository": {
     "type": "git",
-    "url": "https://github.com/swift-rust/swift-rust.git"
+    "url": "https://github.com/colesites/swift-rust.git"
   },
   "workspaces": [
     "apps/*",

@@ -1,6 +1,6 @@
 {
   "name": "@swift-rust/pdf",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "PDF component tree and viewer for swift-rust.",
   "license": "MIT",
   "type": "module",
@@ -43,11 +43,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/swift-rust/swift-rust.git",
+    "url": "https://github.com/colesites/swift-rust.git",
     "directory": "packages/pdf"
   },
   "bugs": {
-    "url": "https://github.com/swift-rust/swift-rust/issues"
+    "url": "https://github.com/colesites/swift-rust/issues"
   },
   "homepage": "https://swift-rust.dev"
 }

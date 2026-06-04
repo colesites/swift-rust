@@ -1,16 +1,16 @@
 {
   "name": "create-swift-rust",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Create a new swift-rust project from a template.",
   "license": "MIT",
   "homepage": "https://swift-rust.dev",
   "repository": {
     "type": "git",
-    "url": "https://github.com/swift-rust/swift-rust.git",
+    "url": "https://github.com/colesites/swift-rust.git",
     "directory": "packages/create-swift-rust"
   },
   "bugs": {
-    "url": "https://github.com/swift-rust/swift-rust/issues"
+    "url": "https://github.com/colesites/swift-rust/issues"
   },
   "type": "module",
   "main": "./dist/index.js",
