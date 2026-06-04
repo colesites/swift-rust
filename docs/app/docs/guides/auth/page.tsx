@@ -38,20 +38,18 @@ export const POST: RouteHandler = async ({ request }) => {
       <h2>Reading the session</h2>
       <div className="code-block">
         <div className="code-block-header">
-          <span>middleware.ts</span>
+          <span>app/proxy.ts</span>
         </div>
         <pre>
-          <code>{`import { NextResponse } from "swift-rust/router";
+          <code>{`import { redirect } from "swift-rust/router";
+import type { RouteRequest } from "swift-rust/router";
 
-export function middleware(request: Request) {
-  const session = request.cookies.get("session");
-  if (!session) return NextResponse.redirect("/login");
-  return NextResponse.next();
+export default function proxy(ctx: RouteRequest) {
+  const session = ctx.cookies.get("session");
+  if (!session) redirect("/login");
 }
 
-export const config = {
-  matcher: ["/dashboard/:path*", "/api/protected/:path*"],
-};`}</code>
+export const matcher = ["/dashboard/**", "/api/protected/**"];`}</code>
         </pre>
       </div>
 
