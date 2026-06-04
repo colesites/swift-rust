@@ -26,7 +26,7 @@ export default function RoutingFilesPage() {
         <strong>additive</strong> — add one when you need it.
       </p>
       <blockquote>
-        Routing files live under your app root — <code>app/src/</code> when you use a{" "}
+        Routing files live under your app root — <code>src/app/</code> when you use a{" "}
         <code>src/</code> directory, otherwise <code>app/</code>. The dev server warns at startup if
         it finds a routing file placed where it won&apos;t be picked up.
       </blockquote>
@@ -288,12 +288,69 @@ export default function ErrorRecovery({ error, retry, attempt }) {
         </li>
       </ul>
 
+      <h2>Client navigation</h2>
+      <p>
+        <code>&lt;Link&gt;</code> and plain <code>&lt;a&gt;</code> links to same‑origin routes are
+        upgraded to client‑side navigation automatically: the next page is fetched, the body is
+        swapped, scripts re‑run, <code>&lt;title&gt;</code> and meta are synced, and back/forward
+        history is managed — no full reload. It degrades to ordinary links when JavaScript is off.
+      </p>
+
+      <h2>prefetch.ts — link prefetching</h2>
+      <p>
+        Controls how links are prefetched into the navigator&apos;s cache. The nearest{" "}
+        <code>prefetch.ts</code> up the tree wins; opt a single link out with{" "}
+        <code>{"<Link prefetch={false}>"}</code>.
+      </p>
+      <Code lang="app/prefetch.ts">{`export const strategy = "viewport"; // "hover" (default) | "viewport" | "none"
+export const margin = "300px";        // IntersectionObserver rootMargin`}</Code>
+
+      <h2>pending.tsx — navigation pending UI</h2>
+      <p>
+        Shown while a client navigation is in flight — but only once it outlasts a ~120ms threshold,
+        so fast/cached navigations don&apos;t flash it. Rendered into a fixed overlay; style it as a
+        top progress bar or spinner.
+      </p>
+      <Code lang="app/pending.tsx">{`export default function Pending() {
+  return <div className="route-progress" />;
+}`}</Code>
+
+      <h2>transition.tsx — view transitions</h2>
+      <p>
+        Wraps the navigation swap in the View Transitions API. Falls back to a plain swap when the
+        API is unsupported, <code>type</code> is <code>&quot;none&quot;</code>, or the user prefers
+        reduced motion.
+      </p>
+      <Code lang="app/transition.tsx">{`export const type = "slide";  // "fade" (default) | "slide" | "none"
+export const duration = 250;    // ms`}</Code>
+
+      <h2>Parallel routes — @slots</h2>
+      <p>
+        A layout directory can hold named slot folders (<code>@modal</code>, <code>@sidebar</code>).
+        Each slot resolves against the URL independently and is passed to the layout as a prop
+        alongside <code>children</code>.
+      </p>
+      <Code lang="app/dashboard/layout.tsx">{`export default function Layout({ children, modal }) {
+  return <>{children}{modal}</>;
+}`}</Code>
+      <ul>
+        <li>
+          <code>@modal/page.tsx</code> · <code>@modal/fragment.tsx</code> — the slot&apos;s matched
+          leaf (use <code>fragment.tsx</code> for reusable modal/drawer content).
+        </li>
+        <li>
+          <code>@modal/default.tsx</code> — rendered when the slot has no match for the current URL.
+        </li>
+        <li>
+          <code>@modal/fallback.tsx</code> — Suspense fallback while the slot loads.
+        </li>
+      </ul>
+
       <h2>Coming soon</h2>
       <p>
-        These conventions are recognized but require the parallel‑routes and client‑navigator
-        subsystems, which are in progress: <code>shell.tsx</code>, <code>fragment.tsx</code>,{" "}
-        <code>fallback.tsx</code>, <code>transition.tsx</code>, <code>pending.tsx</code>,{" "}
-        <code>prefetch.ts</code>.
+        One convention remains in progress: <code>shell.tsx</code> — let a route own the outer
+        document (<code>&lt;html&gt;</code> / <code>&lt;body&gt;</code> / providers) while the
+        framework still injects head assets.
       </p>
     </DocArticle>
   );
