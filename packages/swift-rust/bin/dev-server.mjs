@@ -869,6 +869,21 @@ async function runRoutePipeline(route, ctx) {
   // config.ts — merged, applied to the response by the caller.
   const config = await readMergedConfig(chain);
 
+  // i18n.ts — resolve the active locale into locals (cookie/header/default).
+  const i18nMod = await collectFirst(chain, "i18n");
+  const i18nCfg = i18nMod?.i18n ?? i18nMod?.default;
+  if (i18nCfg && Array.isArray(i18nCfg.locales)) {
+    let locale = i18nCfg.defaultLocale ?? i18nCfg.locales[0];
+    if (typeof i18nCfg.resolve === "function") locale = (await i18nCfg.resolve(ctx)) || locale;
+    else if (i18nCfg.strategy === "cookie") locale = ctx.cookies.get("locale") || locale;
+    else if (i18nCfg.strategy === "header") {
+      const al = ctx.headers.get?.("accept-language")?.split(",")[0]?.split("-")[0];
+      if (al && i18nCfg.locales.includes(al)) locale = al;
+    }
+    ctx.locals.set("locale", locale);
+    ctx.__locale = locale;
+  }
+
   // schema.ts — validate/brand params + searchParams (Standard-Schema/Zod-like)
   for (const { file } of collectRouteFiles(chain, "schema")) {
     const mod = await loadModuleFresh(file);
@@ -1029,8 +1044,30 @@ async function renderRoute(urlPath, req) {
       });
     }
 
-    const pageMod = await loadModuleFresh(route.file);
-    const Page = pageMod.default ?? pageMod.Page ?? pageMod.page;
+    // variant.tsx — pick an A/B variant component (bucket from middleware/
+    // cookie/assign), else fall back to page.tsx.
+    let Page;
+    const leafDir = (route.dirChain || [])[(route.dirChain || []).length - 1];
+    const variantFile = leafDir && findFile(leafDir, "variant");
+    if (variantFile) {
+      const vmod = await loadModuleFresh(variantFile);
+      if (vmod.variants && typeof vmod.variants === "object") {
+        const bucket =
+          (typeof vmod.assign === "function" ? vmod.assign(ctx) : null) ||
+          ctx.locals.get("bucket") ||
+          ctx.cookies.get("bucket") ||
+          Object.keys(vmod.variants)[0];
+        const loader = vmod.variants[bucket];
+        if (typeof loader === "function") {
+          const m = await loader();
+          Page = m.default ?? m;
+        }
+      }
+    }
+    if (!Page) {
+      const pageMod = await loadModuleFresh(route.file);
+      Page = pageMod.default ?? pageMod.Page ?? pageMod.page;
+    }
     if (!Page) {
       return { status: 500, html: null, error: new Error(`page ${route.file} has no default export`) };
     }
