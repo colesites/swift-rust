@@ -617,6 +617,7 @@ function mergeMetadata(...metas) {
     if (m.description) out.description = m.description;
     if (m.keywords) out.keywords = m.keywords;
     if (m.openGraph) out.openGraph = { ...(out.openGraph || {}), ...m.openGraph };
+    if (m.twitter) out.twitter = { ...(out.twitter || {}), ...m.twitter };
   }
   return out;
 }
@@ -641,6 +642,24 @@ function metadataToHead(meta) {
       for (const img of meta.openGraph.images) {
         const url = typeof img === "string" ? img : img.url;
         if (url) parts.push(`<meta property="og:image" content="${escapeHtml(url)}" />`);
+        if (typeof img === "object" && img) {
+          if (img.width) parts.push(`<meta property="og:image:width" content="${escapeHtml(img.width)}" />`);
+          if (img.height) parts.push(`<meta property="og:image:height" content="${escapeHtml(img.height)}" />`);
+          if (img.alt) parts.push(`<meta property="og:image:alt" content="${escapeHtml(img.alt)}" />`);
+        }
+      }
+    }
+  }
+  if (meta.twitter) {
+    if (meta.twitter.card) parts.push(`<meta name="twitter:card" content="${escapeHtml(meta.twitter.card)}" />`);
+    if (meta.twitter.site) parts.push(`<meta name="twitter:site" content="${escapeHtml(meta.twitter.site)}" />`);
+    if (meta.twitter.creator) parts.push(`<meta name="twitter:creator" content="${escapeHtml(meta.twitter.creator)}" />`);
+    if (meta.twitter.title) parts.push(`<meta name="twitter:title" content="${escapeHtml(meta.twitter.title)}" />`);
+    if (meta.twitter.description) parts.push(`<meta name="twitter:description" content="${escapeHtml(meta.twitter.description)}" />`);
+    if (meta.twitter.images) {
+      for (const img of meta.twitter.images) {
+        const url = typeof img === "string" ? img : img.url;
+        if (url) parts.push(`<meta name="twitter:image" content="${escapeHtml(url)}" />`);
       }
     }
   }

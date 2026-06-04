@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
+import { siteConfig } from "@/lib/site.config";
 import { Geist, GeistMono } from "swift-rust/font/google";
+
+const OG_IMAGE = `${siteConfig.url}/og-image.png`;
 
 const geist = Geist({ variable: true, subsets: ["latin"] });
 const geistMono = GeistMono({ variable: true, subsets: ["latin"] });
@@ -21,6 +24,14 @@ export const metadata = {
     title: "Swift Rust",
     description: "The React framework powered with Rust + Bun.",
     type: "website",
+    url: siteConfig.url,
+    images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: "Swift Rust" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Swift Rust",
+    description: "The React framework powered with Rust + Bun.",
+    images: [OG_IMAGE],
   },
 };
 

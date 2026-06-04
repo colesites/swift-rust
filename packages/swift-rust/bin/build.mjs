@@ -200,6 +200,23 @@ function stripHmrScript(html) {
   return html.replace(/\s*<script src="\/_swift-rust\/hmr-client\.js"[^>]*>\s*<\/script>/g, "");
 }
 
+// The dev-time image endpoint (/_swift-rust/image) is a passthrough that only
+// exists while the dev server runs. On a static host nothing serves it, so we
+// rewrite every optimizer URL back to the original asset path (already copied
+// into the output). Handles both `src` and `srcset`, and HTML-escaped `&amp;`.
+function inlineImageUrls(html) {
+  return html.replace(/\/_swift-rust\/image\?[^"'\s,]*/g, (match) => {
+    const query = match.slice(match.indexOf("?") + 1);
+    const m = query.match(/(?:^|&(?:amp;)?)url=([^&]*)/);
+    if (!m) return match;
+    try {
+      return decodeURIComponent(m[1]);
+    } catch {
+      return m[1];
+    }
+  });
+}
+
 function writeStaticFile(outDir, pathname, html) {
   const rel = pathname === "/" ? "index.html" : `${pathname.replace(/^\//, "")}/index.html`;
   const outPath = join(outDir, rel);
@@ -325,7 +342,7 @@ async function main() {
       try {
         const { status, body } = await fetchRoute(route);
         if (status === 200) {
-          const cleaned = await localizeIslands(stripHmrScript(body));
+          const cleaned = inlineImageUrls(await localizeIslands(stripHmrScript(body)));
           writeStaticFile(STATIC_DIR, route, cleaned);
           okCount++;
           process.stdout.write(`  ${paint("green", "✓")} ${route}\n`);
