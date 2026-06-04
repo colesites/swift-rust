@@ -42,7 +42,14 @@ const PUBLIC_DIR = resolve(cwd, "public");
 const SWIFT_RUST_CONFIG = resolve(cwd, "swift-rust.config.json");
 
 const PAGE_EXTENSIONS = [".tsx", ".ts", ".jsx", ".js"];
-const SPECIAL_FILES = new Set(["layout", "loading", "error", "not-found", "template", "default", "route"]);
+const SPECIAL_FILES = new Set([
+  "layout", "loading", "error", "not-found", "template", "default", "route",
+  // RFC 0001 routing files
+  "guard", "loader", "action", "config", "schema", "middleware", "pending",
+  "revalidate", "shell", "fragment", "transition", "fallback", "prefetch",
+  "error-recovery", "i18n", "rpc", "stream", "edge", "worker", "query",
+  "state", "seo", "variant", "global-error",
+]);
 
 const moduleCache = new Map();
 const compileTimings = new Map();
@@ -148,22 +155,22 @@ function findFile(dir, basename) {
 function resolvePageRoute(segments) {
   if (segments.length === 0) {
     const file = findFile(APP_DIR, "page");
-    if (file) return { file, params: {}, segments: [] };
+    if (file) return { file, params: {}, segments: [], dirChain: [APP_DIR] };
     return null;
   }
-  return resolveRoute(APP_DIR, segments, 0, {});
+  return resolveRoute(APP_DIR, segments, 0, {}, [APP_DIR]);
 }
 
-function resolveRoute(dir, segments, idx, params) {
+function resolveRoute(dir, segments, idx, params, chain) {
   if (idx === segments.length) {
     const file = findFile(dir, "page");
-    if (file) return { file, params, segments: segments.slice(0, idx) };
+    if (file) return { file, params, segments: segments.slice(0, idx), dirChain: chain };
     return null;
   }
   const seg = segments[idx];
   const directDir = join(dir, seg);
   if (existsSync(directDir) && statSync(directDir).isDirectory()) {
-    const result = resolveRoute(directDir, segments, idx + 1, params);
+    const result = resolveRoute(directDir, segments, idx + 1, params, [...chain, directDir]);
     if (result) return result;
   }
   if (existsSync(dir) && statSync(dir).isDirectory()) {
@@ -175,12 +182,23 @@ function resolveRoute(dir, segments, idx, params) {
         if (paramName.startsWith("...")) continue;
         const paramDir = join(dir, e.name);
         const newParams = { ...params, [paramName]: seg };
-        const result = resolveRoute(paramDir, segments, idx + 1, newParams);
+        const result = resolveRoute(paramDir, segments, idx + 1, newParams, [...chain, paramDir]);
         if (result) return result;
       }
     }
   }
   return null;
+}
+
+/** Collect a routing file (guard/loader/action/config/schema/…) along the
+ *  matched directory chain, outermost → innermost. */
+function collectRouteFiles(dirChain, basename) {
+  const out = [];
+  for (const dir of dirChain || []) {
+    const f = findFile(dir, basename);
+    if (f) out.push({ file: f, dir });
+  }
+  return out;
 }
 
 function resolveApiRoute(segments) {
@@ -716,7 +734,148 @@ if (el) {
   }
 }
 
-async function renderRoute(urlPath) {
+// ── RFC 0001 route pipeline: config → schema → guard → loader/action ────────
+
+let routerRuntimePromise = null;
+function routerRuntime() {
+  if (!routerRuntimePromise) routerRuntimePromise = import("swift-rust/router").catch(() => null);
+  return routerRuntimePromise;
+}
+
+function parseCookieHeader(header) {
+  const map = new Map();
+  for (const part of (header || "").split(";")) {
+    const i = part.indexOf("=");
+    if (i < 0) continue;
+    const k = part.slice(0, i).trim();
+    if (k) map.set(k, decodeURIComponent(part.slice(i + 1).trim()));
+  }
+  return map;
+}
+function serializeCookie(name, value, opts = {}) {
+  let s = `${name}=${encodeURIComponent(value)}`;
+  if (opts.maxAge != null) s += `; Max-Age=${opts.maxAge}`;
+  if (opts.path) s += `; Path=${opts.path}`;
+  else s += "; Path=/";
+  if (opts.domain) s += `; Domain=${opts.domain}`;
+  if (opts.httpOnly) s += "; HttpOnly";
+  if (opts.secure) s += "; Secure";
+  if (opts.sameSite) s += `; SameSite=${opts.sameSite[0].toUpperCase()}${opts.sameSite.slice(1)}`;
+  return s;
+}
+
+function buildRouteCtx(req, url, params, searchParams) {
+  const cookieMap = parseCookieHeader(req?.headers?.get?.("cookie") || "");
+  const setCookies = [];
+  const cookies = {
+    get: (n) => cookieMap.get(n),
+    set: (n, v, o) => { cookieMap.set(n, v); setCookies.push(serializeCookie(n, v, o)); },
+    delete: (n, o) => { cookieMap.delete(n); setCookies.push(serializeCookie(n, "", { ...o, maxAge: 0 })); },
+    all: () => cookieMap,
+  };
+  const localsMap = new Map();
+  return {
+    url,
+    method: req?.method || "GET",
+    headers: req?.headers || new Headers(),
+    cookies,
+    params,
+    searchParams,
+    runtime: "node",
+    locals: { get: (k) => localsMap.get(k), set: (k, v) => localsMap.set(k, v) },
+    request: req,
+    __setCookies: setCookies,
+  };
+}
+
+// Turn a returned RouteControl object into a thrown control the catch handles.
+function applyControl(c) {
+  if (!c || typeof c !== "object" || !c.kind) return;
+  if (c.kind === "next") return;
+  const e = new Error(`route control: ${c.kind}`);
+  if (c.kind === "redirect") e.digest = `REDIRECT;${c.status || 307};${c.to}`;
+  else if (c.kind === "rewrite") e.digest = `REWRITE;${c.to}`;
+  else if (c.kind === "notFound") e.digest = "NOT_FOUND";
+  else if (c.kind === "response") e.__response = c.response;
+  else if (c.kind === "error") { throw c.error ?? new Error("route error"); }
+  throw e;
+}
+
+async function runRoutePipeline(route, ctx) {
+  const chain = route.dirChain || [];
+
+  // schema.ts — validate/brand params + searchParams (Standard-Schema/Zod-like)
+  for (const { file } of collectRouteFiles(chain, "schema")) {
+    const mod = await loadModuleFresh(file);
+    if (mod.params?.safeParse) {
+      const r = mod.params.safeParse(ctx.params);
+      if (!r.success) { const e = new Error("Invalid params"); e.__response = jsonResponse({ error: "Invalid params", issues: r.error?.issues ?? r.error }, 400); throw e; }
+      Object.assign(ctx.params, r.data);
+    }
+    const querySpec = (await collectFirst(chain, "query"))?.query;
+    const searchSchema = querySpec?.parse ?? mod.searchParams;
+    if (searchSchema?.safeParse) {
+      const r = searchSchema.safeParse(ctx.searchParams);
+      if (r.success) Object.assign(ctx.searchParams, r.data);
+    }
+  }
+
+  // guard.ts — outer → inner
+  for (const { file } of collectRouteFiles(chain, "guard")) {
+    const mod = await loadModuleFresh(file);
+    const fn = mod.default ?? mod.guard;
+    if (typeof fn === "function") applyControl(await fn(ctx));
+  }
+
+  let actionData;
+  // action.ts on mutating requests (leaf only)
+  if (ctx.method !== "GET" && ctx.method !== "HEAD") {
+    const actions = collectRouteFiles(chain, "action");
+    const leaf = actions[actions.length - 1];
+    if (leaf) {
+      const mod = await loadModuleFresh(leaf.file);
+      const fn = mod.default ?? mod.action;
+      if (typeof fn === "function") {
+        const actx = Object.assign({}, ctx, {
+          formData: () => ctx.request.formData(),
+          json: () => ctx.request.json(),
+        });
+        const result = await fn(actx);
+        applyControl(result);
+        actionData = result;
+      }
+    }
+  }
+
+  // loader.ts — run in parallel along the chain
+  const loaders = collectRouteFiles(chain, "loader");
+  const loaded = await Promise.all(
+    loaders.map(async ({ file, dir }) => {
+      const mod = await loadModuleFresh(file);
+      const fn = mod.default ?? mod.loader;
+      if (typeof fn !== "function") return [dir, undefined];
+      const lctx = Object.assign({}, ctx, { parent: () => undefined });
+      return [dir, await fn(lctx)];
+    }),
+  );
+  const loadersMap = {};
+  for (const [dir, data] of loaded) loadersMap[relative(cwd, dir)] = data;
+  const loaderData = loaded.length ? loaded[loaded.length - 1][1] : undefined;
+
+  return { actionData, loaderData, loaders: loadersMap, setCookies: ctx.__setCookies };
+}
+
+async function collectFirst(chain, basename) {
+  const files = collectRouteFiles(chain, basename);
+  if (files.length === 0) return null;
+  return await loadModuleFresh(files[files.length - 1].file);
+}
+
+function jsonResponse(obj, status = 200) {
+  return new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
+}
+
+async function renderRoute(urlPath, req) {
   const segments = urlToRouteSegments(urlPath);
   const route = resolvePageRoute(segments);
   if (!route) {
@@ -729,6 +888,24 @@ async function renderRoute(urlPath) {
 
   try {
     const React = await import("react");
+    const url = req ? new URL(req.url) : new URL(urlPath, "http://localhost");
+    const searchParams = Object.fromEntries(url.searchParams.entries());
+    const ctx = buildRouteCtx(req, url, { ...route.params }, searchParams);
+
+    // Run the RFC 0001 pipeline (config/schema/guard/loader/action).
+    const pipeline = await runRoutePipeline(route, ctx);
+    route.params = ctx.params; // validated/branded params flow to the page
+
+    const runtime = await routerRuntime();
+    if (runtime?.__setRouteContext) {
+      runtime.__setRouteContext({
+        request: ctx,
+        loaderData: pipeline.loaderData,
+        actionData: pipeline.actionData,
+        loaders: pipeline.loaders,
+      });
+    }
+
     const pageMod = await loadModuleFresh(route.file);
     const Page = pageMod.default ?? pageMod.Page ?? pageMod.page;
     if (!Page) {
@@ -755,11 +932,27 @@ async function renderRoute(urlPath) {
       if (Layout) tree = React.createElement(Layout, null, tree);
     }
     const html = await renderToStringCompat(tree);
+    if (runtime?.__setRouteContext) runtime.__setRouteContext(null);
     const metadata = await resolveMetadata(layouts.map((l) => l.file), route.file, route.params, segments);
-    return { status: 200, html, metadata, error: null, clientPage, pageFile: route.file, layoutFiles: layouts.map((l) => l.file), notFoundFile, errorFile, loadingFile, segments };
+    return { status: 200, html, metadata, error: null, clientPage, pageFile: route.file, layoutFiles: layouts.map((l) => l.file), notFoundFile, errorFile, loadingFile, segments, setCookies: pipeline.setCookies, actionData: pipeline.actionData };
   } catch (err) {
+    const rt = await routerRuntime();
+    if (rt?.__setRouteContext) rt.__setRouteContext(null);
+    if (err?.__response instanceof Response) {
+      return { status: err.__response.status, rawResponse: err.__response, html: null, error: null, segments };
+    }
     if (err?.digest === "NOT_FOUND" || err?.name === "NotFoundError") {
       return await renderNotFound(segments);
+    }
+    if (err?.digest === "FORBIDDEN" || err?.name === "ForbiddenError") {
+      return { status: 403, html: null, error: null, segments, rawResponse: new Response("Forbidden", { status: 403, headers: { "Content-Type": "text/plain" } }) };
+    }
+    if (err?.digest === "UNAUTHORIZED" || err?.name === "UnauthorizedError") {
+      return { status: 401, html: null, error: null, segments, rawResponse: new Response("Unauthorized", { status: 401, headers: { "Content-Type": "text/plain" } }) };
+    }
+    if (err?.digest && String(err.digest).startsWith("REWRITE")) {
+      const to = String(err.digest).slice("REWRITE;".length);
+      return await renderRoute(to, req);
     }
     if (err?.digest && String(err.digest).startsWith("REDIRECT")) {
       const [, statusStr, ...rest] = String(err.digest).split(";");
@@ -1177,7 +1370,7 @@ async function handleRequest(req, res) {
   }
 
   const renderStart = performance.now();
-  const renderResult = await renderRoute(pathname);
+  const renderResult = await renderRoute(pathname, req);
   const renderMs = performance.now() - renderStart;
   const total = performance.now() - reqStart;
 
@@ -1352,7 +1545,10 @@ async function handleFetch(req) {
     return await handleApiRoute(req, segments, method, reqStart);
   }
 
-  if (method !== "GET" && method !== "HEAD") {
+  // Non-GET requests are allowed to reach the page render so action.ts can run;
+  // pages without an action simply ignore the body.
+  const ALLOWED_METHODS = new Set(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]);
+  if (!ALLOWED_METHODS.has(method)) {
     return new Response("Method not allowed", { status: 405 });
   }
 
@@ -1397,7 +1593,7 @@ async function handleFetch(req) {
   }
 
   const renderStart = performance.now();
-  const renderResult = await renderRoute(pathname);
+  const renderResult = await renderRoute(pathname, req);
   const renderMs = performance.now() - renderStart;
   const total = performance.now() - reqStart;
 
@@ -1429,10 +1625,17 @@ async function handleFetch(req) {
 
   if (renderResult.redirect) {
     logRequest({ method, url: pathname, status: renderResult.status, duration: total, compileMs });
-    return new Response(null, {
-      status: renderResult.status,
-      headers: { Location: renderResult.redirect },
-    });
+    const rh = new Headers({ Location: renderResult.redirect });
+    for (const c of renderResult.setCookies || []) rh.append("Set-Cookie", c);
+    return new Response(null, { status: renderResult.status, headers: rh });
+  }
+
+  // Raw Response from a guard/action (RouteControl response, 401, 403, …).
+  if (renderResult.rawResponse instanceof Response) {
+    logRequest({ method, url: pathname, status: renderResult.rawResponse.status, duration: total, compileMs });
+    const r = renderResult.rawResponse;
+    for (const c of renderResult.setCookies || []) r.headers.append("Set-Cookie", c);
+    return r;
   }
 
   logRequest({ method, url: pathname, status: 200, duration: total, compileMs });
@@ -1442,10 +1645,9 @@ async function handleFetch(req) {
     const src = `/_swift-rust/island.js?p=${encodeURIComponent(renderResult.pageFile)}`;
     doc = doc.replace("</body>", `<script type="module" src="${src}"></script>\n</body>`);
   }
-  return new Response(doc, {
-    status: 200,
-    headers: { "Content-Type": "text/html; charset=utf-8" },
-  });
+  const headers = new Headers({ "Content-Type": "text/html; charset=utf-8" });
+  for (const c of renderResult.setCookies || []) headers.append("Set-Cookie", c);
+  return new Response(doc, { status: 200, headers });
 }
 
 async function handleApiRoute(req, segments, method, reqStart) {
