@@ -1199,10 +1199,24 @@ async function renderRoute(urlPath, req) {
         tree,
       );
     }
-    for (let i = layouts.length - 1; i >= 0; i--) {
-      const layoutMod = await loadModuleFresh(layouts[i].file);
-      const Layout = layoutMod.default ?? layoutMod.Layout ?? layoutMod.layout;
-      if (Layout) tree = React.createElement(Layout, null, tree);
+    // Wrap the page with each segment's template then layout, innermost dir
+    // first, so the nesting is layout > template > children (Next.js order).
+    // template.tsx re-mounts on navigation; on the server it just wraps.
+    const dirChain = route.dirChain && route.dirChain.length ? route.dirChain : [APP_DIR];
+    for (let i = dirChain.length - 1; i >= 0; i--) {
+      const dir = dirChain[i];
+      const templateFile = findFile(dir, "template");
+      if (templateFile) {
+        const tmod = await loadModuleFresh(templateFile);
+        const Template = tmod.default ?? tmod.Template ?? tmod.template;
+        if (Template) tree = React.createElement(Template, null, tree);
+      }
+      const layoutFile = findFile(dir, "layout");
+      if (layoutFile) {
+        const layoutMod = await loadModuleFresh(layoutFile);
+        const Layout = layoutMod.default ?? layoutMod.Layout ?? layoutMod.layout;
+        if (Layout) tree = React.createElement(Layout, null, tree);
+      }
     }
     const html = await renderToStringCompat(tree);
     if (runtime?.__setRouteContext) runtime.__setRouteContext(null);
@@ -1254,6 +1268,34 @@ async function renderRoute(urlPath, req) {
             React.createElement(Recovery, { error: err, attempt: 1, retry: () => {}, reset: () => {} }),
           );
           return { status: 500, html, metadata: null, error: err, segments, pageFile: route.file };
+        }
+      } catch {}
+    }
+    // global-error.tsx — root-level boundary. It renders its own <html>/<body>,
+    // so it replaces the whole document. Only kicks in for uncaught errors when
+    // no closer error/error-recovery boundary handled them.
+    const globalErrorFile = findFile(APP_DIR, "global-error");
+    if (globalErrorFile) {
+      try {
+        const React = await import("react");
+        const mod = await loadModule(globalErrorFile, { bust: true });
+        const GlobalError = mod.default ?? mod.GlobalError;
+        if (GlobalError) {
+          const inner = await renderToStringCompat(
+            React.createElement(GlobalError, { error: err, reset: () => {} }),
+          );
+          // status:200 here only gates past the dev error overlay; the
+          // rawResponse carries the real 500 to the client.
+          return {
+            status: 200,
+            html: null,
+            error: null,
+            segments,
+            rawResponse: new Response(`<!DOCTYPE html>${inner}`, {
+              status: 500,
+              headers: { "Content-Type": "text/html; charset=utf-8" },
+            }),
+          };
         }
       } catch {}
     }
