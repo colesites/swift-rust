@@ -142,4 +142,56 @@
   window.addEventListener("popstate", () => {
     navigate(location.href, { push: false, scroll: false });
   });
+
+  // ── Prefetch (prefetch.ts) ────────────────────────────────────────────────
+  // Strategy comes from the per-route prefetch.ts, injected as
+  // window.__SR_PREFETCH__ = { strategy, margin? }. Default: "hover".
+  // Per-link opt-out via data-sr-prefetch="false".
+  function strategy() {
+    const c = window.__SR_PREFETCH__;
+    return (c && c.strategy) || "hover";
+  }
+  function prefetchableURL(a) {
+    if (!a || a.dataset.srPrefetch === "false") return null;
+    return internalAnchor(a);
+  }
+  function intent(e) {
+    if (strategy() !== "hover") return;
+    const a = e.target.closest && e.target.closest("a");
+    const url = prefetchableURL(a);
+    if (url && url.href !== location.href) nav.prefetch(url.href);
+  }
+  document.addEventListener("mouseover", intent, { passive: true });
+  document.addEventListener("focusin", intent);
+  document.addEventListener("touchstart", intent, { passive: true });
+
+  let io = null;
+  function scanViewport() {
+    if (io) {
+      io.disconnect();
+      io = null;
+    }
+    if (strategy() !== "viewport" || !("IntersectionObserver" in window)) return;
+    const margin = (window.__SR_PREFETCH__ && window.__SR_PREFETCH__.margin) || "200px";
+    io = new IntersectionObserver(
+      (entries) => {
+        for (const en of entries) {
+          if (!en.isIntersecting) continue;
+          const url = prefetchableURL(en.target);
+          if (url && url.href !== location.href) nav.prefetch(url.href);
+          io.unobserve(en.target);
+        }
+      },
+      { rootMargin: margin },
+    );
+    document.querySelectorAll("a[href]").forEach((a) => {
+      if (prefetchableURL(a)) io.observe(a);
+    });
+  }
+  window.addEventListener("sr:navigate-end", scanViewport);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", scanViewport, { once: true });
+  } else {
+    scanViewport();
+  }
 })();

@@ -1303,6 +1303,22 @@ async function renderRoute(urlPath, req) {
   }
 }
 
+async function resolvePrefetchConfig(segments) {
+  const file = findRouteFileUp(segments || [], "prefetch");
+  if (!file) return null;
+  try {
+    const mod = await loadModuleFresh(file);
+    const cfg = mod.default && typeof mod.default === "object" ? mod.default : {};
+    const strategy = mod.strategy ?? cfg.strategy ?? "hover";
+    const out = { strategy };
+    const margin = mod.margin ?? cfg.margin;
+    if (margin) out.margin = String(margin);
+    return out;
+  } catch {
+    return null;
+  }
+}
+
 const pendingOverlayCache = new Map();
 async function renderPendingOverlay(segments) {
   const file = findRouteFileUp(segments || [], "pending");
@@ -2076,6 +2092,12 @@ async function handleFetch(req) {
   // navigation is in flight (see runtime/navigator.js).
   const pendingOverlay = await renderPendingOverlay(renderResult.segments);
   if (pendingOverlay) doc = doc.replace("</body>", `${pendingOverlay}\n</body>`);
+  // prefetch.ts → client prefetch strategy for the navigator.
+  const prefetchCfg = await resolvePrefetchConfig(renderResult.segments);
+  if (prefetchCfg) {
+    const json = JSON.stringify(prefetchCfg).replace(/</g, "\\u003c");
+    doc = doc.replace("</body>", `<script>window.__SR_PREFETCH__=${json}</script>\n</body>`);
+  }
   const headers = new Headers({ "Content-Type": "text/html; charset=utf-8" });
   for (const c of renderResult.setCookies || []) headers.append("Set-Cookie", c);
   // config.ts headers
