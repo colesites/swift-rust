@@ -48,7 +48,7 @@ bunx swift-rust build --target aarch64-unknown-linux-musl`}</code>
           <span>terminal</span>
         </div>
         <pre>
-          <code>{"bunx swift-rust start --port 3000"}</code>
+          <code>{"bunx swift-rust start --port 3210"}</code>
         </pre>
       </div>
 

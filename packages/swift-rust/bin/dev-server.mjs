@@ -17,7 +17,7 @@ function getArg(name, fallback) {
   return fallback;
 }
 
-const port = parseInt(getArg("port", process.env.PORT || "3000"), 10);
+const port = parseInt(getArg("port", process.env.PORT || "3210"), 10);
 const hostname = getArg("hostname", "0.0.0.0");
 
 const c = {

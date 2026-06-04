@@ -113,8 +113,8 @@ function classifyError(message) {
         "The dev server could not bind to the requested port, " +
         "or it ran out of system resources.",
       suggestions: [
-        "Close any other process using this port (usually 3000)",
-        "Run with --port 3001 to use a different port",
+        "Close any other process using this port (usually 3210)",
+        "Run with --port <number> to use a different port",
         "Check disk space with `df -h`",
       ],
     };

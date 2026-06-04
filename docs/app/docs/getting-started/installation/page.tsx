@@ -16,7 +16,7 @@ export default function InstallationPage() {
           <code>cd my-app</code> and start the dev server.
         </li>
         <li>
-          Visit <code>http://localhost:3000</code>.
+          Visit <code>http://localhost:3210</code>.
         </li>
       </ol>
       <div className="code-block">
