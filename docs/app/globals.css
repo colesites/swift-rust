@@ -247,9 +247,11 @@ button.outline:hover {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: color-mix(in srgb, var(--bg) 90%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  /* NOTE: no backdrop-filter/transform/filter here — any of those would make
+     the header a containing block for position:fixed descendants, which would
+     trap the mobile nav drawer (top:3.5rem; bottom:0) inside the 3.5rem header
+     box and collapse it. Keep the background near-opaque instead of blurred. */
+  background: color-mix(in srgb, var(--bg) 96%, transparent);
   border-bottom: 1px solid var(--border);
 }
 
