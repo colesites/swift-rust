@@ -1303,6 +1303,22 @@ async function renderRoute(urlPath, req) {
   }
 }
 
+async function resolveTransitionConfig(segments) {
+  const file = findRouteFileUp(segments || [], "transition");
+  if (!file) return null;
+  try {
+    const mod = await loadModuleFresh(file);
+    const cfg = mod.default && typeof mod.default === "object" ? mod.default : {};
+    const type = mod.type ?? cfg.type ?? "fade";
+    const out = { type };
+    const duration = mod.duration ?? cfg.duration;
+    if (duration) out.duration = Number(duration);
+    return out;
+  } catch {
+    return null;
+  }
+}
+
 async function resolvePrefetchConfig(segments) {
   const file = findRouteFileUp(segments || [], "prefetch");
   if (!file) return null;
@@ -2097,6 +2113,12 @@ async function handleFetch(req) {
   if (prefetchCfg) {
     const json = JSON.stringify(prefetchCfg).replace(/</g, "\\u003c");
     doc = doc.replace("</body>", `<script>window.__SR_PREFETCH__=${json}</script>\n</body>`);
+  }
+  // transition.tsx → View Transitions config for the navigator's swap.
+  const transitionCfg = await resolveTransitionConfig(renderResult.segments);
+  if (transitionCfg) {
+    const json = JSON.stringify(transitionCfg).replace(/</g, "\\u003c");
+    doc = doc.replace("</body>", `<script>window.__SR_TRANSITION__=${json}</script>\n</body>`);
   }
   const headers = new Headers({ "Content-Type": "text/html; charset=utf-8" });
   for (const c of renderResult.setCookies || []) headers.append("Set-Cookie", c);

@@ -63,6 +63,42 @@
     }
   }
 
+  // transition.tsx → wrap the DOM swap in the View Transitions API. Config is
+  // injected as window.__SR_TRANSITION__ = { type, duration }. Falls back to a
+  // plain swap when unsupported, type "none", or reduced-motion is requested.
+  function injectTransitionStyle() {
+    if (document.getElementById("__sr-transition-style")) return;
+    const s = document.createElement("style");
+    s.id = "__sr-transition-style";
+    s.textContent =
+      "::view-transition-old(root),::view-transition-new(root){animation-duration:var(--sr-transition-duration,250ms)}" +
+      'html[data-sr-transition="slide"]::view-transition-old(root){animation-name:sr-vt-slide-out}' +
+      'html[data-sr-transition="slide"]::view-transition-new(root){animation-name:sr-vt-slide-in}' +
+      "@keyframes sr-vt-slide-out{to{opacity:0;transform:translateX(-24px)}}" +
+      "@keyframes sr-vt-slide-in{from{opacity:0;transform:translateX(24px)}}";
+    (document.head || document.documentElement).appendChild(s);
+  }
+
+  async function withTransition(apply) {
+    const t = window.__SR_TRANSITION__;
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!t || !t.type || t.type === "none" || reduce || typeof document.startViewTransition !== "function") {
+      apply();
+      return;
+    }
+    const root = document.documentElement;
+    root.dataset.srTransition = t.type;
+    if (t.duration) root.style.setProperty("--sr-transition-duration", t.duration + "ms");
+    try {
+      const vt = document.startViewTransition(() => apply());
+      await vt.finished;
+    } catch {
+      // DOM was already updated inside the callback; nothing to recover.
+    } finally {
+      delete root.dataset.srTransition;
+    }
+  }
+
   function syncHead(doc) {
     const title = doc.querySelector("title");
     if (title) document.title = title.textContent || document.title;
@@ -108,9 +144,12 @@
       location.href = href;
       return;
     }
-    document.body.replaceWith(doc.body);
-    runScripts(document.body);
-    syncHead(doc);
+    const apply = () => {
+      document.body.replaceWith(doc.body);
+      runScripts(document.body);
+      syncHead(doc);
+    };
+    await withTransition(apply);
     if (push) {
       if (replace) history.replaceState({ srNav: true }, "", href);
       else history.pushState({ srNav: true }, "", href);
@@ -194,4 +233,6 @@
   } else {
     scanViewport();
   }
+
+  injectTransitionStyle();
 })();
