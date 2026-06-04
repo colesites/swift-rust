@@ -1,5 +1,5 @@
 import Image from "swift-rust/image";
-import { BLUR } from "../blur";
+import { BLUR_TRANSPARENT } from "../blur";
 import { siteConfig } from "../site.config";
 import { MobileNav } from "./mobile-nav";
 
@@ -16,7 +16,7 @@ export function Header() {
             width={24}
             height={24}
             placeholder="blur"
-            blurDataURL={BLUR}
+            blurDataURL={BLUR_TRANSPARENT}
             loader={({ src }) => src}
           />
           <span>Swift Rust</span>

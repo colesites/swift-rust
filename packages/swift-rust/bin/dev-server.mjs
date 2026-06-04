@@ -633,14 +633,18 @@ async function buildIslandBundle(pageFile) {
 
   // Temp hydration entry, written next to the page so module resolution works.
   const entryPath = join(dirname(pageFile), `.__sr_island_${process.pid}_${Date.now()}.js`);
-  const entry = `import { hydrateRoot } from "react-dom/client";
+  const entry = `import { createRoot } from "react-dom/client";
 import { createElement } from "react";
 import Page from ${JSON.stringify(pageFile)};
 const el = document.getElementById("__sr_island_root");
 if (el) {
   let params = {};
   try { params = JSON.parse(el.getAttribute("data-sr-params") || "{}"); } catch {}
-  hydrateRoot(el, createElement(Page, { params }));
+  // Client-render (not hydrate): "use client" pages contain client-only
+  // widgets (e.g. the pdf.js viewer) whose SSR output intentionally differs
+  // from the first client render, so hydration would mismatch.
+  el.innerHTML = "";
+  createRoot(el).render(createElement(Page, { params }));
 }
 `;
   writeFileSync(entryPath, entry);
@@ -889,6 +893,12 @@ function setupWatcher() {
     }
   }
   walk(APP_DIR);
+  // Also watch sibling source dirs that pages/layouts import from — without
+  // this, edits to components/, lib/, etc. never trigger a reload.
+  for (const extra of ["components", "lib", "app"]) {
+    const p = resolve(cwd, extra);
+    if (existsSync(p)) walk(p);
+  }
 }
 
 const networkUrls = [];

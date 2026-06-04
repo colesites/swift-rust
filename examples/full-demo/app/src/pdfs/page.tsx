@@ -178,6 +178,7 @@ export default function PdfsPage() {
           width="100%"
           height={820}
           initialScale="fit-width"
+          workerSrc="/pdf.worker.min.mjs"
           showControls
           showPageNumbers
           fallback={

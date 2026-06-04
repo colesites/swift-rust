@@ -1,5 +1,5 @@
 import Image from "swift-rust/image";
-import { BLUR } from "@/lib/blur";
+import { BLUR_TRANSPARENT } from "@/lib/blur";
 
 export function Logo({ className = "" }: { className?: string }) {
   return (
@@ -14,7 +14,7 @@ export function Logo({ className = "" }: { className?: string }) {
         width={24}
         height={24}
         placeholder="blur"
-        blurDataURL={BLUR}
+        blurDataURL={BLUR_TRANSPARENT}
         loader={({ src }) => src}
         className="h-6 w-6"
       />
