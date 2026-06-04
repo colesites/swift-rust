@@ -44,7 +44,7 @@ describe("web structure", () => {
   });
 
   it("has all main sections", () => {
-    const required = ["about", "blog", "contact", "fonts", "images", "pdfs", "videos"];
+    const required = ["about", "blog", "contact", "fonts", "images", "videos"];
     for (const dir of required) {
       expect(existsSync(join(SRC, dir))).toBe(true);
     }

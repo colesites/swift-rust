@@ -46,7 +46,7 @@ describe("full-demo structure", () => {
   });
 
   it("has all main sections", () => {
-    const required = ["about", "blog", "contact", "dashboard", "fonts", "images", "pdfs", "videos"];
+    const required = ["about", "blog", "contact", "dashboard", "fonts", "images", "videos"];
     for (const dir of required) {
       expect(existsSync(join(SRC, dir))).toBe(true);
     }

@@ -18,7 +18,6 @@ const COLUMNS: Array<{ title: string; links: Array<{ href: string; label: string
       { href: "/fonts", label: "Fonts" },
       { href: "/images", label: "Images" },
       { href: "/videos", label: "Videos" },
-      { href: "/pdfs", label: "PDFs" },
     ],
   },
   {
