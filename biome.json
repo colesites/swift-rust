@@ -14,29 +14,27 @@
     "lineWidth": 100
   },
   "files": {
-    "include": [
-      "packages/*/src/**/*.ts",
-      "packages/*/src/**/*.tsx",
-      "packages/*/src",
-      "scripts/src/**/*.ts",
-      "test/**/*.ts",
-      "docs/app/**/*.tsx",
-      "examples/*/app/**/*.ts",
-      "examples/*/app/**/*.tsx",
-      "examples/*/components/**/*.ts",
-      "examples/*/components/**/*.tsx",
-      "examples/*/lib/**/*.ts"
-    ],
-    "ignore": [
-      "**/dist/**",
-      "**/node_modules/**",
-      "**/.turbo/**",
-      "**/.swift-rust/**",
-      "**/target/**",
-      "**/coverage/**",
-      "docs/app/docs/api-reference/components/image/page.tsx",
-      "docs/app/docs/api-reference/components/pdf/page.tsx",
-      "docs/app/docs/api-reference/components/video/page.tsx"
+    "includes": [
+      "**/packages/**/*/src/**/*.ts",
+      "**/packages/**/*/src/**/*.tsx",
+      "**/packages/**/*/src/**",
+      "**/scripts/src/**/*.ts",
+      "**/test/**/*.ts",
+      "**/docs/app/**/*.tsx",
+      "**/examples/**/*/app/**/*.ts",
+      "**/examples/**/*/app/**/*.tsx",
+      "**/examples/**/*/components/**/*.ts",
+      "**/examples/**/*/components/**/*.tsx",
+      "**/examples/**/*/lib/**/*.ts",
+      "!**/dist/**",
+      "!**/node_modules/**",
+      "!**/.turbo/**",
+      "!**/.swift-rust/**",
+      "!**/target/**",
+      "!**/coverage/**",
+      "!**/docs/app/docs/api-reference/components/image/page.tsx",
+      "!**/docs/app/docs/api-reference/components/pdf/page.tsx",
+      "!**/docs/app/docs/api-reference/components/video/page.tsx"
     ]
   },
   "javascript": {

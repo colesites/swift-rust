@@ -1,5 +1,5 @@
-export { default as COMPONENTS } from "./components.js";
 export type { ComponentInfo } from "./components.js";
+export { default as COMPONENTS } from "./components.js";
 
 import * as p from "@clack/prompts";
 

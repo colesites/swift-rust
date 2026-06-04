@@ -383,7 +383,7 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
       ...(language === "ts"
         ? { typescript: "^6.0.0", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0" }
         : {}),
-      ...(linter === "biome" ? { "@biomejs/biome": "^1.9.0" } : { eslint: "^9.0.0" }),
+      ...(linter === "biome" ? { "@biomejs/biome": "^2.4.16" } : { eslint: "^9.0.0" }),
       ...(tailwind
         ? { tailwindcss: "^4.0.0", "@tailwindcss/postcss": "^4.0.0", postcss: "^8.4.0" }
         : {}),
@@ -743,11 +743,13 @@ export default function NotFound() {
 
   if (linter === "biome") {
     const biome = {
-      $schema: "https://biomejs.dev/schemas/1.9.0/schema.json",
+      $schema: "https://biomejs.dev/schemas/2.4.16/schema.json",
       vcs: { enabled: true, clientKind: "git", useIgnoreFile: true },
-      files: { ignore: [".swift-rust", "node_modules", "dist", ".turbo"] },
+      files: {
+        includes: ["**", "!.swift-rust", "!node_modules", "!dist", "!.turbo"],
+      },
       formatter: { enabled: true, indentStyle: "space", indentWidth: 2 },
-      organizeImports: { enabled: true },
+      assist: { actions: { source: { organizeImports: "on" } } },
       linter: {
         enabled: true,
         rules: { recommended: true, a11y: { noSvgWithoutTitle: "off" } },
