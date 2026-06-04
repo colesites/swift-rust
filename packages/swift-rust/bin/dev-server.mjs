@@ -1303,6 +1303,29 @@ async function renderRoute(urlPath, req) {
   }
 }
 
+const pendingOverlayCache = new Map();
+async function renderPendingOverlay(segments) {
+  const file = findRouteFileUp(segments || [], "pending");
+  if (!file) return "";
+  try {
+    let inner;
+    const cached = pendingOverlayCache.get(file);
+    if (cached && cached.gen === buildGeneration) {
+      inner = cached.html;
+    } else {
+      const React = await import("react");
+      const mod = await loadModuleFresh(file);
+      const Pending = mod.default ?? mod.Pending ?? mod.pending;
+      if (!Pending) return "";
+      inner = await renderToStringCompat(React.createElement(Pending, {}));
+      pendingOverlayCache.set(file, { gen: buildGeneration, html: inner });
+    }
+    return `<div id="__sr-pending" data-sr-pending hidden style="position:fixed;top:0;left:0;right:0;z-index:2147483646;pointer-events:none">${inner}</div>`;
+  } catch {
+    return "";
+  }
+}
+
 async function renderNotFound(segments) {
   const notFoundFile = findNotFound(segments);
   if (!notFoundFile) {
@@ -2049,6 +2072,10 @@ async function handleFetch(req) {
     const src = `/_swift-rust/island.js?p=${encodeURIComponent(renderResult.pageFile)}`;
     doc = doc.replace("</body>", `<script type="module" src="${src}"></script>\n</body>`);
   }
+  // pending.tsx → hidden overlay the client navigator reveals while a
+  // navigation is in flight (see runtime/navigator.js).
+  const pendingOverlay = await renderPendingOverlay(renderResult.segments);
+  if (pendingOverlay) doc = doc.replace("</body>", `${pendingOverlay}\n</body>`);
   const headers = new Headers({ "Content-Type": "text/html; charset=utf-8" });
   for (const c of renderResult.setCookies || []) headers.append("Set-Cookie", c);
   // config.ts headers

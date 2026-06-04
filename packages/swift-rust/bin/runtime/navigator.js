@@ -73,9 +73,28 @@
     }
   }
 
+  // pending.tsx overlay: revealed only if a navigation outlasts the threshold,
+  // so fast (cached) navigations don't flash it.
+  let pendingTimer = null;
+  function showPending() {
+    const el = document.getElementById("__sr-pending");
+    if (el) el.hidden = false;
+  }
+  function clearPending() {
+    if (pendingTimer) {
+      clearTimeout(pendingTimer);
+      pendingTimer = null;
+    }
+    const el = document.getElementById("__sr-pending");
+    if (el) el.hidden = true;
+  }
+
   async function navigate(href, { push = true, scroll = true, replace = false } = {}) {
     let html;
     nav.active = href;
+    if (pendingTimer) clearTimeout(pendingTimer);
+    const delay = typeof window.__SR_NAV_PENDING_DELAY === "number" ? window.__SR_NAV_PENDING_DELAY : 120;
+    pendingTimer = setTimeout(showPending, delay);
     window.dispatchEvent(new CustomEvent("sr:navigate-start", { detail: { url: href } }));
     try {
       html = await fetchDoc(href);
@@ -97,6 +116,7 @@
       else history.pushState({ srNav: true }, "", href);
     }
     if (scroll) window.scrollTo(0, 0);
+    clearPending();
     window.dispatchEvent(new CustomEvent("sr:navigate-end", { detail: { url: href } }));
   }
   nav.navigate = navigate;
