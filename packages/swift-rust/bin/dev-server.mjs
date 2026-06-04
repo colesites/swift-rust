@@ -1391,6 +1391,7 @@ async function wrapInDocumentAsync({ head, body }) {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 ${fullHead}
+<script src="/_swift-rust/navigator.js" defer></script>
 <script src="/_swift-rust/hmr-client.js" defer></script>
 </head>
 <body>${body}</body>
@@ -1400,6 +1401,15 @@ ${fullHead}
 async function tryHmrClient() {
   try {
     const file = join(dirname(new URL(import.meta.url).pathname), "runtime", "hmr-client.js");
+    return readFileSync(file, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+function readNavigatorClient() {
+  try {
+    const file = join(dirname(new URL(import.meta.url).pathname), "runtime", "navigator.js");
     return readFileSync(file, "utf8");
   } catch {
     return null;
@@ -1787,6 +1797,14 @@ async function handleFetch(req) {
       return new Response(client, { headers: { "Content-Type": "application/javascript" } });
     }
     return new Response("Not found", { status: 404 });
+  }
+
+  if (pathname === "/_swift-rust/navigator.js") {
+    const client = readNavigatorClient();
+    if (client) {
+      return new Response(client, { headers: { "Content-Type": "application/javascript; charset=utf-8" } });
+    }
+    return new Response("// navigator unavailable", { status: 404, headers: { "Content-Type": "application/javascript" } });
   }
 
   if (pathname === "/_swift-rust/image") {

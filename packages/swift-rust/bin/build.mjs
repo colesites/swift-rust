@@ -412,6 +412,15 @@ async function main() {
       }
     }
 
+    // Client navigator runtime (SPA navigation). The rendered HTML references
+    // /_swift-rust/navigator.js; emit it as a static asset so deployed sites
+    // get client-side navigation too.
+    const navSrc = join(RUNTIME_DIR, "navigator.js");
+    if (existsSync(navSrc)) {
+      writeRawFile(STATIC_DIR, "_swift-rust/navigator.js", readFileSync(navSrc));
+      process.stdout.write(`  ${paint("green", "✓")} _swift-rust/navigator.js\n`);
+    }
+
     writeConfigJson(OUT_DIR, hasPublic);
 
     const total = Date.now() - start;
