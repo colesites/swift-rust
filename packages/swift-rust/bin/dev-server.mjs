@@ -1126,6 +1126,98 @@ function cacheControlFromPlan(plan) {
   return null;
 }
 
+// ── Parallel routes (@slot dirs → fragment / fallback / default) ────────────
+function findDynamicChild(dir) {
+  try {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.isDirectory() && /^\[.+\]$/.test(e.name)) return join(dir, e.name);
+    }
+  } catch {}
+  return null;
+}
+
+// Resolve one @slot dir against the URL segments below its layout. Returns a
+// React element (the slot's matched page/fragment, its default.tsx, wrapped in
+// any slot layouts + a fallback.tsx Suspense boundary) or null.
+async function resolveSlotElement(slotDir, segs) {
+  const React = await import("react");
+  let cur = slotDir;
+  const slotLayouts = [];
+  let matched = true;
+  for (let i = 0; i < segs.length; i++) {
+    const layoutFile = findFile(cur, "layout");
+    if (layoutFile) slotLayouts.push(layoutFile);
+    let next = join(cur, segs[i]);
+    if (!existsSync(next) || !statSync(next).isDirectory()) {
+      const dyn = findDynamicChild(cur);
+      if (dyn) next = dyn;
+      else {
+        matched = false;
+        break;
+      }
+    }
+    cur = next;
+  }
+  let leafFile = null;
+  if (matched) {
+    const layoutFile = findFile(cur, "layout");
+    if (layoutFile && !slotLayouts.includes(layoutFile)) slotLayouts.push(layoutFile);
+    leafFile = findFile(cur, "page") || findFile(cur, "fragment");
+  }
+  if (!leafFile) {
+    // Unmatched slot → default.tsx (Next.js semantics), else nothing.
+    const def = findFile(slotDir, "default");
+    if (!def) return null;
+    leafFile = def;
+    slotLayouts.length = 0;
+    const rootLayout = findFile(slotDir, "layout");
+    if (rootLayout) slotLayouts.push(rootLayout);
+  }
+  let mod;
+  try {
+    mod = await loadModuleFresh(leafFile);
+  } catch {
+    return null;
+  }
+  const Comp = mod.default ?? mod.Page ?? mod.Fragment ?? mod.page ?? mod.fragment;
+  if (!Comp) return null;
+  let el = React.createElement(Comp, {});
+  for (let i = slotLayouts.length - 1; i >= 0; i--) {
+    try {
+      const lm = await loadModuleFresh(slotLayouts[i]);
+      const L = lm.default ?? lm.Layout ?? lm.layout;
+      if (L) el = React.createElement(L, null, el);
+    } catch {}
+  }
+  const fallbackFile = findFile(slotDir, "fallback");
+  if (fallbackFile) {
+    try {
+      const fb = await loadModuleFresh(fallbackFile);
+      const Fallback = fb.default ?? fb.Fallback;
+      if (Fallback) el = React.createElement(React.Suspense, { fallback: React.createElement(Fallback, {}) }, el);
+    } catch {}
+  }
+  return el;
+}
+
+// Collect all @slot dirs of a layout dir into named props for the layout.
+async function resolveParallelSlots(dir, segs) {
+  const slots = {};
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return slots;
+  }
+  for (const e of entries) {
+    if (e.isDirectory() && e.name.startsWith("@")) {
+      const el = await resolveSlotElement(join(dir, e.name), segs);
+      if (el) slots[e.name.slice(1)] = el;
+    }
+  }
+  return slots;
+}
+
 async function renderRoute(urlPath, req) {
   const segments = urlToRouteSegments(urlPath);
   const route = resolvePageRoute(segments);
@@ -1215,7 +1307,11 @@ async function renderRoute(urlPath, req) {
       if (layoutFile) {
         const layoutMod = await loadModuleFresh(layoutFile);
         const Layout = layoutMod.default ?? layoutMod.Layout ?? layoutMod.layout;
-        if (Layout) tree = React.createElement(Layout, null, tree);
+        if (Layout) {
+          // Parallel routes: @slot subdirs of this layout become named props.
+          const slotProps = await resolveParallelSlots(dir, segments.slice(i));
+          tree = React.createElement(Layout, slotProps, tree);
+        }
       }
     }
     const html = await renderToStringCompat(tree);
