@@ -1,12 +1,22 @@
 # RFC 0001 — Swift‑Rust Routing Files
 
-> Status: **Draft / Design** · Target: `swift-rust` router core · Author: Framework Architecture
+> Status: **Implemented (server pipeline)** · Target: `swift-rust` router core · Author: Framework Architecture
 >
 > This RFC specifies a complete set of new file‑based routing primitives for
-> Swift‑Rust. It is a **design document** — no implementation is included. The
-> goal is a routing system that is more powerful and more ergonomic than the
-> Next.js App Router while staying RSC‑native, streaming‑first, type‑safe end
-> to end, and portable across Node, Edge, Workers, and a future Rust backend.
+> Swift‑Rust. The server‑side pipeline is **implemented and tested**:
+> `schema`, `guard`, `loader`, `action`, `config`, `proxy`, `revalidate`,
+> `error-recovery`, `seo`, `state`, `rpc`, `stream`, `edge`, `worker`,
+> `variant`, `i18n`, `query`. Still pending (need the parallel‑routes and
+> client‑navigator subsystems): `shell`, `fragment`, `fallback`,
+> `transition`, `pending`, `prefetch`. The goal is a routing system more
+> powerful and more ergonomic than the Next.js App Router while staying
+> RSC‑native, streaming‑first, type‑safe, and portable across Node, Edge,
+> Workers, and a future Rust backend.
+>
+> Note: the request‑interception file is **`proxy.ts`** (Next.js naming);
+> `middleware.ts` is accepted with a deprecation warning. Routing files live
+> under the app root (`app/src/` when a `src/` directory is used); misplaced
+> files are flagged at startup.
 
 ---
 
@@ -16,7 +26,7 @@
 2. Core type definitions
 3. File specifications
    - 3.1 Core (priority): `guard` · `loader` · `action` · `pending` · `revalidate` · `config`
-   - 3.2 Specialized: `shell` · `fragment` · `transition` · `schema` · `middleware` · `fallback` · `prefetch` · `error-recovery` · `i18n`
+   - 3.2 Specialized: `shell` · `fragment` · `transition` · `schema` · `proxy` · `fallback` · `prefetch` · `error-recovery` · `i18n`
    - 3.3 Advanced: `rpc` · `stream` · `edge` · `worker` · `query` · `state` · `seo` · `variant`
 4. Example project structure
 5. Router core: discovery & execution
@@ -39,7 +49,7 @@ the segment nesting `app → app/(group) → app/dashboard → app/dashboard/[id
           │                                                                                         │
           ▼                                                                                         │
   ┌───────────────┐   per segment, outer → inner                                                    │
-  │ middleware.ts │ ─▶ rewrites / headers / short‑circuit (cheap, no data)                          │
+  │ proxy.ts │ ─▶ rewrites / headers / short‑circuit (cheap, no data)                          │
   └───────────────┘                                                                                 │
           │                                                                                         │
           ▼                                                                                         │
@@ -81,7 +91,7 @@ the segment nesting `app → app/(group) → app/dashboard → app/dashboard/[id
 | # | Phase | Files | Runs on | Can short‑circuit? |
 |---|-------|-------|---------|--------------------|
 | 0 | **Runtime resolution** | `config.ts`, `edge.ts`, `worker.ts` | build/boot | — |
-| 1 | **Middleware** | `middleware.ts` | server (edge or node) | ✅ rewrite/redirect/response |
+| 1 | **Middleware** | `proxy.ts` | server (edge or node) | ✅ rewrite/redirect/response |
 | 2 | **Input validation** | `schema.ts`, `query.ts` | server | ✅ 400 |
 | 3 | **Guards** | `guard.ts` | server | ✅ redirect / 401 / 403 |
 | 4a | **Mutation** (non‑GET) | `action.ts` | server | ✅ redirect / error |
@@ -549,7 +559,7 @@ export const searchParams = z.object({ page: z.coerce.number().default(1) });
 
 ---
 
-#### `middleware.ts` — per‑route middleware
+#### `proxy.ts` — per‑route middleware
 
 - **Purpose:** cheap, data‑free request interception scoped to a subtree:
   rewrites, header injection, A/B bucket assignment, redirects.
@@ -784,7 +794,7 @@ export default function seo<P, Q>(ctx: SeoContext<P, Q>): {
 #### `variant.tsx` — A/B testing / feature variants
 
 - **Purpose:** render a variant of a segment based on a bucket (experiment, flag,
-  cohort). Pairs with `middleware.ts` for bucket assignment.
+  cohort). Pairs with `proxy.ts` for bucket assignment.
 - **When:** phase 5.
 
 ```tsx
@@ -803,7 +813,7 @@ app/
 ├── shell.tsx                    # <html>/<body>, providers (whole app)
 ├── config.ts                    # runtime: "node", default ISR
 ├── i18n.ts                      # locales: en, fr
-├── middleware.ts                # A/B bucket + security headers
+├── proxy.ts                # A/B bucket + security headers
 ├── layout.tsx
 ├── page.tsx
 ├── (marketing)/                 # route group (no URL segment)
@@ -886,7 +896,7 @@ interface RouteHandler {
 `run` executes phases §1 in order, threading one `RouteRequest`:
 
 1. Resolve runtime (`config`/`edge`/`worker`) → dispatch to the right executor.
-2. Run `middleware` chain (outer→inner); honor `RouteControl`.
+2. Run `proxy` chain (outer→inner); honor `RouteControl`.
 3. Validate via `schema`/`query`; brand `params`/`searchParams`.
 4. Run `guard` chain (outer→inner); set `locals`.
 5. If mutating → run the matched `action`; else run `loader`s in parallel +
@@ -921,7 +931,7 @@ Each segment's resolved `config`/`edge`/`worker` maps to `.vercel/output`:
 | `config.rendering: "dynamic"` / `"ssr-stream"` | `functions/<seg>.func` (Node) with streaming |
 | `runtime: "edge"` / `edge.ts` | `functions/<seg>.func` with `"runtime": "edge"`, `regions` |
 | `runtime: "worker"` / `worker.ts` | Edge function + declared bindings (or external Workers deploy) |
-| `middleware.ts` (root) | `functions/_middleware.func` (`"runtime":"edge"`) + `config.json` routing |
+| `proxy.ts` (root) | `functions/_middleware.func` (`"runtime":"edge"`) + `config.json` routing |
 | `revalidate.invalidate` / cache tags | `x-vercel-cache-tags` headers + on‑demand `revalidateTag` |
 | `headers` from `config.ts` | route `headers` in `config.json` |
 | `i18n.ts` | `config.json` `i18n` + locale `routes` |
@@ -949,7 +959,7 @@ Ship `useLoaderData`/`useActionData` + the inferred `routes.d.ts` here.
 resilience.
 
 **Wave 3 — Composition.** `shell.tsx` → `fragment.tsx` → `fallback.tsx` →
-`middleware.ts` → `seo.tsx`. Unlocks parallel/intercepting routes, custom
+`proxy.ts` → `seo.tsx`. Unlocks parallel/intercepting routes, custom
 documents, and SEO.
 
 **Wave 4 — Platform & advanced.** `i18n.ts` → `query.ts` → `state.ts` →

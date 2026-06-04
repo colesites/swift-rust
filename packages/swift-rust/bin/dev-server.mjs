@@ -45,7 +45,7 @@ const PAGE_EXTENSIONS = [".tsx", ".ts", ".jsx", ".js"];
 const SPECIAL_FILES = new Set([
   "layout", "loading", "error", "not-found", "template", "default", "route",
   // RFC 0001 routing files
-  "guard", "loader", "action", "config", "schema", "middleware", "pending",
+  "guard", "loader", "action", "config", "schema", "proxy", "pending",
   "revalidate", "shell", "fragment", "transition", "fallback", "prefetch",
   "error-recovery", "i18n", "rpc", "stream", "edge", "worker", "query",
   "state", "seo", "variant", "global-error",
@@ -769,6 +769,51 @@ if (el) {
   }
 }
 
+// ── Routing-file error handling & convention validation ─────────────────────
+
+class RoutingFileError extends Error {
+  constructor(kind, file, cause) {
+    super(`Error in ${kind} (${relative(cwd, file)}): ${cause?.message ?? cause}`);
+    this.name = "RoutingFileError";
+    this.kind = kind;
+    this.file = file;
+    this.cause = cause;
+    if (cause?.stack) this.stack = cause.stack;
+  }
+}
+
+const warnedRouting = new Set();
+function warnRoutingFile(file, msg) {
+  const key = `${file}::${msg}`;
+  if (warnedRouting.has(key)) return;
+  warnedRouting.add(key);
+  process.stderr.write(`  ${paint("yellow", "⚠")} ${paint("dim", "[routing]")} ${msg}\n`);
+}
+
+/** Warn when routing files are placed where the router will never find them
+ *  (e.g. proxy.ts at the project root, or routing files in app/ when the app
+ *  uses an app/src/ directory). Helps catch a very common mistake early. */
+function validateRoutingConventions() {
+  const names = [...SPECIAL_FILES, "page"];
+  const appRel = relative(cwd, APP_DIR) || "app";
+  const usesSrc = APP_DIR.endsWith(`${sep}src`);
+  const scan = (dir, label) => {
+    if (!existsSync(dir) || resolve(dir) === resolve(APP_DIR)) return;
+    for (const name of names) {
+      const f = findFile(dir, name);
+      if (f) {
+        warnRoutingFile(
+          f,
+          `"${name}" found in ${label} — routing files belong under "${appRel}/". ` +
+            `Move ${relative(cwd, f)} into ${appRel}/ (the router only scans there).`,
+        );
+      }
+    }
+  };
+  scan(cwd, "the project root");
+  if (usesSrc) scan(dirname(APP_DIR), `"app/" (outside "src/")`);
+}
+
 // ── RFC 0001 route pipeline: config → schema → guard → loader/action ────────
 
 let routerRuntimePromise = null;
@@ -855,14 +900,32 @@ async function readMergedConfig(chain) {
 async function runRoutePipeline(route, ctx) {
   const chain = route.dirChain || [];
 
-  // middleware.ts — phase 1, outer → inner. Cheap, data-free interception.
+  // proxy.ts — phase 1, outer → inner. Cheap, data-free interception
+  // (Next.js calls this "proxy"; "middleware" is accepted with a warning).
+  for (const { file } of collectRouteFiles(chain, "proxy")) {
+    const mod = await loadModuleFresh(file);
+    const fn = mod.default ?? mod.proxy;
+    if (typeof fn === "function") {
+      const matcher = mod.matcher;
+      const matched = !matcher || matchesMatcher(ctx.url.pathname, matcher);
+      if (matched) {
+        try {
+          applyControl(await fn(ctx));
+        } catch (e) {
+          if (e?.digest || e?.__response) throw e; // control flow, re-throw
+          throw new RoutingFileError("proxy", file, e);
+        }
+      }
+    }
+  }
+  // Back-compat: warn if the old name is used.
   for (const { file } of collectRouteFiles(chain, "middleware")) {
+    warnRoutingFile(file, `"middleware.ts" was renamed to "proxy.ts" — rename ${relative(cwd, file)}.`);
     const mod = await loadModuleFresh(file);
     const fn = mod.default ?? mod.middleware;
     if (typeof fn === "function") {
       const matcher = mod.matcher;
-      const matched = !matcher || matchesMatcher(ctx.url.pathname, matcher);
-      if (matched) applyControl(await fn(ctx));
+      if (!matcher || matchesMatcher(ctx.url.pathname, matcher)) applyControl(await fn(ctx));
     }
   }
 
@@ -904,7 +967,16 @@ async function runRoutePipeline(route, ctx) {
   for (const { file } of collectRouteFiles(chain, "guard")) {
     const mod = await loadModuleFresh(file);
     const fn = mod.default ?? mod.guard;
-    if (typeof fn === "function") applyControl(await fn(ctx));
+    if (typeof fn === "function") {
+      try {
+        applyControl(await fn(ctx));
+      } catch (e) {
+        if (e?.digest || e?.__response) throw e;
+        throw new RoutingFileError("guard", file, e);
+      }
+    } else if (mod.default !== undefined || mod.guard !== undefined) {
+      warnRoutingFile(file, `guard.ts must export a function (default export). ${relative(cwd, file)}`);
+    }
   }
 
   let actionData;
@@ -920,9 +992,14 @@ async function runRoutePipeline(route, ctx) {
           formData: () => ctx.request.formData(),
           json: () => ctx.request.json(),
         });
-        const result = await fn(actx);
-        applyControl(result);
-        actionData = result;
+        try {
+          const result = await fn(actx);
+          applyControl(result);
+          actionData = result;
+        } catch (e) {
+          if (e?.digest || e?.__response) throw e;
+          throw new RoutingFileError("action", leaf.file, e);
+        }
       }
     }
   }
@@ -935,7 +1012,12 @@ async function runRoutePipeline(route, ctx) {
       const fn = mod.default ?? mod.loader;
       if (typeof fn !== "function") return [dir, undefined];
       const lctx = Object.assign({}, ctx, { parent: () => undefined });
-      return [dir, await fn(lctx)];
+      try {
+        return [dir, await fn(lctx)];
+      } catch (e) {
+        if (e?.digest || e?.__response) throw e;
+        throw new RoutingFileError("loader", file, e);
+      }
     }),
   );
   const loadersMap = {};
@@ -1962,6 +2044,7 @@ const MIME = {
 };
 
 await checkAppDir();
+try { validateRoutingConventions(); } catch {}
 await detectNetworkUrls();
 logStartupBanner(`http://localhost:${port}`, networkUrls);
 logLine([` ${paint("dim", "› setupWatcher…")}`]);
