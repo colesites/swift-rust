@@ -22,6 +22,7 @@
   "types": "./dist/index.d.ts",
   "exports": {
     "./package.json": "./package.json",
+    "./tsconfig.base.json": "./tsconfig.base.json",
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
@@ -74,7 +75,8 @@
     "dist",
     "bin",
     "scripts",
-    "native"
+    "native",
+    "tsconfig.base.json"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",

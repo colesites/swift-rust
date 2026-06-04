@@ -45,6 +45,21 @@ const DEFAULT_LOADER = ({
   return `/_swift-rust/image?${params.toString()}`;
 };
 
+/**
+ * Widths the optimizer is allowed to produce. These must mirror the `images.sizes`
+ * list the build writes into the Vercel Build Output config, otherwise the
+ * optimizer rejects the request. Mirror of Next.js' default device sizes.
+ */
+export const DEVICE_SIZES = [640, 750, 828, 1080, 1200, 1920, 2048, 3840];
+
+/** Candidate widths for an intrinsic size: every device size up to it, plus the next one above. */
+function deviceWidths(intrinsic: number): number[] {
+  const widths = DEVICE_SIZES.filter((w) => w <= intrinsic);
+  const next = DEVICE_SIZES.find((w) => w >= intrinsic);
+  if (next && !widths.includes(next)) widths.push(next);
+  return widths.length ? widths : [DEVICE_SIZES[DEVICE_SIZES.length - 1] as number];
+}
+
 function validate(props: ImageProps): void {
   if (props.placeholder !== "blur") {
     throw new ImageMissingBlurError(
@@ -82,13 +97,13 @@ export function Image(props: ImageProps) {
     ...rest
   } = props;
 
-  const srcSet = [1, 2, 3]
-    .map((d) => `${loader({ src, width: width * d, quality })} ${width * d}w`)
-    .join(", ");
+  const candidates = deviceWidths(width);
+  const srcSet = candidates.map((w) => `${loader({ src, width: w, quality })} ${w}w`).join(", ");
+  const fallbackWidth = candidates[candidates.length - 1] as number;
 
   return createElement("img", {
     ...rest,
-    src: loader({ src, width, quality }),
+    src: loader({ src, width: fallbackWidth, quality }),
     srcSet,
     sizes,
     width,

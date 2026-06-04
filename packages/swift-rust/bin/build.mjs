@@ -200,21 +200,13 @@ function stripHmrScript(html) {
   return html.replace(/\s*<script src="\/_swift-rust\/hmr-client\.js"[^>]*>\s*<\/script>/g, "");
 }
 
-// The dev-time image endpoint (/_swift-rust/image) is a passthrough that only
-// exists while the dev server runs. On a static host nothing serves it, so we
-// rewrite every optimizer URL back to the original asset path (already copied
-// into the output). Handles both `src` and `srcset`, and HTML-escaped `&amp;`.
-function inlineImageUrls(html) {
-  return html.replace(/\/_swift-rust\/image\?[^"'\s,]*/g, (match) => {
-    const query = match.slice(match.indexOf("?") + 1);
-    const m = query.match(/(?:^|&(?:amp;)?)url=([^&]*)/);
-    if (!m) return match;
-    try {
-      return decodeURIComponent(m[1]);
-    } catch {
-      return m[1];
-    }
-  });
+// The dev-time image endpoint (/_swift-rust/image) only exists while the dev
+// server runs. On Vercel the platform serves an optimizing endpoint at
+// /_vercel/image with the exact same query contract (url, w, q), so we swap the
+// path prefix at build time. The `images` config written into config.json
+// enables (and bounds) that optimizer. Handles `src`, `srcset`, and `&amp;`.
+function rewriteImageUrls(html) {
+  return html.split("/_swift-rust/image?").join("/_vercel/image?");
 }
 
 function writeStaticFile(outDir, pathname, html) {
@@ -280,6 +272,16 @@ function writeConfigJson(outDir, _hasPublic) {
     overrides: {
       "404.html": { path: "404", contentType: "text/html; charset=utf-8" },
     },
+    // Enables Vercel's image optimizer (/_vercel/image). `sizes` MUST match the
+    // widths <Image> requests (packages/image DEVICE_SIZES) or requests 400.
+    images: {
+      sizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+      formats: ["image/avif", "image/webp"],
+      minimumCacheTTL: 86400,
+      // Allow optimizing local SVG assets (e.g. blog covers); sandboxed by CSP.
+      dangerouslyAllowSVG: true,
+      contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    },
   };
   writeFileSync(join(outDir, "config.json"), `${JSON.stringify(config, null, 2)}\n`);
 }
@@ -342,7 +344,7 @@ async function main() {
       try {
         const { status, body } = await fetchRoute(route);
         if (status === 200) {
-          const cleaned = inlineImageUrls(await localizeIslands(stripHmrScript(body)));
+          const cleaned = rewriteImageUrls(await localizeIslands(stripHmrScript(body)));
           writeStaticFile(STATIC_DIR, route, cleaned);
           okCount++;
           process.stdout.write(`  ${paint("green", "✓")} ${route}\n`);
