@@ -1,6 +1,6 @@
 {
   "name": "create-swift-rust",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Create a new swift-rust project from a template.",
   "license": "MIT",
   "homepage": "https://swift-rust.dev",
@@ -22,12 +22,14 @@
     "templates"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/sync-template.mjs",
+    "prepack": "node scripts/sync-template.mjs",
+    "sync-template": "node scripts/sync-template.mjs",
     "dev": "tsc -p tsconfig.json --watch",
     "lint": "biome check $(pwd)/src",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist .turbo"
+    "clean": "rm -rf dist .turbo templates"
   },
   "engines": {
     "node": ">=20"
