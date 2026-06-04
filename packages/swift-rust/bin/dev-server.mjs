@@ -271,6 +271,57 @@ function bustCache(file) {
   }
 }
 
+// Bumped on every file change. Used to invalidate the per-render SSR bundles
+// below so that edits to *transitively imported* modules (components/, lib/)
+// are picked up — Bun's module cache is path-keyed and ignores ?query busting,
+// so a plain re-import of the page would still serve stale child modules.
+let buildGeneration = 1;
+
+// Externalize everything that isn't the app's own source (relative imports and
+// the @/ alias). React and the framework stay shared/cached; only app code is
+// re-bundled, so every render reflects the latest component/lib edits.
+const externalizeDepsPlugin = {
+  name: "sr-externalize-deps",
+  setup(build) {
+    build.onResolve({ filter: /.*/ }, (args) => {
+      const p = args.path;
+      // App's own source (relative, absolute, or the @/ alias) → bundle fresh.
+      if (p.startsWith(".") || p.startsWith("/") || p.startsWith("@/")) return undefined;
+      // Everything else (react, swift-rust, node:*, @scope/*) → keep external.
+      return { path: p, external: true };
+    });
+  },
+};
+
+const ssrBundleCache = new Map(); // file -> { gen, mod }
+
+async function loadModuleFresh(filePath) {
+  if (typeof Bun === "undefined" || typeof Bun.build !== "function") {
+    return loadModule(filePath, { bust: true });
+  }
+  const cached = ssrBundleCache.get(filePath);
+  if (cached && cached.gen === buildGeneration) return cached.mod;
+
+  const result = await Bun.build({
+    entrypoints: [filePath],
+    target: "bun",
+    plugins: [externalizeDepsPlugin],
+  });
+  if (!result.success) {
+    throw new Error(result.logs.map((l) => l.message).join("\n"));
+  }
+  const code = await result.outputs[0].text();
+  const tmp = join(dirname(filePath), `.__sr_ssr_${buildGeneration}_${Math.random().toString(36).slice(2)}.mjs`);
+  writeFileSync(tmp, code);
+  try {
+    const mod = await import(pathToFileURL(tmp).href);
+    ssrBundleCache.set(filePath, { gen: buildGeneration, mod });
+    return mod;
+  } finally {
+    try { unlinkSync(tmp); } catch {}
+  }
+}
+
 async function loadModule(filePath, { bust = false } = {}) {
   const baseUrl = pathToFileURL(filePath).href;
   const url = bust ? `${baseUrl}?t=${Date.now()}-${Math.random().toString(36).slice(2)}` : baseUrl;
@@ -627,9 +678,8 @@ async function buildIslandBundle(pageFile) {
   if (typeof Bun === "undefined" || typeof Bun.build !== "function") {
     throw new Error("client islands require the Bun runtime");
   }
-  const mtime = statSync(pageFile).mtimeMs;
   const cached = islandBundleCache.get(pageFile);
-  if (cached && cached.mtime === mtime) return cached.code;
+  if (cached && cached.gen === buildGeneration) return cached.code;
 
   // Temp hydration entry, written next to the page so module resolution works.
   const entryPath = join(dirname(pageFile), `.__sr_island_${process.pid}_${Date.now()}.js`);
@@ -659,7 +709,7 @@ if (el) {
       throw new Error(result.logs.map((l) => l.message).join("\n"));
     }
     const code = await result.outputs[0].text();
-    islandBundleCache.set(pageFile, { mtime, code });
+    islandBundleCache.set(pageFile, { gen: buildGeneration, code });
     return code;
   } finally {
     try { unlinkSync(entryPath); } catch {}
@@ -679,7 +729,7 @@ async function renderRoute(urlPath) {
 
   try {
     const React = await import("react");
-    const pageMod = await loadModule(route.file, { bust: true });
+    const pageMod = await loadModuleFresh(route.file);
     const Page = pageMod.default ?? pageMod.Page ?? pageMod.page;
     if (!Page) {
       return { status: 500, html: null, error: new Error(`page ${route.file} has no default export`) };
@@ -700,7 +750,7 @@ async function renderRoute(urlPath) {
       );
     }
     for (let i = layouts.length - 1; i >= 0; i--) {
-      const layoutMod = await loadModule(layouts[i].file, { bust: true });
+      const layoutMod = await loadModuleFresh(layouts[i].file);
       const Layout = layoutMod.default ?? layoutMod.Layout ?? layoutMod.layout;
       if (Layout) tree = React.createElement(Layout, null, tree);
     }
@@ -870,6 +920,7 @@ function setupWatcher() {
             }
           } catch {}
           logEvent("change", full);
+          buildGeneration++;
           bustCache(full);
           if (full.includes(`${sep}globals.${"css"}`)) {
             globalsCssCache = { file: null, mtime: 0, css: "" };

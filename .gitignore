@@ -94,3 +94,4 @@ temp/
 
 # transient client-island build entries
 .__sr_island_*
+.__sr_ssr_*

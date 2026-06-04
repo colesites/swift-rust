@@ -66,7 +66,12 @@
     }
   });
 
+  es.addEventListener("open", function () {
+    if (window.__sr_setStatus) window.__sr_setStatus(true);
+  });
+
   es.addEventListener("error", function () {
+    if (window.__sr_setStatus) window.__sr_setStatus(false);
     setTimeout(function () {
       if (es.readyState === EventSource.CLOSED) {
         console.warn("[swift-rust] HMR connection lost, retrying…");
@@ -75,77 +80,98 @@
     }, 1000);
   });
 
-  // ── Dev widget: a tab peeking from the left edge; hover to open. ──────────
+  // ── Dev indicator: a sleek, glassy button at the bottom-left (Next.js-style).
+  //    Click to toggle a popover with route / status / version info. ─────────
   function mountDevWidget() {
     if (document.getElementById("__sr_devwidget")) return;
-    var connected = true;
-    var wrap = document.createElement("div");
-    wrap.id = "__sr_devwidget";
-    wrap.setAttribute("data-sr-dev", "");
-    wrap.style.cssText =
-      "position:fixed;left:0;top:50%;transform:translateY(-50%) translateX(-188px);" +
-      "z-index:2147483646;display:flex;align-items:stretch;height:auto;" +
-      "font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;" +
-      "transition:transform .22s cubic-bezier(.4,0,.2,1);will-change:transform;";
 
-    // Panel (the part that slides out)
-    var panel = document.createElement("div");
-    panel.style.cssText =
-      "width:188px;background:#0a0a0a;color:#fafafa;border:1px solid #262626;border-left:none;" +
-      "border-radius:0 12px 12px 0;padding:12px 14px;box-shadow:0 8px 30px rgba(0,0,0,.45);" +
-      "font-size:12px;line-height:1.5;";
-    function row(label, value, valColor) {
+    var root = document.createElement("div");
+    root.id = "__sr_devwidget";
+    root.setAttribute("data-sr-dev", "");
+    root.style.cssText =
+      "position:fixed;left:16px;bottom:16px;z-index:2147483646;" +
+      "font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;" +
+      "color-scheme:dark;";
+
+    var glass =
+      "background:rgba(10,10,10,0.55);-webkit-backdrop-filter:blur(12px) saturate(160%);" +
+      "backdrop-filter:blur(12px) saturate(160%);border:1px solid rgba(255,255,255,0.12);";
+
+    // Popover (hidden by default, opens above the button)
+    var pop = document.createElement("div");
+    pop.style.cssText =
+      glass +
+      "position:absolute;left:0;bottom:46px;width:236px;border-radius:14px;padding:12px;" +
+      "box-shadow:0 12px 40px rgba(0,0,0,0.5);color:#ededed;font-size:12px;line-height:1.5;" +
+      "opacity:0;transform:translateY(6px) scale(.97);pointer-events:none;transform-origin:bottom left;" +
+      "transition:opacity .16s ease,transform .16s ease;";
+    function row(label, value, color) {
       var r = document.createElement("div");
-      r.style.cssText = "display:flex;justify-content:space-between;gap:10px;margin:3px 0;";
+      r.style.cssText = "display:flex;justify-content:space-between;gap:12px;padding:5px 4px;";
       var l = document.createElement("span");
-      l.textContent = label;
-      l.style.cssText = "color:#a3a3a3;";
+      l.textContent = label; l.style.cssText = "color:#8f8f8f;";
       var v = document.createElement("span");
       v.textContent = value;
-      v.style.cssText = "color:" + (valColor || "#fafafa") + ";font-weight:500;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+      v.style.cssText = "color:" + (color || "#ededed") + ";font-weight:500;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
       r.appendChild(l); r.appendChild(v);
-      return r;
+      return { el: r, set: function (t, c) { v.textContent = t; if (c) v.style.color = c; } };
     }
-    var title = document.createElement("div");
-    title.textContent = "swift·rust dev";
-    title.style.cssText = "font-weight:600;letter-spacing:-.01em;margin-bottom:8px;color:#fb923c;";
-    var statusRow = row("status", "● connected", "#4ade80");
-    var routeRow = row("route", location.pathname, "#fafafa");
-    panel.appendChild(title);
-    panel.appendChild(statusRow);
-    panel.appendChild(routeRow);
-    panel.appendChild(row("reload", "on save", "#a3a3a3"));
+    var head = document.createElement("div");
+    head.style.cssText = "display:flex;align-items:center;gap:7px;padding:2px 4px 8px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:4px;";
+    head.innerHTML =
+      '<span style="display:inline-flex;width:18px;height:18px;border-radius:5px;background:#fb923c;align-items:center;justify-content:center;">' +
+      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.7"/><path d="M13.3 6.8 L8.9 12.6 H11.5 L10.7 16.6 L15.1 10.8 H12.5 Z" fill="#0a0a0a" stroke="none"/></svg></span>' +
+      '<span style="font-weight:600;color:#fafafa;">Swift Rust</span>' +
+      '<span style="margin-left:auto;font-size:10px;color:#8f8f8f;">dev</span>';
+    var statusRow = row("Status", "Connected", "#4ade80");
+    var routeRow = row("Route", location.pathname);
+    var saveRow = row("Hot reload", "On save", "#8f8f8f");
+    pop.appendChild(head);
+    pop.appendChild(statusRow.el);
+    pop.appendChild(routeRow.el);
+    pop.appendChild(saveRow.el);
 
-    // Tab (always visible, peeking ~28px)
-    var tab = document.createElement("button");
-    tab.type = "button";
-    tab.setAttribute("aria-label", "swift-rust dev tools");
-    tab.style.cssText =
-      "width:28px;background:#fb923c;border:none;border-radius:0 10px 10px 0;cursor:pointer;" +
-      "display:flex;align-items:center;justify-content:center;padding:14px 0;";
-    tab.innerHTML =
-      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.8" stroke-linecap="round">' +
+    // Button (the always-visible trigger)
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.setAttribute("aria-label", "Swift Rust dev tools");
+    btn.style.cssText =
+      glass +
+      "display:flex;align-items:center;gap:8px;height:34px;padding:0 11px;border-radius:999px;" +
+      "cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.35);transition:transform .12s ease,background .2s ease;";
+    btn.onmouseenter = function () { btn.style.transform = "translateY(-1px)"; };
+    btn.onmouseleave = function () { btn.style.transform = "none"; };
+    var dot = document.createElement("span");
+    dot.style.cssText = "width:8px;height:8px;border-radius:999px;background:#4ade80;box-shadow:0 0 8px #4ade80;flex-shrink:0;";
+    var mark = document.createElement("span");
+    mark.style.cssText = "display:inline-flex;width:18px;height:18px;align-items:center;justify-content:center;";
+    mark.innerHTML =
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fb923c" stroke-width="1.8" stroke-linecap="round">' +
       '<circle cx="12" cy="12" r="4.7"/>' +
       '<path d="M12 3.3v1.9M12 18.8v1.9M3.3 12h1.9M18.8 12h1.9M6 6l1.4 1.4M16.6 16.6l1.4 1.4M6 18l1.4-1.4M16.6 7.4l1.4-1.4"/>' +
-      '<path d="M13.3 6.8 L8.9 12.6 H11.5 L10.7 16.6 L15.1 10.8 H12.5 Z" fill="#0a0a0a" stroke="none"/></svg>';
+      '<path d="M13.3 6.8 L8.9 12.6 H11.5 L10.7 16.6 L15.1 10.8 H12.5 Z" fill="#fb923c" stroke="none"/></svg>';
+    btn.appendChild(dot);
+    btn.appendChild(mark);
 
-    wrap.appendChild(panel);
-    wrap.appendChild(tab);
-    document.body.appendChild(wrap);
+    root.appendChild(pop);
+    root.appendChild(btn);
+    document.body.appendChild(root);
 
-    function open() { wrap.style.transform = "translateY(-50%) translateX(0)"; }
-    function close() { wrap.style.transform = "translateY(-50%) translateX(-188px)"; }
-    wrap.addEventListener("mouseenter", open);
-    wrap.addEventListener("mouseleave", close);
-    tab.addEventListener("click", function () {
-      // toggle pinned-open on click
-      if (wrap.style.transform.indexOf("translateX(0") !== -1) close(); else open();
-    });
+    var openState = false;
+    function setOpen(v) {
+      openState = v;
+      pop.style.opacity = v ? "1" : "0";
+      pop.style.transform = v ? "translateY(0) scale(1)" : "translateY(6px) scale(.97)";
+      pop.style.pointerEvents = v ? "auto" : "none";
+    }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); setOpen(!openState); });
+    document.addEventListener("click", function () { if (openState) setOpen(false); });
+    pop.addEventListener("click", function (e) { e.stopPropagation(); });
 
-    // keep status fresh
     window.__sr_setStatus = function (ok) {
-      connected = ok;
-      statusRow.replaceWith((statusRow = row("status", ok ? "● connected" : "● offline", ok ? "#4ade80" : "#f87171")));
+      dot.style.background = ok ? "#4ade80" : "#f87171";
+      dot.style.boxShadow = "0 0 8px " + (ok ? "#4ade80" : "#f87171");
+      statusRow.set(ok ? "Connected" : "Disconnected", ok ? "#4ade80" : "#f87171");
     };
   }
   if (document.body) mountDevWidget();
