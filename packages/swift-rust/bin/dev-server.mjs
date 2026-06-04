@@ -902,6 +902,20 @@ async function runRoutePipeline(route, ctx) {
   for (const [dir, data] of loaded) loadersMap[relative(cwd, dir)] = data;
   const loaderData = loaded.length ? loaded[loaded.length - 1][1] : undefined;
 
+  // state.ts — server-side state to hydrate a client store.
+  let serverState;
+  const stateMod = await collectFirst(chain, "state");
+  const stateFn = stateMod?.default ?? stateMod?.state;
+  if (typeof stateFn === "function") serverState = await stateFn(ctx);
+
+  // seo.tsx — structured data / head injection (has loader data).
+  let seoHead = "";
+  const seoMod = await collectFirst(chain, "seo");
+  const seoFn = seoMod?.default ?? seoMod?.seo;
+  if (typeof seoFn === "function") {
+    seoHead = buildSeoHead(await seoFn(Object.assign({}, ctx, { data: loaderData })));
+  }
+
   // revalidate.ts — leaf decides cache TTL / tags.
   let revalidatePlan = config.revalidate != null ? { ttl: config.revalidate } : undefined;
   const rev = await collectFirst(chain, "revalidate");
@@ -911,7 +925,24 @@ async function runRoutePipeline(route, ctx) {
     if (plan && typeof plan === "object") revalidatePlan = { ...revalidatePlan, ...plan };
   }
 
-  return { actionData, loaderData, loaders: loadersMap, setCookies: ctx.__setCookies, config, revalidatePlan };
+  return { actionData, loaderData, loaders: loadersMap, setCookies: ctx.__setCookies, config, revalidatePlan, serverState, seoHead };
+}
+
+function escAttr(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+function buildSeoHead(r) {
+  if (!r || typeof r !== "object") return "";
+  const out = [];
+  if (r.title) out.push(`<title>${escAttr(r.title)}</title>`);
+  if (r.description) out.push(`<meta name="description" content="${escAttr(r.description)}" />`);
+  if (r.canonical) out.push(`<link rel="canonical" href="${escAttr(r.canonical)}" />`);
+  if (r.robots) out.push(`<meta name="robots" content="${escAttr(r.robots)}" />`);
+  for (const [k, v] of Object.entries(r.openGraph || {})) out.push(`<meta property="og:${escAttr(k)}" content="${escAttr(v)}" />`);
+  for (const a of r.alternates || []) out.push(`<link rel="alternate" hreflang="${escAttr(a.hreflang)}" href="${escAttr(a.href)}" />`);
+  const jsonLd = r.jsonLd ? (Array.isArray(r.jsonLd) ? r.jsonLd : [r.jsonLd]) : [];
+  for (const ld of jsonLd) out.push(`<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>`);
+  return out.join("\n");
 }
 
 async function collectFirst(chain, basename) {
@@ -1001,7 +1032,7 @@ async function renderRoute(urlPath, req) {
     const html = await renderToStringCompat(tree);
     if (runtime?.__setRouteContext) runtime.__setRouteContext(null);
     const metadata = await resolveMetadata(layouts.map((l) => l.file), route.file, route.params, segments);
-    return { status: 200, html, metadata, error: null, clientPage, pageFile: route.file, layoutFiles: layouts.map((l) => l.file), notFoundFile, errorFile, loadingFile, segments, setCookies: pipeline.setCookies, actionData: pipeline.actionData, config: pipeline.config, revalidatePlan: pipeline.revalidatePlan };
+    return { status: 200, html, metadata, error: null, clientPage, pageFile: route.file, layoutFiles: layouts.map((l) => l.file), notFoundFile, errorFile, loadingFile, segments, setCookies: pipeline.setCookies, actionData: pipeline.actionData, config: pipeline.config, revalidatePlan: pipeline.revalidatePlan, seoHead: pipeline.seoHead, serverState: pipeline.serverState };
   } catch (err) {
     const rt = await routerRuntime();
     if (rt?.__setRouteContext) rt.__setRouteContext(null);
@@ -1722,7 +1753,14 @@ async function handleFetch(req) {
 
   logRequest({ method, url: pathname, status: 200, duration: total, compileMs });
   await scanFontsFromLayouts();
-  let doc = await wrapInDocumentAsync({ head: metadataToHead(renderResult.metadata), body: renderResult.html || "" });
+  // seo.tsx head + metadata head
+  const headExtra = [metadataToHead(renderResult.metadata), renderResult.seoHead || ""].filter(Boolean).join("\n");
+  let doc = await wrapInDocumentAsync({ head: headExtra, body: renderResult.html || "" });
+  // state.ts → window.__SR_STATE__ for client stores
+  if (renderResult.serverState !== undefined) {
+    const json = JSON.stringify(renderResult.serverState).replace(/</g, "\\u003c");
+    doc = doc.replace("</body>", `<script>window.__SR_STATE__=${json}</script>\n</body>`);
+  }
   if (renderResult.clientPage && renderResult.pageFile) {
     const src = `/_swift-rust/island.js?p=${encodeURIComponent(renderResult.pageFile)}`;
     doc = doc.replace("</body>", `<script type="module" src="${src}"></script>\n</body>`);
