@@ -274,6 +274,16 @@ function findLoading(segments) {
   return findFile(APP_DIR, "loading");
 }
 
+/** Generic: find the nearest `<basename>` file walking the URL segments up. */
+function findRouteFileUp(segments, basename) {
+  for (let i = segments?.length ?? 0; i >= 0; i--) {
+    const dir = i === 0 ? APP_DIR : join(APP_DIR, ...segments.slice(0, i));
+    const file = findFile(dir, basename);
+    if (file) return file;
+  }
+  return findFile(APP_DIR, basename);
+}
+
 function findRouteSegmentsForDir(dir) {
   const rel = relative(APP_DIR, dir);
   if (rel === "" || rel === ".") return [];
@@ -801,8 +811,38 @@ function applyControl(c) {
   throw e;
 }
 
+/** Merge config.ts along the chain (inner overrides outer). */
+async function readMergedConfig(chain) {
+  let config = {};
+  for (const { file } of collectRouteFiles(chain, "config")) {
+    const mod = await loadModuleFresh(file);
+    const c = mod.config ?? mod.default;
+    if (c && typeof c === "object") config = { ...config, ...c, headers: { ...config.headers, ...c.headers } };
+  }
+  // edge.ts / worker.ts force a runtime.
+  const edge = await collectFirst(chain, "edge");
+  if (edge && (edge.edge || edge.default)) config.runtime = "edge";
+  const worker = await collectFirst(chain, "worker");
+  if (worker && (worker.default || worker.bindings)) config.runtime = "worker";
+  return config;
+}
+
 async function runRoutePipeline(route, ctx) {
   const chain = route.dirChain || [];
+
+  // middleware.ts — phase 1, outer → inner. Cheap, data-free interception.
+  for (const { file } of collectRouteFiles(chain, "middleware")) {
+    const mod = await loadModuleFresh(file);
+    const fn = mod.default ?? mod.middleware;
+    if (typeof fn === "function") {
+      const matcher = mod.matcher;
+      const matched = !matcher || matchesMatcher(ctx.url.pathname, matcher);
+      if (matched) applyControl(await fn(ctx));
+    }
+  }
+
+  // config.ts — merged, applied to the response by the caller.
+  const config = await readMergedConfig(chain);
 
   // schema.ts — validate/brand params + searchParams (Standard-Schema/Zod-like)
   for (const { file } of collectRouteFiles(chain, "schema")) {
@@ -862,7 +902,16 @@ async function runRoutePipeline(route, ctx) {
   for (const [dir, data] of loaded) loadersMap[relative(cwd, dir)] = data;
   const loaderData = loaded.length ? loaded[loaded.length - 1][1] : undefined;
 
-  return { actionData, loaderData, loaders: loadersMap, setCookies: ctx.__setCookies };
+  // revalidate.ts — leaf decides cache TTL / tags.
+  let revalidatePlan = config.revalidate != null ? { ttl: config.revalidate } : undefined;
+  const rev = await collectFirst(chain, "revalidate");
+  const revFn = rev?.default ?? rev?.revalidate;
+  if (typeof revFn === "function") {
+    const plan = await revFn(Object.assign({}, ctx, { data: loaderData, afterAction: ctx.method !== "GET" }));
+    if (plan && typeof plan === "object") revalidatePlan = { ...revalidatePlan, ...plan };
+  }
+
+  return { actionData, loaderData, loaders: loadersMap, setCookies: ctx.__setCookies, config, revalidatePlan };
 }
 
 async function collectFirst(chain, basename) {
@@ -871,8 +920,26 @@ async function collectFirst(chain, basename) {
   return await loadModuleFresh(files[files.length - 1].file);
 }
 
+function matchesMatcher(pathname, matcher) {
+  const list = Array.isArray(matcher) ? matcher : [matcher];
+  return list.some((m) => {
+    if (typeof m !== "string") return false;
+    // simple glob: * → [^/]*, ** → .*
+    const re = new RegExp("^" + m.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*\*/g, "::").replace(/\*/g, "[^/]*").replace(/::/g, ".*") + "$");
+    return re.test(pathname);
+  });
+}
+
 function jsonResponse(obj, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
+}
+
+function cacheControlFromPlan(plan) {
+  if (!plan) return null;
+  if (plan.ttl === false) return "public, max-age=31536000, immutable";
+  if (plan.ttl === 0) return "no-store";
+  if (typeof plan.ttl === "number") return `public, max-age=0, s-maxage=${plan.ttl}, stale-while-revalidate`;
+  return null;
 }
 
 async function renderRoute(urlPath, req) {
@@ -934,7 +1001,7 @@ async function renderRoute(urlPath, req) {
     const html = await renderToStringCompat(tree);
     if (runtime?.__setRouteContext) runtime.__setRouteContext(null);
     const metadata = await resolveMetadata(layouts.map((l) => l.file), route.file, route.params, segments);
-    return { status: 200, html, metadata, error: null, clientPage, pageFile: route.file, layoutFiles: layouts.map((l) => l.file), notFoundFile, errorFile, loadingFile, segments, setCookies: pipeline.setCookies, actionData: pipeline.actionData };
+    return { status: 200, html, metadata, error: null, clientPage, pageFile: route.file, layoutFiles: layouts.map((l) => l.file), notFoundFile, errorFile, loadingFile, segments, setCookies: pipeline.setCookies, actionData: pipeline.actionData, config: pipeline.config, revalidatePlan: pipeline.revalidatePlan };
   } catch (err) {
     const rt = await routerRuntime();
     if (rt?.__setRouteContext) rt.__setRouteContext(null);
@@ -966,6 +1033,21 @@ async function renderRoute(urlPath, req) {
         if (ErrorBoundary) {
           const html = await renderToStringCompat(React.createElement(ErrorBoundary, { error: err }));
           return { status: 500, html, metadata: null, error: err, segments, pageFile: route.file, errorFile };
+        }
+      } catch {}
+    }
+    // error-recovery.tsx — richer boundary with retry/reset (SSR: stub callbacks).
+    const recoveryFile = findRouteFileUp(segments, "error-recovery");
+    if (recoveryFile) {
+      try {
+        const React = await import("react");
+        const mod = await loadModule(recoveryFile, { bust: true });
+        const Recovery = mod.default ?? mod.ErrorRecovery;
+        if (Recovery) {
+          const html = await renderToStringCompat(
+            React.createElement(Recovery, { error: err, attempt: 1, retry: () => {}, reset: () => {} }),
+          );
+          return { status: 500, html, metadata: null, error: err, segments, pageFile: route.file };
         }
       } catch {}
     }
@@ -1647,6 +1729,13 @@ async function handleFetch(req) {
   }
   const headers = new Headers({ "Content-Type": "text/html; charset=utf-8" });
   for (const c of renderResult.setCookies || []) headers.append("Set-Cookie", c);
+  // config.ts headers
+  for (const [k, v] of Object.entries(renderResult.config?.headers || {})) headers.set(k, String(v));
+  // revalidate.ts → Cache-Control + cache tags
+  const cc = cacheControlFromPlan(renderResult.revalidatePlan);
+  if (cc) headers.set("Cache-Control", cc);
+  const tags = renderResult.revalidatePlan?.tags || renderResult.revalidatePlan?.invalidate;
+  if (Array.isArray(tags) && tags.length) headers.set("x-vercel-cache-tags", tags.join(","));
   return new Response(doc, { status: 200, headers });
 }
 
