@@ -190,6 +190,31 @@ function resolveRoute(dir, segments, idx, params, chain) {
   return null;
 }
 
+/** Resolve the leaf directory for URL segments (incl. dynamic), even when the
+ *  segment has no page.tsx — used for stream.ts / rpc.ts handlers. */
+function resolveLeafDir(segments) {
+  return walkLeafDir(APP_DIR, segments, 0, {});
+}
+function walkLeafDir(dir, segments, idx, params) {
+  if (idx === segments.length) return { dir, params };
+  const seg = segments[idx];
+  const directDir = join(dir, seg);
+  if (existsSync(directDir) && statSync(directDir).isDirectory()) {
+    const r = walkLeafDir(directDir, segments, idx + 1, params);
+    if (r) return r;
+  }
+  if (existsSync(dir) && statSync(dir).isDirectory()) {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.isDirectory() && e.name.startsWith("[") && e.name.endsWith("]") && !e.name.includes("...")) {
+        const pn = e.name.slice(1, -1);
+        const r = walkLeafDir(join(dir, e.name), segments, idx + 1, { ...params, [pn]: seg });
+        if (r) return r;
+      }
+    }
+  }
+  return null;
+}
+
 /** Collect a routing file (guard/loader/action/config/schema/…) along the
  *  matched directory chain, outermost → innermost. */
 function collectRouteFiles(dirChain, basename) {
@@ -1656,6 +1681,55 @@ async function handleFetch(req) {
   const segments = urlToRouteSegments(pathname);
   if (segments[0] === "api") {
     return await handleApiRoute(req, segments, method, reqStart);
+  }
+
+  // rpc.ts / stream.ts handlers (leaf, route.ts-like).
+  {
+    const leaf = resolveLeafDir(segments);
+    if (leaf) {
+      const sp = Object.fromEntries(url.searchParams.entries());
+      const baseCtx = buildRouteCtx(req, url, leaf.params, sp);
+      const rpcFile = findFile(leaf.dir, "rpc");
+      if (rpcFile) {
+        try {
+          const mod = await loadModuleFresh(rpcFile);
+          const procs = mod.procedures ?? mod.default;
+          if (procs && typeof procs === "object") {
+            if (method === "POST") {
+              const body = await req.json().catch(() => ({}));
+              const proc = procs[body.procedure];
+              if (!proc) return jsonResponse({ error: `Unknown procedure: ${body.procedure}` }, 404);
+              let input = body.input;
+              if (proc.input?.safeParse) {
+                const r = proc.input.safeParse(input);
+                if (!r.success) return jsonResponse({ error: "Invalid input", issues: r.error?.issues ?? r.error }, 400);
+                input = r.data;
+              }
+              return jsonResponse({ data: await proc.handler(input, baseCtx) });
+            }
+            if (method === "GET") return jsonResponse({ procedures: Object.keys(procs) });
+          }
+        } catch (e) {
+          return jsonResponse({ error: String(e?.message || e) }, 500);
+        }
+      }
+      const streamFile = findFile(leaf.dir, "stream");
+      if (streamFile && !findFile(leaf.dir, "page")) {
+        try {
+          const mod = await loadModuleFresh(streamFile);
+          const fn = mod.default ?? mod.stream;
+          if (typeof fn === "function") {
+            const result = await fn(baseCtx);
+            if (result instanceof Response) return result;
+            return new Response(result, {
+              headers: { "Content-Type": mod.contentType || "text/event-stream", "Cache-Control": "no-cache" },
+            });
+          }
+        } catch (e) {
+          return new Response(String(e?.message || e), { status: 500 });
+        }
+      }
+    }
   }
 
   // Non-GET requests are allowed to reach the page render so action.ts can run;
