@@ -64,7 +64,7 @@ ${pc.bold("Options")}
   ${pc.yellow("--no-tailwind")}           Skip Tailwind CSS
   ${pc.yellow("--shadcn")}                Install shadcn-style UI components (default)
   ${pc.yellow("--no-shadcn")}             Skip shadcn UI components
-  ${pc.yellow("--src-dir")}               Use src/ under app/ (default)
+  ${pc.yellow("--src-dir")}               Use a src/ directory (src/app) (default)
   ${pc.yellow("--no-src-dir")}            Use top-level app/
   ${pc.yellow("--biome")}                 Use Biome for linting (default)
   ${pc.yellow("--eslint")}                Use ESLint for linting
@@ -334,9 +334,9 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
   // When scaffolding into the current directory ("."), name the package after
   // the directory itself (like create-next-app), since "." is not a valid name.
   const projectName = rawName === "." ? basename(resolve(target)) : rawName;
-  const appDir = join(target, srcDir ? "app/src" : "app");
-  const componentsDir = join(target, "components");
-  const libDir = join(target, "lib");
+  const appDir = join(target, srcDir ? "src/app" : "app");
+  const componentsDir = join(target, srcDir ? "src/components" : "components");
+  const libDir = join(target, srcDir ? "src/lib" : "lib");
   const uiDir = join(componentsDir, "ui");
 
   await mkdir(target, { recursive: true });
@@ -406,15 +406,11 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
       compilerOptions: {
         jsx: "preserve",
         baseUrl: ".",
-        paths: { [importAlias]: ["./*"] },
+        paths: { [importAlias]: [srcDir ? "./src/*" : "./*"] },
       },
-      include: [
-        srcDir ? "app/src/**/*" : "app/**/*",
-        "components/**/*",
-        "lib/**/*",
-        "globals.d.ts",
-        ".swift-rust/types/**/*",
-      ],
+      include: srcDir
+        ? ["src/**/*", "globals.d.ts", ".swift-rust/types/**/*"]
+        : ["app/**/*", "components/**/*", "lib/**/*", "globals.d.ts", ".swift-rust/types/**/*"],
       exclude: ["node_modules", "dist", ".swift-rust", ".turbo"],
     };
     await writeFile(join(target, "tsconfig.json"), `${JSON.stringify(tsconfig, null, 2)}\n`);
@@ -422,9 +418,9 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
     const jsconfig = {
       compilerOptions: {
         baseUrl: ".",
-        paths: { [importAlias]: ["./*"] },
+        paths: { [importAlias]: [srcDir ? "./src/*" : "./*"] },
       },
-      include: [srcDir ? "app/src/**/*" : "app/**/*", "components/**/*", "lib/**/*"],
+      include: srcDir ? ["src/**/*"] : ["app/**/*", "components/**/*", "lib/**/*"],
     };
     await writeFile(join(target, "jsconfig.json"), `${JSON.stringify(jsconfig, null, 2)}\n`);
   }
@@ -658,7 +654,7 @@ export default function Home() {
           <Badge variant="secondary" className="w-fit mb-2">Welcome</Badge>
           <CardTitle className="text-3xl sm:text-5xl">${projectName}</CardTitle>
           <CardDescription>
-            Get started by editing <code>${srcDir ? "app/src/" : "app/"}page.${componentExt(language)}</code>.
+            Get started by editing <code>${srcDir ? "src/app/" : "app/"}page.${componentExt(language)}</code>.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex gap-2">
@@ -691,7 +687,7 @@ export default function Home() {
           ${projectName}
         </h1>
         <p className="text-lg text-fg-secondary mb-8">
-          Get started by editing <code>${srcDir ? "app/src/" : "app/"}page.${componentExt(language)}</code>.
+          Get started by editing <code>${srcDir ? "src/app/" : "app/"}page.${componentExt(language)}</code>.
         </p>
         <a
           href="https://swift-rust.dev/docs"
@@ -709,7 +705,7 @@ export default function Home() {
     <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
       <div style={{ maxWidth: "32rem", textAlign: "center" }}>
         <h1>${projectName}</h1>
-        <p>Get started by editing <code>${srcDir ? "app/src/" : "app/"}page.${componentExt(language)}</code>.</p>
+        <p>Get started by editing <code>${srcDir ? "src/app/" : "app/"}page.${componentExt(language)}</code>.</p>
         <a href="https://swift-rust.dev/docs">Read the docs →</a>
       </div>
     </main>
@@ -790,7 +786,7 @@ Built with [swift-rust](https://swift-rust.dev) — the React framework powered 
 
  ${
    srcDir
-     ? `\`\`\`\napp/\n  src/\n    layout.${componentExt(language)}\n    page.${componentExt(language)}\n    not-found.${componentExt(language)}\ncomponents/\nlib/\n\`\`\``
+     ? `\`\`\`\nsrc/\n  app/\n    layout.${componentExt(language)}\n    page.${componentExt(language)}\n    not-found.${componentExt(language)}\n  components/\n  lib/\n\`\`\``
      : `\`\`\`\napp/\n  layout.${componentExt(language)}\n  page.${componentExt(language)}\n  not-found.${componentExt(language)}\ncomponents/\nlib/\n\`\`\``
  }
 
@@ -1054,7 +1050,7 @@ export { badgeVariants };
   "tsx": ${componentExt === "tsx"},
   "tailwind": {
     "config": "",
-    "css": "${srcDir ? "app/src/globals.css" : "app/globals.css"}",
+    "css": "${srcDir ? "src/app/globals.css" : "app/globals.css"}",
     "baseColor": "zinc",
     "cssVariables": true,
     "prefix": ""
@@ -1173,7 +1169,7 @@ async function main(): Promise<void> {
     `${pc.cyan("•")} Linter:      ${linter === "biome" ? "Biome" : "ESLint"}`,
     `${pc.cyan("•")} Tailwind:    ${tailwind ? "Yes" : "No"}`,
     `${pc.cyan("•")} shadcn UI:   ${answers.useShadcn ? "Yes" : "No"}`,
-    `${pc.cyan("•")} src/ dir:    ${srcDir ? "Yes (app/src/)" : "No"}`,
+    `${pc.cyan("•")} src/ dir:    ${srcDir ? "Yes (src/app/)" : "No"}`,
     `${pc.cyan("•")} Import as:   ${answers.importAlias}`,
     `${pc.cyan("•")} Install:     ${install ? "Yes" : "No"}`,
   ].join("\n");

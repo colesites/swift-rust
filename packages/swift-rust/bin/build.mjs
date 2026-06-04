@@ -15,7 +15,7 @@ import { join, resolve, dirname, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const cwd = process.cwd();
-const APP_DIR_CANDIDATES = [resolve(cwd, "app", "src"), resolve(cwd, "app")];
+const APP_DIR_CANDIDATES = [resolve(cwd, "src", "app"), resolve(cwd, "app")];
 const APP_DIR = APP_DIR_CANDIDATES.find((p) => existsSync(p)) ?? resolve(cwd, "app");
 const PUBLIC_DIR = resolve(cwd, "public");
 const OUT_DIR = resolve(cwd, ".vercel", "output");

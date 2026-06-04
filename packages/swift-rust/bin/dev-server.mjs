@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, statSync, readFileSync, readdirSync, writeFileSync, unlinkSync, watch as fsWatch } from "node:fs";
-import { join, resolve, extname, relative, dirname, sep } from "node:path";
+import { join, resolve, extname, relative, dirname, basename, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { performance } from "node:perf_hooks";
 import { errorOverlayHTML as renderErrorOverlay } from "./error-overlay.mjs";
@@ -36,7 +36,7 @@ const useColor = process.stdout.isTTY !== false && !process.env.NO_COLOR;
 const paint = (color, s) => (useColor ? `${c[color]}${s}${c.reset}` : s);
 
 const VERSION = "0.1.0";
-const APP_DIR_CANDIDATES = [resolve(cwd, "app", "src"), resolve(cwd, "app")];
+const APP_DIR_CANDIDATES = [resolve(cwd, "src", "app"), resolve(cwd, "app")];
 const APP_DIR = APP_DIR_CANDIDATES.find((p) => existsSync(p)) ?? resolve(cwd, "app");
 const PUBLIC_DIR = resolve(cwd, "public");
 const SWIFT_RUST_CONFIG = resolve(cwd, "swift-rust.config.json");
@@ -796,10 +796,12 @@ function warnRoutingFile(file, msg) {
 function validateRoutingConventions() {
   const names = [...SPECIAL_FILES, "page"];
   const appRel = relative(cwd, APP_DIR) || "app";
-  const usesSrc = APP_DIR.endsWith(`${sep}src`);
-  const scan = (dir, label) => {
+  const srcRoot = dirname(APP_DIR);
+  const usesSrc = basename(APP_DIR) === "app" && basename(srcRoot) === "src";
+  const scan = (dir, label, allow = []) => {
     if (!existsSync(dir) || resolve(dir) === resolve(APP_DIR)) return;
     for (const name of names) {
+      if (allow.includes(name)) continue;
       const f = findFile(dir, name);
       if (f) {
         warnRoutingFile(
@@ -811,7 +813,8 @@ function validateRoutingConventions() {
     }
   };
   scan(cwd, "the project root");
-  if (usesSrc) scan(dirname(APP_DIR), `"app/" (outside "src/")`);
+  // proxy.ts is allowed to live at the src/ root (sibling of src/app).
+  if (usesSrc) scan(srcRoot, `"src/" (outside "app/")`, ["proxy"]);
 }
 
 // ── RFC 0001 route pipeline: config → schema → guard → loader/action ────────
@@ -902,7 +905,16 @@ async function runRoutePipeline(route, ctx) {
 
   // proxy.ts — phase 1, outer → inner. Cheap, data-free interception
   // (Next.js calls this "proxy"; "middleware" is accepted with a warning).
-  for (const { file } of collectRouteFiles(chain, "proxy")) {
+  // When using a src/ directory, a root proxy lives at src/proxy.ts (sibling
+  // of src/app), so it runs before any in-app proxy.
+  const proxyFiles = [];
+  const srcRoot = dirname(APP_DIR);
+  if (basename(APP_DIR) === "app" && basename(srcRoot) === "src") {
+    const rootProxy = findFile(srcRoot, "proxy");
+    if (rootProxy) proxyFiles.push({ file: rootProxy, dir: srcRoot });
+  }
+  proxyFiles.push(...collectRouteFiles(chain, "proxy"));
+  for (const { file } of proxyFiles) {
     const mod = await loadModuleFresh(file);
     const fn = mod.default ?? mod.proxy;
     if (typeof fn === "function") {
