@@ -1,7 +1,9 @@
 import type { Metadata } from "swift-rust";
 import { Link } from "swift-rust";
+import Image from "swift-rust/image";
 import { getAllTags, posts } from "@/lib/posts";
 import { formatDate } from "@/lib/format";
+import { BLUR } from "@/lib/blur";
 
 export const metadata: Metadata = {
   title: "Blog",
@@ -42,7 +44,19 @@ export default function BlogIndexPage() {
               <span>{featured.readingTime}</span>
             </div>
           </div>
-          <div className="aspect-[4/3] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-gradient-to-br from-[var(--color-accent-soft)] via-[var(--color-surface)] to-[var(--color-surface-2)]" />
+          {featured.cover ? (
+            <Image
+              src={featured.cover}
+              alt={featured.title}
+              width={1200}
+              height={630}
+              placeholder="blur"
+              blurDataURL={BLUR}
+              className="aspect-[4/3] w-full overflow-hidden rounded-2xl border border-[var(--color-border)] object-cover"
+            />
+          ) : (
+            <div className="aspect-[4/3] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-gradient-to-br from-[var(--color-accent-soft)] via-[var(--color-surface)] to-[var(--color-surface-2)]" />
+          )}
         </Link>
       ) : null}
 
