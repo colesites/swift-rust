@@ -71,7 +71,7 @@ function findRoutingFile(dir, base) {
 // URL pattern segments (with [param] markers preserved). Mirrors the dev
 // server's pipeline so the emitted function has the same behavior.
 function collectChainFiles(pageFile) {
-  const layouts = [];
+  const layouts = []; // { file, slots: [{ name, file }] }
   const proxies = [];
   const schemas = [];
   const guards = [];
@@ -80,18 +80,32 @@ function collectChainFiles(pageFile) {
   let queryFile = null;
   let stateFile = null;
   let seoFile = null;
+  let i18nFile = null;
+  let revalidateFile = null;
   const pattern = [];
   const rel = dirname(pageFile).slice(APP_DIR.length).replace(/^[/\\]/, "");
   const segs = rel ? rel.split(sep) : [];
-  // Root src/proxy.ts (sibling of src/app) runs before any in-app proxy.
   if (APP_DIR.endsWith(`${sep}app`) && dirname(APP_DIR).endsWith(`${sep}src`)) {
     const rp = findRoutingFile(dirname(APP_DIR), "proxy");
     if (rp) proxies.push(rp);
   }
+  const slotsFor = (d) => {
+    const out = [];
+    try {
+      for (const e of readdirSync(d, { withFileTypes: true })) {
+        if (e.isDirectory() && e.name.startsWith("@")) {
+          const sd = join(d, e.name);
+          const file = findRoutingFile(sd, "page") || findRoutingFile(sd, "fragment") || findRoutingFile(sd, "default");
+          if (file) out.push({ name: e.name.slice(1), file });
+        }
+      }
+    } catch {}
+    return out;
+  };
   let dir = APP_DIR;
   const scan = (d, isLeaf) => {
     const l = findRoutingFile(d, "layout");
-    if (l) layouts.push(l);
+    if (l) layouts.push({ file: l, slots: slotsFor(d) });
     const p = findRoutingFile(d, "proxy");
     if (p) proxies.push(p);
     const s = findRoutingFile(d, "schema");
@@ -106,6 +120,10 @@ function collectChainFiles(pageFile) {
     if (st) stateFile = st;
     const se = findRoutingFile(d, "seo");
     if (se) seoFile = se;
+    const i = findRoutingFile(d, "i18n");
+    if (i) i18nFile = i;
+    const rv = findRoutingFile(d, "revalidate");
+    if (rv) revalidateFile = rv;
     if (isLeaf) {
       const a = findRoutingFile(d, "action");
       if (a) actionFile = a;
@@ -117,46 +135,91 @@ function collectChainFiles(pageFile) {
     pattern.push(segs[i]);
     scan(dir, i === segs.length - 1);
   }
-  return { layouts, proxies, schemas, guards, loaders, actionFile, queryFile, stateFile, seoFile, pattern };
+  return { layouts, proxies, schemas, guards, loaders, actionFile, queryFile, stateFile, seoFile, i18nFile, revalidateFile, pattern };
+}
+
+function isClientPageFile(file) {
+  return scanFileDirectivesRaw(file).includes("client");
+}
+function scanFileDirectivesRaw(file) {
+  const found = [];
+  try {
+    for (const line of readFileSync(file, "utf8").split("\n")) {
+      const t = line.trim();
+      if (!t || t.startsWith("//") || t.startsWith("/*") || t.startsWith("*")) continue;
+      const m = t.match(/^["']use ([a-z]+)["'];?$/);
+      if (m) {
+        found.push(m[1]);
+        continue;
+      }
+      break;
+    }
+  } catch {}
+  return found;
+}
+
+// Build a client-island bundle for a "use client" page (served by the dev
+// server during build) and write it to the static output. Returns its URL.
+async function buildIslandAsset(pageFile) {
+  try {
+    const res = await fetch(`http://${HOST}:${PORT}/_swift-rust/island.js?p=${encodeURIComponent(pageFile)}`);
+    if (!res.ok) return null;
+    const code = await res.text();
+    const rel = `_swift-rust/island/${simpleHash(pageFile)}.js`;
+    writeRawFile(STATIC_DIR, rel, code);
+    return `/${rel}`;
+  } catch {
+    return null;
+  }
 }
 
 // Generate + bundle a Vercel function (.func) for one dynamic route.
-async function emitFunction({ route, pageFile, runtime, head, guardEnabled }) {
+async function emitFunction({ route, funcRel, pageFile, runtime, head, guardEnabled, isClient, islandSrc }) {
   if (typeof Bun === "undefined" || typeof Bun.build !== "function") return false;
   const f = collectChainFiles(pageFile);
   const fnCore = join(RUNTIME_DIR, "fn-core.mjs");
   const imports = [`import { makeRouteHandler } from ${JSON.stringify(fnCore)};`];
-  const ns = (prefix, file) => {
-    const name = `__${prefix}`;
+  let uid = 0;
+  const ns = (file) => {
+    const name = `__m${uid++}`;
     imports.push(`import * as ${name} from ${JSON.stringify(file)};`);
     return name;
   };
-  const arr = (prefix, files) => `[${files.map((file, i) => ns(`${prefix}${i}`, file)).join(", ")}]`;
-  const pageNs = ns("page", pageFile);
-  const layoutsArr = arr("l", f.layouts);
-  const proxiesArr = arr("p", f.proxies);
-  const schemasArr = arr("s", f.schemas);
-  const guardsArr = arr("g", f.guards);
-  const loadersArr = arr("d", f.loaders);
-  const actionNs = f.actionFile ? ns("a", f.actionFile) : "undefined";
-  const queryNs = f.queryFile ? ns("q", f.queryFile) : "undefined";
-  const stateNs = f.stateFile ? ns("st", f.stateFile) : "undefined";
-  const seoNs = f.seoFile ? ns("seo", f.seoFile) : "undefined";
+  const arr = (files) => `[${files.map((file) => ns(file)).join(", ")}]`;
+  const opt = (file) => (file ? ns(file) : "undefined");
+
+  // IMPORTANT: resolve every ns()/arr()/opt() (which append to `imports`)
+  // BEFORE joining `imports` — otherwise body-only modules go unimported.
+  const pageNs = ns(pageFile);
+  const layoutsArr = `[${f.layouts.map((l) => ns(l.file)).join(", ")}]`;
+  const slotsArr = `[${f.layouts.map((l) => `[${l.slots.map((s) => `{ name: ${JSON.stringify(s.name)}, mod: ${ns(s.file)} }`).join(", ")}]`).join(", ")}]`;
+  const proxiesArr = arr(f.proxies);
+  const schemasArr = arr(f.schemas);
+  const guardsArr = arr(f.guards);
+  const loadersArr = arr(f.loaders);
+  const actionNs = opt(f.actionFile);
+  const queryNs = opt(f.queryFile);
+  const stateNs = opt(f.stateFile);
+  const seoNs = opt(f.seoFile);
+  const i18nNs = opt(f.i18nFile);
+  const revNs = opt(f.revalidateFile);
 
   const entry =
     `${imports.join("\n")}\n` +
     `const handler = makeRouteHandler({\n` +
-    `  page: ${pageNs}, layouts: ${layoutsArr}, proxies: ${proxiesArr}, schemas: ${schemasArr},\n` +
-    `  guards: ${guardsArr}, guardEnabled: ${guardEnabled ? "true" : "false"}, action: ${actionNs},\n` +
-    `  loaders: ${loadersArr}, query: ${queryNs}, state: ${stateNs}, seo: ${seoNs},\n` +
+    `  page: ${pageNs}, layouts: ${layoutsArr}, layoutMetas: ${layoutsArr}, slots: ${slotsArr},\n` +
+    `  proxies: ${proxiesArr}, schemas: ${schemasArr}, guards: ${guardsArr}, guardEnabled: ${guardEnabled ? "true" : "false"},\n` +
+    `  action: ${actionNs}, loaders: ${loadersArr}, query: ${queryNs}, state: ${stateNs},\n` +
+    `  seo: ${seoNs}, i18n: ${i18nNs}, revalidate: ${revNs},\n` +
+    `  isClient: ${isClient ? "true" : "false"}, islandSrc: ${JSON.stringify(islandSrc || "")},\n` +
     `  pattern: ${JSON.stringify(f.pattern)}, runtime: ${JSON.stringify(runtime)}, head: ${JSON.stringify(head)},\n` +
     `});\n` +
     (runtime === "bun" ? `export default { fetch: handler };\n` : `export default handler;\n`);
 
-  const funcRel = route === "/" ? "index.func" : `${route.replace(/^\//, "")}.func`;
-  const funcDir = join(OUT_DIR, "functions", funcRel);
+  const rel = funcRel || (route === "/" ? "index.func" : `${route.replace(/^\//, "")}.func`);
+  const funcDir = join(OUT_DIR, "functions", rel);
   mkdirSync(funcDir, { recursive: true });
-  const entryTmp = join(dirname(pageFile), `.__sr_fn_${process.pid}_${simpleHash(route)}.js`);
+  const entryTmp = join(dirname(pageFile), `.__sr_fn_${process.pid}_${simpleHash(rel)}.js`);
   writeFileSync(entryTmp, entry);
   try {
     const isEdge = runtime === "edge";
@@ -456,7 +519,7 @@ async function localizeIslands(html) {
   return out;
 }
 
-function writeConfigJson(outDir, _hasPublic) {
+function writeConfigJson(outDir, _hasPublic, fnRoutes = []) {
   // Build Output API v3 config. Only schema-valid fields here — unknown
   // top-level fields or route properties are rejected at "Deploying outputs".
   const config = {
@@ -464,6 +527,8 @@ function writeConfigJson(outDir, _hasPublic) {
     routes: [
       { src: "/_swift-rust/static/(.*)", headers: { "Cache-Control": "public, max-age=31536000, immutable" } },
       { src: "/fonts/(.*)", headers: { "Cache-Control": "public, max-age=31536000, immutable" } },
+      // [param] / catch-all routes → their request-time function.
+      ...fnRoutes,
       { handle: "filesystem" },
       { src: "^(.*)$", status: 404, dest: "/404.html" },
     ],
@@ -511,10 +576,12 @@ async function main() {
     for (const r of routes) staticRoutes.push(r);
     process.stdout.write(`  ${paint("dim", "•")} catch-all ${paint("cyan", ca.base + "/[...]")}: ${paint("bold", String(routes.length))}\n`);
   }
+  const paramFns = []; // dynamic pages with no static params → request-time functions
   for (const dyn of dynamics) {
     const params = await enumerateParams(dyn);
     if (params.length === 0) {
-      process.stdout.write(`  ${paint("dim", "•")} dynamic ${paint("cyan", dyn.base + "/[" + dyn.paramName + "]")}: ${paint("yellow", "needs serverless function (skipped for v0.1.0)")}\n`);
+      paramFns.push(dyn);
+      process.stdout.write(`  ${paint("dim", "•")} dynamic ${paint("cyan", dyn.base + "/[" + dyn.paramName + "]")}: ${paint("cyan", "→ function")}\n`);
       continue;
     }
     const routes = routesFromParams(dyn.base, dyn.paramName, params);
@@ -541,6 +608,7 @@ async function main() {
   let fnCount = 0;
   let usesBunFns = false;
   let fallbackHead = null;
+  const fnConfigRoutes = [];
   try {
     await waitForServer();
     process.stdout.write(`  ${paint("green", "✓")} server ready\n\n`);
@@ -575,8 +643,10 @@ async function main() {
 
         if (fnRuntime && pageFile) {
           let emitted = false;
+          const isClient = isClientPageFile(pageFile);
+          const islandSrc = isClient ? await buildIslandAsset(pageFile) : null;
           try {
-            emitted = await emitFunction({ route, pageFile, runtime: fnRuntime, head: fnHead, guardEnabled: fnGuard });
+            emitted = await emitFunction({ route, pageFile, runtime: fnRuntime, head: fnHead, guardEnabled: fnGuard, isClient, islandSrc });
           } catch (e) {
             process.stdout.write(`      ${paint("dim", `fn emit failed: ${e?.message || e}`)}\n`);
           }
@@ -605,6 +675,32 @@ async function main() {
       } catch (e) {
         failCount++;
         process.stdout.write(`  ${paint("red", "✗")} ${route} ${paint("dim", e.name === "AbortError" ? "timeout" : e.message)}\n`);
+      }
+    }
+
+    // [param] / catch-all routes with no static params → one request-time
+    // function each, matched via a config.json route.
+    for (const dyn of paramFns) {
+      const pageFile = dyn.file;
+      const relDir = dirname(pageFile).slice(APP_DIR.length).replace(/^[/\\]/, "").split(sep).join("/");
+      const funcRel = `${relDir}.func`;
+      const { runtime: dirRt, guardEnabled: dirGuard } = scanDirectives(pageFile);
+      const runtime = dirRt || "bun";
+      const isClient = isClientPageFile(pageFile);
+      const islandSrc = isClient ? await buildIslandAsset(pageFile) : null;
+      let emitted = false;
+      try {
+        emitted = await emitFunction({ funcRel, pageFile, runtime, head: fallbackHead || "", guardEnabled: dirGuard, isClient, islandSrc });
+      } catch (e) {
+        process.stdout.write(`      ${paint("dim", `fn emit failed: ${e?.message || e}`)}\n`);
+      }
+      if (emitted) {
+        fnCount++;
+        if (runtime === "bun") usesBunFns = true;
+        // src regex from the pattern segments; dest is the literal function path.
+        const src = `^/${relDir.split("/").map((s) => (s.startsWith("[...") ? "(.*)" : s.startsWith("[") ? "([^/]+)" : s)).join("/")}/?$`;
+        fnConfigRoutes.push({ src, dest: `/${relDir}` });
+        process.stdout.write(`  ${paint("cyan", "ƒ")} /${relDir} ${paint("yellow", `[${runtime}]`)}\n`);
       }
     }
 
@@ -674,7 +770,7 @@ async function main() {
       process.stdout.write(`  ${paint("green", "✓")} _swift-rust/fonts/\n`);
     }
 
-    writeConfigJson(OUT_DIR, hasPublic);
+    writeConfigJson(OUT_DIR, hasPublic, fnConfigRoutes);
 
     const total = Date.now() - start;
     const outRel = OUT_DIR.startsWith(cwd + sep) ? OUT_DIR.slice(cwd.length + 1) : OUT_DIR;
