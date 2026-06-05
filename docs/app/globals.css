@@ -328,11 +328,19 @@ button.outline:hover {
   }
 }
 
-/* Content sits centered in its (wide) column. */
+/* Content sits centered in its (wide) column. `width: 100%` is required: as a
+   grid item, `margin: 0 auto` alone makes it size to its max-content (e.g. a
+   long <pre> line) and overflow the track on narrow screens. */
 .doc-article .prose {
   min-width: 0;
+  width: 100%;
   max-width: 46rem;
   margin: 0 auto;
+}
+
+/* Never let code blocks or media push the content past the viewport. */
+.doc-article .prose :is(pre, table, img, video, iframe) {
+  max-width: 100%;
 }
 
 .docs-sidebar {
