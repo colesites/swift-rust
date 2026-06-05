@@ -158,11 +158,37 @@ export const matcher = ["/old", "/blog/**"];`}</Code>
         to the response; <code>runtime</code> selects where the segment executes.
       </p>
       <Code lang="app/dashboard/config.ts">{`export const config = {
-  runtime: "node",          // "node" | "edge" | "worker"
+  runtime: "bun",           // "bun" (default) | "edge" | "node" | "worker"
   rendering: "ssr-stream",
   revalidate: 120,           // seconds
   headers: { "X-Frame-Options": "DENY" },
 };`}</Code>
+
+      <h2>Runtimes — bun · edge · node</h2>
+      <p>
+        Every route declares a runtime. <strong>Bun is the default</strong> (fast, global). Force a
+        different one with a top‑of‑file directive — it applies to the file{" "}
+        <em>and its tree</em>, just like <code>&quot;use client&quot;</code>:
+      </p>
+      <Code lang="app/dashboard/page.tsx">{`'use bun';   // ← or 'use edge' / 'use node'
+
+export default function Dashboard() {
+  return <main>…</main>;
+}`}</Code>
+      <p>
+        Or set a default per‑segment in <code>config.ts</code>, or project‑wide in{" "}
+        <code>swift-rust.config.json</code>. Resolution order, highest priority first:
+      </p>
+      <Code lang="priority">{`'use bun' | 'use edge' | 'use node'   // file directive — wins
+  → config.ts  { runtime: 'edge' }    // per-segment default
+  → swift-rust.config.json "runtime"  // project default
+  → 'bun'                              // built-in default`}</Code>
+      <p>
+        The resolved runtime is exposed to every routing file as{" "}
+        <code>ctx.runtime</code> and emitted on the response as{" "}
+        <code>x-swift-rust-runtime</code>. <code>edge.ts</code> / <code>worker.ts</code> remain a
+        file‑based way to force the Edge / Workers runtime.
+      </p>
 
       <h2>revalidate.ts — cache control</h2>
       <p>

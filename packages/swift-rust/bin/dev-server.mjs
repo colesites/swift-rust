@@ -762,10 +762,31 @@ export function isClientPage(file) {
     for (const raw of readFileSync(file, "utf8").split("\n")) {
       const t = raw.trim();
       if (!t || t.startsWith("//") || t.startsWith("/*") || t.startsWith("*")) continue;
-      return /^["']use client["'];?$/.test(t);
+      if (/^["']use client["'];?$/.test(t)) return true;
+      // allow other leading directives (e.g. 'use bun') before 'use client'
+      if (/^["']use [a-z]+["'];?$/.test(t)) continue;
+      return false;
     }
   } catch {}
   return false;
+}
+
+const VALID_RUNTIMES = new Set(["bun", "edge", "node", "worker"]);
+
+// Detect a `'use bun' | 'use edge' | 'use node'` directive among a file's
+// leading string-literal directives (alongside an optional 'use client').
+export function detectRuntimeDirective(file) {
+  try {
+    for (const raw of readFileSync(file, "utf8").split("\n")) {
+      const t = raw.trim();
+      if (!t || t.startsWith("//") || t.startsWith("/*") || t.startsWith("*")) continue;
+      const m = t.match(/^["']use (bun|edge|node|worker)["'];?$/);
+      if (m) return m[1];
+      if (/^["']use [a-z]+["'];?$/.test(t)) continue; // other directive, keep scanning
+      return null; // first non-directive line ends the directive prologue
+    }
+  } catch {}
+  return null;
 }
 
 async function buildIslandBundle(pageFile) {
@@ -905,7 +926,7 @@ function buildRouteCtx(req, url, params, searchParams) {
     cookies,
     params,
     searchParams,
-    runtime: "node",
+    runtime: "bun",
     locals: { get: (k) => localsMap.get(k), set: (k, v) => localsMap.set(k, v) },
     request: req,
     __setCookies: setCookies,
@@ -925,19 +946,61 @@ function applyControl(c) {
   throw e;
 }
 
-/** Merge config.ts along the chain (inner overrides outer). */
-async function readMergedConfig(chain) {
+// swift-rust.config.json (read once) — provides the project default runtime.
+let _globalConfig;
+function loadGlobalConfig() {
+  if (_globalConfig !== undefined) return _globalConfig;
+  try {
+    _globalConfig = existsSync(SWIFT_RUST_CONFIG) ? JSON.parse(readFileSync(SWIFT_RUST_CONFIG, "utf8")) : {};
+  } catch {
+    _globalConfig = {};
+  }
+  return _globalConfig;
+}
+
+// Resolve a `'use bun'|'use edge'|'use node'` directive for a route's tree:
+// the page wins, then layouts innermost → outermost.
+function resolveTreeRuntimeDirective(route, chain) {
+  if (route?.file) {
+    const d = detectRuntimeDirective(route.file);
+    if (d) return d;
+  }
+  const layouts = collectRouteFiles(chain, "layout"); // outer → inner
+  for (let i = layouts.length - 1; i >= 0; i--) {
+    const d = detectRuntimeDirective(layouts[i].file);
+    if (d) return d;
+  }
+  return null;
+}
+
+/** Merge config.ts along the chain (inner overrides outer) + resolve runtime. */
+async function readMergedConfig(chain, route) {
   let config = {};
   for (const { file } of collectRouteFiles(chain, "config")) {
     const mod = await loadModuleFresh(file);
     const c = mod.config ?? mod.default;
     if (c && typeof c === "object") config = { ...config, ...c, headers: { ...config.headers, ...c.headers } };
   }
-  // edge.ts / worker.ts force a runtime.
+  // edge.ts / worker.ts force a runtime (file-based, like a directive).
   const edge = await collectFirst(chain, "edge");
   if (edge && (edge.edge || edge.default)) config.runtime = "edge";
   const worker = await collectFirst(chain, "worker");
   if (worker && (worker.default || worker.bindings)) config.runtime = "worker";
+
+  // Runtime resolution (highest priority first):
+  //   'use bun|edge|node' directive  →  config.ts / edge.ts / worker.ts
+  //   →  swift-rust.config.json "runtime"  →  default "bun".
+  const directive = resolveTreeRuntimeDirective(route, chain);
+  const fromJson = loadGlobalConfig().runtime;
+  let runtime = directive ?? config.runtime ?? fromJson ?? "bun";
+  if (!VALID_RUNTIMES.has(runtime)) {
+    process.stderr.write(
+      `  ${paint("yellow", "⚠")} invalid runtime ${JSON.stringify(runtime)} — falling back to "bun"\n`,
+    );
+    runtime = "bun";
+  }
+  config.runtime = runtime;
+  config.headers = { "x-swift-rust-runtime": runtime, ...config.headers };
   return config;
 }
 
@@ -983,7 +1046,8 @@ async function runRoutePipeline(route, ctx) {
   }
 
   // config.ts — merged, applied to the response by the caller.
-  const config = await readMergedConfig(chain);
+  const config = await readMergedConfig(chain, route);
+  ctx.runtime = config.runtime;
 
   // i18n.ts — resolve the active locale into locals (cookie/header/default).
   const i18nMod = await collectFirst(chain, "i18n");
