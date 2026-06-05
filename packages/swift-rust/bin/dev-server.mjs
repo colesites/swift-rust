@@ -789,6 +789,22 @@ export function detectRuntimeDirective(file) {
   return null;
 }
 
+// True if a file declares a `'use <name>'` directive among its leading
+// string-literal directives (coexists with 'use client' / 'use bun' / etc.).
+export function hasUseDirective(file, name) {
+  try {
+    const re = new RegExp(`^["']use ${name}["'];?$`);
+    for (const raw of readFileSync(file, "utf8").split("\n")) {
+      const t = raw.trim();
+      if (!t || t.startsWith("//") || t.startsWith("/*") || t.startsWith("*")) continue;
+      if (re.test(t)) return true;
+      if (/^["']use [a-z]+["'];?$/.test(t)) continue;
+      return false;
+    }
+  } catch {}
+  return false;
+}
+
 async function buildIslandBundle(pageFile) {
   if (typeof Bun === "undefined" || typeof Bun.build !== "function") {
     throw new Error("client islands require the Bun runtime");
@@ -973,6 +989,22 @@ function resolveTreeRuntimeDirective(route, chain) {
   return null;
 }
 
+// guard.ts runs only when explicitly opted in: a `'use guard'` directive in the
+// route tree (page/layout/config), config.ts `{ guard: true }`, or the global
+// `autoApplyGuard: true`. Default is off (autoApplyGuard defaults to false).
+function shouldRunGuard(route, chain, config) {
+  if (route?.file && hasUseDirective(route.file, "guard")) return true;
+  for (const { file } of collectRouteFiles(chain, "layout")) {
+    if (hasUseDirective(file, "guard")) return true;
+  }
+  for (const { file } of collectRouteFiles(chain, "config")) {
+    if (hasUseDirective(file, "guard")) return true;
+  }
+  if (config?.guard === true) return true;
+  if (loadGlobalConfig().autoApplyGuard === true) return true;
+  return false;
+}
+
 /** Merge config.ts along the chain (inner overrides outer) + resolve runtime. */
 async function readMergedConfig(chain, route) {
   let config = {};
@@ -1080,19 +1112,22 @@ async function runRoutePipeline(route, ctx) {
     }
   }
 
-  // guard.ts — outer → inner
-  for (const { file } of collectRouteFiles(chain, "guard")) {
-    const mod = await loadModuleFresh(file);
-    const fn = mod.default ?? mod.guard;
-    if (typeof fn === "function") {
-      try {
-        applyControl(await fn(ctx));
-      } catch (e) {
-        if (e?.digest || e?.__response) throw e;
-        throw new RoutingFileError("guard", file, e);
+  // guard.ts — outer → inner. Opt-in via 'use guard' / config.guard /
+  // global autoApplyGuard (see shouldRunGuard).
+  if (shouldRunGuard(route, chain, config)) {
+    for (const { file } of collectRouteFiles(chain, "guard")) {
+      const mod = await loadModuleFresh(file);
+      const fn = mod.default ?? mod.guard;
+      if (typeof fn === "function") {
+        try {
+          applyControl(await fn(ctx));
+        } catch (e) {
+          if (e?.digest || e?.__response) throw e;
+          throw new RoutingFileError("guard", file, e);
+        }
+      } else if (mod.default !== undefined || mod.guard !== undefined) {
+        warnRoutingFile(file, `guard.ts must export a function (default export). ${relative(cwd, file)}`);
       }
-    } else if (mod.default !== undefined || mod.guard !== undefined) {
-      warnRoutingFile(file, `guard.ts must export a function (default export). ${relative(cwd, file)}`);
     }
   }
 

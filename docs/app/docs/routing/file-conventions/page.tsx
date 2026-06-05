@@ -81,6 +81,26 @@ export default function RoutingFilesPage() {
         <code>redirect()</code>, <code>unauthorized()</code> (401), <code>forbidden()</code> (403),
         or <code>notFound()</code>. Pass data to downstream files via <code>locals</code>.
       </p>
+      <p>
+        <strong>Guards are opt‑in.</strong> A <code>guard.ts</code> only runs when you enable it —
+        keeping protection explicit. Three ways, any one is enough:
+      </p>
+      <ul>
+        <li>
+          a <code>&quot;use guard&quot;</code> directive at the top of <code>page.tsx</code>,{" "}
+          <code>layout.tsx</code>, or <code>config.ts</code> (applies to that tree),
+        </li>
+        <li>
+          <code>config.ts</code> → <code>{"{ guard: true }"}</code> for a segment, or
+        </li>
+        <li>
+          <code>swift-rust.config.json</code> → <code>{"{ autoApplyGuard: true }"}</code> to enforce
+          every guard project‑wide (secure‑by‑default; defaults to <code>false</code>).
+        </li>
+      </ul>
+      <Code lang="app/admin/page.tsx">{`'use guard';   // ← drop this in and admin/guard.ts is enforced
+
+export default function Admin() { … }`}</Code>
       <Code lang="app/dashboard/guard.ts">{`import { redirect, forbidden } from "swift-rust/router";
 
 export default async function guard(ctx) {
