@@ -1,6 +1,6 @@
 {
   "name": "create-swift-rust",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "Create a new swift-rust project from a template.",
   "license": "MIT",
   "homepage": "https://swift-rust.dev",

@@ -466,6 +466,30 @@ async function askQuestions(
   };
 }
 
+// Fallback pin used when the npm registry can't be reached at scaffold time.
+// Kept in sync with the current swift-rust release so a generated project never
+// advertises an ancient version. `^` still lets it float forward within the major.
+const SWIFT_RUST_FALLBACK = "^1.5.1";
+
+// Resolve the newest published swift-rust version so the scaffolded package.json
+// reflects reality (e.g. ^1.5.1) instead of a stale literal like ^1.0.0. A caret
+// range already installs the latest matching release, but showing the real number
+// avoids the "it installed an old version" confusion. Falls back offline.
+async function resolveSwiftRustVersion(): Promise<string> {
+  try {
+    const res = await fetch("https://registry.npmjs.org/swift-rust/latest", {
+      signal: AbortSignal.timeout(4000),
+    });
+    if (res.ok) {
+      const data = (await res.json()) as { version?: string };
+      if (data?.version && /^\d+\.\d+\.\d+/.test(data.version)) return `^${data.version}`;
+    }
+  } catch {
+    // offline / registry down → use the pinned fallback
+  }
+  return SWIFT_RUST_FALLBACK;
+}
+
 async function writeProjectFiles(target: string, answers: Answers): Promise<void> {
   const {
     projectName: rawName,
@@ -496,6 +520,7 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
 
   const fileExt = (lang: Language) => (lang === "ts" ? "ts" : "js");
   const componentExt = (lang: Language) => (lang === "ts" ? "tsx" : "jsx");
+  const swiftRustVersion = await resolveSwiftRustVersion();
 
   const pkg: Record<string, unknown> = {
     name: projectName,
@@ -512,7 +537,7 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
       format: linter === "biome" ? "biome format --write ." : "prettier --write .",
     },
     dependencies: {
-      "swift-rust": "^1.0.0",
+      "swift-rust": swiftRustVersion,
       react: "^19.0.0",
       "react-dom": "^19.0.0",
       ...(useShadcn

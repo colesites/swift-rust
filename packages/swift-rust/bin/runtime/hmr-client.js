@@ -45,9 +45,17 @@
     }, 1800);
   }
 
-  es.addEventListener("change", function (e) {
+  // The server sends *unnamed* SSE messages whose payload is an envelope:
+  //   data: {"event":"change","data":{"type":"reload",...}}
+  // An unnamed SSE message fires the browser's default "message" event — NOT a
+  // named "change" event. Listening only on addEventListener("change") meant the
+  // handler never fired, so the browser never reloaded and you had to refresh by
+  // hand. We listen on "message" (and "change", for forward-compat) and unwrap
+  // the envelope, tolerating both the enveloped and flat payload shapes.
+  function handlePayload(raw) {
     try {
-      var data = JSON.parse(e.data);
+      var msg = JSON.parse(raw);
+      var data = msg && msg.event && msg.data ? msg.data : msg;
       if (data.type === "reload") {
         showToast("↻ Reloading…");
         setTimeout(function () { location.reload(); }, 100);
@@ -64,7 +72,9 @@
     } catch (err) {
       console.error("[swift-rust] bad HMR payload", err);
     }
-  });
+  }
+  es.addEventListener("message", function (e) { handlePayload(e.data); });
+  es.addEventListener("change", function (e) { handlePayload(e.data); });
 
   es.addEventListener("open", function () {
     if (window.__sr_setStatus) window.__sr_setStatus(true);

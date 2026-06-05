@@ -94,4 +94,48 @@ describe("dev server route pipeline", () => {
       writeFileSync(widget, original);
     }
   });
+
+  // Regression guard for the browser-never-reloads bug: the server emits the
+  // HMR signal as an *unnamed* SSE message (`data: {...}` with no `event:` line),
+  // which fires the browser's default "message" event. The hmr-client therefore
+  // MUST listen on "message" and unwrap the {event,data} envelope — listening
+  // only on "change" silently dropped every reload. We assert both halves here.
+  test("HMR: SSE emits an unwrappable reload payload + client listens on 'message'", async () => {
+    const hmrClient = readFileSync(
+      join(ROOT, "packages", "swift-rust", "bin", "runtime", "hmr-client.js"),
+      "utf8",
+    );
+    expect(hmrClient).toContain('addEventListener("message"');
+
+    const widget = join(FIX, "src", "components", "widget.tsx");
+    const original = readFileSync(widget, "utf8");
+    const res = await fetch(`${BASE}/_swift-rust/hmr`);
+    const reader = res.body!.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    let reloadSeen = false;
+    try {
+      writeFileSync(widget, original.replace("VERSION1", "SSE_RELOAD"));
+      const deadline = Date.now() + 6000;
+      while (Date.now() < deadline && !reloadSeen) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let i: number;
+        while ((i = buf.indexOf("\n\n")) !== -1) {
+          const frame = buf.slice(0, i);
+          buf = buf.slice(i + 2);
+          const dataLine = frame.split("\n").find((l) => l.startsWith("data:"));
+          if (!dataLine) continue;
+          const msg = JSON.parse(dataLine.slice(5).trim());
+          const data = msg && msg.event && msg.data ? msg.data : msg;
+          if (data.type === "reload") reloadSeen = true;
+        }
+      }
+    } finally {
+      await reader.cancel().catch(() => {});
+      writeFileSync(widget, original);
+    }
+    expect(reloadSeen).toBe(true);
+  }, 12_000);
 });
