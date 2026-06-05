@@ -17,14 +17,19 @@ export default function NewPostPage() {
           stroke="currentColor"
           strokeWidth="2"
         >
-          <path d="M19 12H5M11 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M19 12H5M11 18l-6-6 6-6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
         All posts
       </Link>
 
       <h1 className="mt-6 text-3xl font-semibold tracking-tight">New post</h1>
       <p className="mt-1 text-fg-muted">
-        Compose a draft. Save without publishing, or hit publish when you&apos;re ready.
+        Compose a draft. Save without publishing, or hit publish when
+        you&apos;re ready.
       </p>
 
       <form className="mt-8 space-y-6">
@@ -83,7 +88,7 @@ export default function NewPostPage() {
             id="body"
             name="body"
             placeholder="Write your post here. Markdown is supported."
-            className="textarea mt-2 min-h-[16rem] font-mono"
+            className="textarea mt-2 min-h-64 font-mono"
           />
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-border pt-6">

@@ -23,7 +23,12 @@ export function Nav() {
     <header className="sticky top-0 z-40 border-b border-border bg-bg/80 backdrop-blur-md">
       {/* CSS-only mobile menu toggle: no client JS required (these pages are
           static SSR). The peer checkbox drives the panel below. */}
-      <input type="checkbox" id="site-menu" className="peer sr-only" aria-label="Toggle menu" />
+      <input
+        type="checkbox"
+        id="site-menu"
+        className="peer sr-only"
+        aria-label="Toggle menu"
+      />
 
       <div className="container-page flex h-14 items-center justify-between gap-8">
         <Link href="/" aria-label="Home">
@@ -52,7 +57,10 @@ export function Nav() {
             <GitHubIcon />
             GitHub
           </a>
-          <Link href={siteConfig.docsUrl} className="btn btn-accent btn-sm hidden sm:inline-flex">
+          <Link
+            href={siteConfig.docsUrl}
+            className="btn btn-accent btn-sm hidden sm:inline-flex"
+          >
             Get started
           </Link>
 
@@ -62,7 +70,14 @@ export function Nav() {
             aria-label="Toggle navigation menu"
             className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-border text-fg md:hidden"
           >
-            <svg viewBox="0 0 24 24" className="h-5 w-5 peer-checked:hidden" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5 peer-checked:hidden"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden
+            >
               <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
             </svg>
           </label>
@@ -70,7 +85,7 @@ export function Nav() {
       </div>
 
       {/* Mobile dropdown panel — shown only when the checkbox is checked. */}
-      <nav className="hidden border-t border-border bg-bg px-4 py-3 peer-checked:block md:!hidden">
+      <nav className="hidden border-t border-border bg-bg px-4 py-3 peer-checked:block md:hidden!">
         <div className="flex flex-col gap-1">
           {NAV.map((item) => (
             <Link
@@ -91,7 +106,10 @@ export function Nav() {
               <GitHubIcon />
               GitHub
             </a>
-            <Link href={siteConfig.docsUrl} className="btn btn-accent btn-sm flex-1 justify-center">
+            <Link
+              href={siteConfig.docsUrl}
+              className="btn btn-accent btn-sm flex-1 justify-center"
+            >
               Get started
             </Link>
           </div>

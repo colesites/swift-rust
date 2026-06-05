@@ -10,7 +10,11 @@ export function generateStaticParams() {
   return posts.map((p) => ({ slug: p.slug }));
 }
 
-export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
+export function generateMetadata({
+  params,
+}: {
+  params: { slug: string };
+}): Metadata {
   const post = getPost(params.slug);
   if (!post) return { title: "Not found" };
   return {
@@ -38,7 +42,11 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
           stroke="currentColor"
           strokeWidth="2"
         >
-          <path d="M19 12H5M11 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M19 12H5M11 18l-6-6 6-6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
         All posts
       </Link>
@@ -75,7 +83,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
           placeholder="blur"
           blurDataURL={BLUR}
           loader={({ src }) => src}
-          className="mt-10 aspect-[1200/630] w-full rounded-2xl border border-border object-cover"
+          className="mt-10 aspect-1200/630 w-full rounded-2xl border border-border object-cover"
         />
       ) : null}
 

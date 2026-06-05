@@ -7,7 +7,8 @@ import Image from "swift-rust/image";
 
 export const metadata: Metadata = {
   title: "Blog",
-  description: "Field notes, release announcements, and the occasional rant about bundlers.",
+  description:
+    "Field notes, release announcements, and the occasional rant about bundlers.",
 };
 
 export default function BlogIndexPage() {
@@ -17,9 +18,12 @@ export default function BlogIndexPage() {
   return (
     <div className="container-page py-16 sm:py-20">
       <div className="mx-auto max-w-2xl">
-        <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Blog</h1>
+        <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+          Blog
+        </h1>
         <p className="mt-4 text-fg-muted">
-          Field notes, release announcements, and the occasional rant about bundlers.
+          Field notes, release announcements, and the occasional rant about
+          bundlers.
         </p>
       </div>
 
@@ -52,10 +56,10 @@ export default function BlogIndexPage() {
               height={630}
               placeholder="blur"
               blurDataURL={BLUR}
-              className="aspect-[4/3] w-full overflow-hidden rounded-2xl border border-border object-cover"
+              className="aspect-4/3 w-full overflow-hidden rounded-2xl border border-border object-cover"
             />
           ) : (
-            <div className="aspect-[4/3] overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-accent-soft via-surface to-surface-2" />
+            <div className="aspect-4/3 overflow-hidden rounded-2xl border border-border bg-linear-to-br from-accent-soft via-surface to-surface-2" />
           )}
         </Link>
       ) : null}

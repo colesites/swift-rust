@@ -47,7 +47,9 @@ export default function DashboardOverviewPage() {
           <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-fg-subtle">
             Overview
           </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">Welcome back, Alex</h1>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight">
+            Welcome back, Alex
+          </h1>
           <p className="mt-1 text-fg-muted">
             Here&apos;s what happened across your projects in the last 30 days.
           </p>
@@ -66,11 +68,13 @@ export default function DashboardOverviewPage() {
         {stats.map((s) => (
           <div key={s.label} className="bg-surface p-6">
             <p className="text-[0.8125rem] text-fg-muted">{s.label}</p>
-            <p className="mt-2 text-3xl font-semibold tracking-tight">{s.value}</p>
+            <p className="mt-2 text-3xl font-semibold tracking-tight">
+              {s.value}
+            </p>
             <div className="mt-3 flex items-center gap-2 text-[0.75rem]">
               <span
                 className={`inline-flex items-center gap-0.5 font-medium ${
-                  s.delta >= 0 ? "text-[#16a34a]" : "text-[#dc2626]"
+                  s.delta >= 0 ? "text-success" : "text-danger"
                 }`}
               >
                 {s.delta >= 0 ? "↑" : "↓"} {formatPercent(Math.abs(s.delta))}
@@ -94,7 +98,10 @@ export default function DashboardOverviewPage() {
           </div>
           <div className="mt-6 flex h-48 items-end gap-2">
             {trafficSeries.map((d) => (
-              <div key={d.day} className="flex flex-1 flex-col items-center gap-2">
+              <div
+                key={d.day}
+                className="flex flex-1 flex-col items-center gap-2"
+              >
                 <div
                   className="w-full rounded-t-md bg-accent/80 transition-colors hover:bg-accent"
                   style={{ height: `${(d.requests / trafficMax) * 100}%` }}
@@ -168,7 +175,9 @@ export default function DashboardOverviewPage() {
                 </td>
                 <td className="py-3 pr-4 text-fg-muted">{p.author.name}</td>
                 <td className="py-3 pr-4">
-                  <span className="badge badge-success badge-dot">Published</span>
+                  <span className="badge badge-success badge-dot">
+                    Published
+                  </span>
                 </td>
                 <td className="py-3 text-right text-fg-subtle">{p.date}</td>
               </tr>

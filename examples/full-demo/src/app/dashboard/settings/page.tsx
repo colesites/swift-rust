@@ -19,13 +19,24 @@ export default function SettingsPage() {
           </p>
           <div className="mt-5 space-y-4">
             <div>
-              <label htmlFor="name" className="block text-[0.8125rem] font-medium">
+              <label
+                htmlFor="name"
+                className="block text-[0.8125rem] font-medium"
+              >
                 Name
               </label>
-              <input id="name" type="text" defaultValue="Alex Chen" className="input mt-1.5" />
+              <input
+                id="name"
+                type="text"
+                defaultValue="Alex Chen"
+                className="input mt-1.5"
+              />
             </div>
             <div>
-              <label htmlFor="email" className="block text-[0.8125rem] font-medium">
+              <label
+                htmlFor="email"
+                className="block text-[0.8125rem] font-medium"
+              >
                 Email
               </label>
               <input
@@ -36,7 +47,10 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label htmlFor="bio" className="block text-[0.8125rem] font-medium">
+              <label
+                htmlFor="bio"
+                className="block text-[0.8125rem] font-medium"
+              >
                 Bio
               </label>
               <textarea
@@ -61,12 +75,20 @@ export default function SettingsPage() {
                 hint: "Default. Server-rendered HTML, WASM-hydrated.",
               },
               { id: "ssr", label: "SSR only", hint: "No client JavaScript." },
-              { id: "ssr-htmx", label: "SSR + HTMX", hint: "Progressive enhancement." },
-              { id: "wasm", label: "Full WASM SPA", hint: "Single-page app in WebAssembly." },
+              {
+                id: "ssr-htmx",
+                label: "SSR + HTMX",
+                hint: "Progressive enhancement.",
+              },
+              {
+                id: "wasm",
+                label: "Full WASM SPA",
+                hint: "Single-page app in WebAssembly.",
+              },
             ].map((opt, i) => (
               <label
                 key={opt.id}
-                className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-surface-2 has-[:checked]:border-accent has-[:checked]:bg-accent-soft"
+                className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-surface-2 has-checked:border-accent has-checked:bg-accent-soft"
               >
                 <input
                   type="radio"
