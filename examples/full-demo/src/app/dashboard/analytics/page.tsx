@@ -22,16 +22,16 @@ const PAGES = [
 export default function AnalyticsPage() {
   return (
     <div className="px-6 py-10 sm:px-10">
-      <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
+      <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-fg-subtle">
         Dashboard
       </p>
       <h1 className="mt-1 text-3xl font-semibold tracking-tight">Analytics</h1>
-      <p className="mt-1 text-[var(--color-fg-muted)]">Last 7 days, all projects combined.</p>
+      <p className="mt-1 text-fg-muted">Last 7 days, all projects combined.</p>
 
       <div className="mt-8 card p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-[0.95rem] font-semibold">Requests over time</h2>
-          <span className="text-[0.75rem] text-[var(--color-fg-subtle)]">
+          <span className="text-[0.75rem] text-fg-subtle">
             Total: {formatNumber(trafficSeries.reduce((s, d) => s + d.requests, 0))}
           </span>
         </div>
@@ -39,11 +39,11 @@ export default function AnalyticsPage() {
           {trafficSeries.map((d) => (
             <div key={d.day} className="flex flex-1 flex-col items-center gap-2">
               <div
-                className="w-full rounded-t-md bg-[var(--color-accent)] transition-opacity hover:opacity-80"
+                className="w-full rounded-t-md bg-accent transition-opacity hover:opacity-80"
                 style={{ height: `${(d.requests / trafficMax) * 100}%` }}
                 title={`${d.requests.toLocaleString()} requests`}
               />
-              <span className="text-[0.75rem] font-medium text-[var(--color-fg-subtle)]">
+              <span className="text-[0.75rem] font-medium text-fg-subtle">
                 {d.day}
               </span>
             </div>
@@ -59,13 +59,13 @@ export default function AnalyticsPage() {
               <li key={s.name}>
                 <div className="flex items-center justify-between text-[0.875rem]">
                   <span className="font-medium">{s.name}</span>
-                  <span className="font-mono text-[var(--color-fg-muted)]">
+                  <span className="font-mono text-fg-muted">
                     {formatNumber(s.value)}
                   </span>
                 </div>
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--color-surface-2)]">
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-2">
                   <div
-                    className="h-full rounded-full bg-[var(--color-accent)]"
+                    className="h-full rounded-full bg-accent"
                     style={{ width: `${s.pct}%` }}
                   />
                 </div>
@@ -76,20 +76,20 @@ export default function AnalyticsPage() {
 
         <div className="card p-6">
           <h2 className="text-[0.95rem] font-semibold">Top pages</h2>
-          <ul className="mt-5 divide-y divide-[var(--color-border)]">
+          <ul className="mt-5 divide-y divide-border">
             {PAGES.map((p) => (
               <li
                 key={p.path}
                 className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
               >
-                <span className="truncate font-mono text-[0.8125rem] text-[var(--color-fg)]">
+                <span className="truncate font-mono text-[0.8125rem] text-fg">
                   {p.path}
                 </span>
                 <div className="flex items-center gap-6 text-[0.8125rem]">
-                  <span className="font-mono text-[var(--color-fg-muted)]">
+                  <span className="font-mono text-fg-muted">
                     {formatNumber(p.views)}
                   </span>
-                  <span className="w-12 text-right font-mono text-[var(--color-fg-subtle)]">
+                  <span className="w-12 text-right font-mono text-fg-subtle">
                     {p.avg}
                   </span>
                 </div>

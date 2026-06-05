@@ -20,7 +20,7 @@ const GitHubIcon = () => (
 
 export function Nav() {
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--color-border)] bg-[var(--color-bg)]/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-border bg-bg/80 backdrop-blur-md">
       {/* CSS-only mobile menu toggle: no client JS required (these pages are
           static SSR). The peer checkbox drives the panel below. */}
       <input type="checkbox" id="site-menu" className="peer sr-only" aria-label="Toggle menu" />
@@ -35,7 +35,7 @@ export function Nav() {
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-md px-3 py-1.5 text-[0.875rem] text-[var(--color-fg-muted)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
+              className="rounded-md px-3 py-1.5 text-[0.875rem] text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
             >
               {item.label}
             </Link>
@@ -60,7 +60,7 @@ export function Nav() {
           <label
             htmlFor="site-menu"
             aria-label="Toggle navigation menu"
-            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-[var(--color-border)] text-[var(--color-fg)] md:hidden"
+            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-border text-fg md:hidden"
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5 peer-checked:hidden" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
               <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
@@ -70,18 +70,18 @@ export function Nav() {
       </div>
 
       {/* Mobile dropdown panel — shown only when the checkbox is checked. */}
-      <nav className="hidden border-t border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3 peer-checked:block md:!hidden">
+      <nav className="hidden border-t border-border bg-bg px-4 py-3 peer-checked:block md:!hidden">
         <div className="flex flex-col gap-1">
           {NAV.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-md px-3 py-2 text-[0.95rem] text-[var(--color-fg-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
+              className="rounded-md px-3 py-2 text-[0.95rem] text-fg-muted hover:bg-surface-2 hover:text-fg"
             >
               {item.label}
             </Link>
           ))}
-          <div className="mt-2 flex gap-2 border-t border-[var(--color-border)] pt-3">
+          <div className="mt-2 flex gap-2 border-t border-border pt-3">
             <a
               href={siteConfig.githubUrl}
               target="_blank"

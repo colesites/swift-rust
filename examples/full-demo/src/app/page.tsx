@@ -82,16 +82,16 @@ export default function HomePage() {
                 <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </Link>
-            <h1 className="text-balance text-5xl font-semibold tracking-tight text-[var(--color-fg)] sm:text-6xl md:text-7xl">
+            <h1 className="text-balance text-5xl font-semibold tracking-tight text-fg sm:text-6xl md:text-7xl">
               The React framework
               <br />
-              <span className="text-[var(--color-accent)]">Powered</span>{" "}
-              <span className="text-[var(--color-fg-muted)]">with Rust +</span>{" "}
-              <span className="text-[var(--color-accent)]">Bun</span>.
+              <span className="text-accent">Powered</span>{" "}
+              <span className="text-fg-muted">with Rust +</span>{" "}
+              <span className="text-accent">Bun</span>.
             </h1>
-            <p className="mx-auto mt-7 max-w-xl text-pretty text-lg leading-relaxed text-[var(--color-fg-muted)]">
+            <p className="mx-auto mt-7 max-w-xl text-pretty text-lg leading-relaxed text-fg-muted">
               TSX, streaming SSR, file-system routing, and a single binary at deploy.{" "}
-              <span className="font-semibold text-[var(--color-fg)]">10x faster than Next.js.</span>{" "}
+              <span className="font-semibold text-fg">10x faster than Next.js.</span>{" "}
               Familiar to anyone who has used Next.js. Familiar to nobody else.
             </p>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
@@ -120,24 +120,24 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="border-t border-[var(--color-border)] bg-[var(--color-surface)] py-24">
+      <section className="border-t border-border bg-surface py-24">
         <div className="container-page">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
               Four ways to render.
             </h2>
-            <p className="mt-4 text-pretty text-[var(--color-fg-muted)]">
+            <p className="mt-4 text-pretty text-fg-muted">
               Pick a mode when you scaffold. Change it later in one line of config.
             </p>
           </div>
-          <div className="mt-16 grid gap-px overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-border)] sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-16 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
             {RENDERERS.map((r) => (
-              <div key={r.name} className="flex flex-col gap-2 bg-[var(--color-surface)] p-6">
+              <div key={r.name} className="flex flex-col gap-2 bg-surface p-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-[0.95rem] font-semibold text-[var(--color-fg)]">{r.name}</h3>
+                  <h3 className="text-[0.95rem] font-semibold text-fg">{r.name}</h3>
                   {r.badge ? <span className="badge badge-accent">{r.badge}</span> : null}
                 </div>
-                <p className="text-[0.875rem] leading-relaxed text-[var(--color-fg-muted)]">
+                <p className="text-[0.875rem] leading-relaxed text-fg-muted">
                   {r.description}
                 </p>
               </div>
@@ -152,21 +152,21 @@ export default function HomePage() {
             <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
               Everything you&apos;d expect.
             </h2>
-            <p className="mt-4 text-pretty text-[var(--color-fg-muted)]">
+            <p className="mt-4 text-pretty text-fg-muted">
               The primitives every framework should have shipped with years ago.
             </p>
           </div>
-          <div className="mt-16 grid gap-px overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-border)] sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-16 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => {
               const Icon = f.icon;
               return (
                 <div
                   key={f.title}
-                  className="flex flex-col gap-3 bg-[var(--color-surface)] p-6 transition-colors hover:bg-[var(--color-surface-2)]"
+                  className="flex flex-col gap-3 bg-surface p-6 transition-colors hover:bg-surface-2"
                 >
-                  <Icon className="h-5 w-5 text-[var(--color-accent)]" />
-                  <h3 className="text-[0.95rem] font-semibold text-[var(--color-fg)]">{f.title}</h3>
-                  <p className="text-[0.875rem] leading-relaxed text-[var(--color-fg-muted)]">
+                  <Icon className="h-5 w-5 text-accent" />
+                  <h3 className="text-[0.95rem] font-semibold text-fg">{f.title}</h3>
+                  <p className="text-[0.875rem] leading-relaxed text-fg-muted">
                     {f.description}
                   </p>
                 </div>
@@ -176,17 +176,17 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="border-t border-[var(--color-border)] bg-[var(--color-surface)] py-24">
+      <section className="border-t border-border bg-surface py-24">
         <div className="container-page">
           <div className="grid items-start gap-16 lg:grid-cols-[1fr_1.4fr]">
             <div className="lg:sticky lg:top-24">
               <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">From the blog.</h2>
-              <p className="mt-4 text-[var(--color-fg-muted)]">
+              <p className="mt-4 text-fg-muted">
                 Field notes, release announcements, and the occasional rant about bundlers.
               </p>
               <Link
                 href="/blog"
-                className="mt-6 inline-flex items-center gap-1.5 text-[0.875rem] font-medium text-[var(--color-accent)] hover:text-[var(--color-accent-hover)]"
+                className="mt-6 inline-flex items-center gap-1.5 text-[0.875rem] font-medium text-accent hover:text-accent-hover"
               >
                 Read all posts
                 <svg
@@ -200,7 +200,7 @@ export default function HomePage() {
                 </svg>
               </Link>
             </div>
-            <ul className="divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
+            <ul className="divide-y divide-border border-y border-border">
               {recentPosts.map((post) => (
                 <li key={post.slug}>
                   <Link
@@ -208,21 +208,21 @@ export default function HomePage() {
                     className="group flex items-start justify-between gap-6 py-6 transition-colors"
                   >
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 text-[0.75rem] text-[var(--color-fg-subtle)]">
+                      <div className="flex items-center gap-2 text-[0.75rem] text-fg-subtle">
                         <time dateTime={post.date}>{post.date}</time>
                         <span>·</span>
                         <span>{post.readingTime}</span>
                       </div>
-                      <h3 className="mt-2 text-[1.0625rem] font-semibold text-[var(--color-fg)] group-hover:text-[var(--color-accent)]">
+                      <h3 className="mt-2 text-[1.0625rem] font-semibold text-fg group-hover:text-accent">
                         {post.title}
                       </h3>
-                      <p className="mt-1.5 text-[0.875rem] leading-relaxed text-[var(--color-fg-muted)]">
+                      <p className="mt-1.5 text-[0.875rem] leading-relaxed text-fg-muted">
                         {post.excerpt}
                       </p>
                     </div>
                     <svg
                       viewBox="0 0 24 24"
-                      className="mt-1 h-4 w-4 shrink-0 text-[var(--color-fg-subtle)] transition-all group-hover:translate-x-0.5 group-hover:text-[var(--color-fg)]"
+                      className="mt-1 h-4 w-4 shrink-0 text-fg-subtle transition-all group-hover:translate-x-0.5 group-hover:text-fg"
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="2"
@@ -243,11 +243,11 @@ export default function HomePage() {
 
       <section className="py-24">
         <div className="container-page">
-          <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-fg)] p-12 text-center sm:p-16">
-            <h2 className="text-balance text-3xl font-semibold tracking-tight text-[var(--color-bg)] sm:text-4xl">
+          <div className="rounded-3xl border border-border bg-fg p-12 text-center sm:p-16">
+            <h2 className="text-balance text-3xl font-semibold tracking-tight text-bg sm:text-4xl">
               Stop waiting on the build.
             </h2>
-            <p className="mx-auto mt-4 max-w-lg text-pretty text-[var(--color-fg-subtle)]">
+            <p className="mx-auto mt-4 max-w-lg text-pretty text-fg-subtle">
               Install with one command. Scaffold a project, write TSX, ship a binary.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -267,55 +267,55 @@ export default function HomePage() {
 
 function CodePreview() {
   return (
-    <div className="mx-auto mt-20 max-w-4xl overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_24px_64px_-12px_rgb(0_0_0_0.12)]">
-      <div className="flex items-center gap-1.5 border-b border-[var(--color-border)] px-4 py-3">
+    <div className="mx-auto mt-20 max-w-4xl overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_24px_64px_-12px_rgb(0_0_0_0.12)]">
+      <div className="flex items-center gap-1.5 border-b border-border px-4 py-3">
         <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
         <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
         <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-        <span className="ml-3 font-mono text-[0.75rem] text-[var(--color-fg-subtle)]">
+        <span className="ml-3 font-mono text-[0.75rem] text-fg-subtle">
           app/page.tsx
         </span>
       </div>
       <pre className="overflow-x-auto p-6 font-mono text-[0.8125rem] leading-relaxed">
         <code>
-          <span className="block text-[var(--color-fg-subtle)]">
+          <span className="block text-fg-subtle">
             {"// A page is just a component."}
           </span>
           {"\n"}
           <span className="text-[#7c3aed]">export default function</span>{" "}
           <span className="text-[#0ea5e9]">Page</span>
-          <span className="text-[var(--color-fg-muted)]">() {"{"}</span>
+          <span className="text-fg-muted">() {"{"}</span>
           {"\n  "}
-          <span className="text-[var(--color-fg-subtle)]">return</span>{" "}
-          <span className="text-[var(--color-fg-muted)]">(</span>
+          <span className="text-fg-subtle">return</span>{" "}
+          <span className="text-fg-muted">(</span>
           {"\n    <"}
           <span className="text-[#dc2626]">main</span>{" "}
           <span className="text-[#0ea5e9]">className</span>
-          <span className="text-[var(--color-fg-muted)]">=</span>
+          <span className="text-fg-muted">=</span>
           <span className="text-[#16a34a]">"container"</span>
-          <span className="text-[var(--color-fg-muted)]">{">"}</span>
+          <span className="text-fg-muted">{">"}</span>
           {"\n      <"}
           <span className="text-[#dc2626]">h1</span>
-          <span className="text-[var(--color-fg-muted)]">{">"}</span>
-          <span className="text-[var(--color-fg)]">Hello from Rust</span>
-          <span className="text-[var(--color-fg-muted)]">{"</"}</span>
+          <span className="text-fg-muted">{">"}</span>
+          <span className="text-fg">Hello from Rust</span>
+          <span className="text-fg-muted">{"</"}</span>
           <span className="text-[#dc2626]">h1</span>
-          <span className="text-[var(--color-fg-muted)]">{">"}</span>
+          <span className="text-fg-muted">{">"}</span>
           {"\n      <"}
           <span className="text-[#dc2626]">p</span>
-          <span className="text-[var(--color-fg-muted)]">{">"}</span>
-          <span className="text-[var(--color-fg-muted)]">{"Streamed in 14ms."}</span>
-          <span className="text-[var(--color-fg-muted)]">{"</"}</span>
+          <span className="text-fg-muted">{">"}</span>
+          <span className="text-fg-muted">{"Streamed in 14ms."}</span>
+          <span className="text-fg-muted">{"</"}</span>
           <span className="text-[#dc2626]">p</span>
-          <span className="text-[var(--color-fg-muted)]">{">"}</span>
+          <span className="text-fg-muted">{">"}</span>
           {"\n    "}
-          <span className="text-[var(--color-fg-muted)]">{"</"}</span>
+          <span className="text-fg-muted">{"</"}</span>
           <span className="text-[#dc2626]">main</span>
-          <span className="text-[var(--color-fg-muted)]">{">"}</span>
+          <span className="text-fg-muted">{">"}</span>
           {"\n  "}
-          <span className="text-[var(--color-fg-muted)]">{")"}</span>
+          <span className="text-fg-muted">{")"}</span>
           {"\n"}
-          <span className="text-[var(--color-fg-muted)]">{"}"}</span>
+          <span className="text-fg-muted">{"}"}</span>
         </code>
       </pre>
     </div>

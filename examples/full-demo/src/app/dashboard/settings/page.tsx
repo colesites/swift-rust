@@ -5,16 +5,16 @@ export const metadata: Metadata = { title: "Settings" };
 export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-10 sm:px-10">
-      <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
+      <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-fg-subtle">
         Dashboard
       </p>
       <h1 className="mt-1 text-3xl font-semibold tracking-tight">Settings</h1>
-      <p className="mt-1 text-[var(--color-fg-muted)]">Manage your project preferences.</p>
+      <p className="mt-1 text-fg-muted">Manage your project preferences.</p>
 
       <div className="mt-10 space-y-10">
         <section>
           <h2 className="text-[0.95rem] font-semibold">Profile</h2>
-          <p className="mt-1 text-[0.875rem] text-[var(--color-fg-muted)]">
+          <p className="mt-1 text-[0.875rem] text-fg-muted">
             Information that shows up on posts you author.
           </p>
           <div className="mt-5 space-y-4">
@@ -48,9 +48,9 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <section className="border-t border-[var(--color-border)] pt-8">
+        <section className="border-t border-border pt-8">
           <h2 className="text-[0.95rem] font-semibold">Rendering</h2>
-          <p className="mt-1 text-[0.875rem] text-[var(--color-fg-muted)]">
+          <p className="mt-1 text-[0.875rem] text-fg-muted">
             How the framework renders pages for this project.
           </p>
           <div className="mt-5 grid gap-2">
@@ -66,26 +66,26 @@ export default function SettingsPage() {
             ].map((opt, i) => (
               <label
                 key={opt.id}
-                className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--color-border)] p-4 transition-colors hover:bg-[var(--color-surface-2)] has-[:checked]:border-[var(--color-accent)] has-[:checked]:bg-[var(--color-accent-soft)]"
+                className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-surface-2 has-[:checked]:border-accent has-[:checked]:bg-accent-soft"
               >
                 <input
                   type="radio"
                   name="renderer"
                   defaultChecked={i === 0}
-                  className="mt-1 h-4 w-4 cursor-pointer accent-[var(--color-accent)]"
+                  className="mt-1 h-4 w-4 cursor-pointer accent-accent"
                 />
                 <div>
                   <p className="font-medium">{opt.label}</p>
-                  <p className="text-[0.8125rem] text-[var(--color-fg-muted)]">{opt.hint}</p>
+                  <p className="text-[0.8125rem] text-fg-muted">{opt.hint}</p>
                 </div>
               </label>
             ))}
           </div>
         </section>
 
-        <section className="border-t border-[var(--color-border)] pt-8">
+        <section className="border-t border-border pt-8">
           <h2 className="text-[0.95rem] font-semibold">Danger zone</h2>
-          <p className="mt-1 text-[0.875rem] text-[var(--color-fg-muted)]">
+          <p className="mt-1 text-[0.875rem] text-fg-muted">
             Irreversible actions. Be sure before proceeding.
           </p>
           <div className="mt-5 flex items-center justify-between rounded-lg border border-[#fecaca] bg-[#fef2f2] p-4">
@@ -105,7 +105,7 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <div className="flex justify-end gap-2 border-t border-[var(--color-border)] pt-8">
+        <div className="flex justify-end gap-2 border-t border-border pt-8">
           <button type="button" className="btn btn-outline">
             Cancel
           </button>

@@ -21,7 +21,7 @@ export default function TagPage({ params }: { params: { tag: string } }) {
     <div className="container-page py-16 sm:py-20">
       <Link
         href="/blog"
-        className="inline-flex items-center gap-1.5 text-[0.875rem] text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]"
+        className="inline-flex items-center gap-1.5 text-[0.875rem] text-fg-muted transition-colors hover:text-fg"
       >
         <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M19 12H5M11 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
@@ -29,16 +29,16 @@ export default function TagPage({ params }: { params: { tag: string } }) {
         All posts
       </Link>
       <div className="mt-8">
-        <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
+        <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-fg-subtle">
           Tag
         </p>
         <h1 className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl">{tag}</h1>
-        <p className="mt-3 text-[var(--color-fg-muted)]">
+        <p className="mt-3 text-fg-muted">
           {tagged.length} {tagged.length === 1 ? "post" : "posts"}
         </p>
       </div>
 
-      <ul className="mt-12 divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
+      <ul className="mt-12 divide-y divide-border border-y border-border">
         {tagged.map((post) => (
           <li key={post.slug}>
             <Link
@@ -46,21 +46,21 @@ export default function TagPage({ params }: { params: { tag: string } }) {
               className="group flex items-start justify-between gap-6 py-6 transition-colors"
             >
               <div className="flex-1">
-                <div className="flex items-center gap-2 text-[0.75rem] text-[var(--color-fg-subtle)]">
+                <div className="flex items-center gap-2 text-[0.75rem] text-fg-subtle">
                   <time dateTime={post.date}>{formatDate(post.date)}</time>
                   <span>·</span>
                   <span>{post.readingTime}</span>
                 </div>
-                <h3 className="mt-2 text-[1.0625rem] font-semibold text-[var(--color-fg)] group-hover:text-[var(--color-accent)]">
+                <h3 className="mt-2 text-[1.0625rem] font-semibold text-fg group-hover:text-accent">
                   {post.title}
                 </h3>
-                <p className="mt-1.5 text-[0.875rem] leading-relaxed text-[var(--color-fg-muted)]">
+                <p className="mt-1.5 text-[0.875rem] leading-relaxed text-fg-muted">
                   {post.excerpt}
                 </p>
               </div>
               <svg
                 viewBox="0 0 24 24"
-                className="mt-1 h-4 w-4 shrink-0 text-[var(--color-fg-subtle)] transition-all group-hover:translate-x-0.5 group-hover:text-[var(--color-fg)]"
+                className="mt-1 h-4 w-4 shrink-0 text-fg-subtle transition-all group-hover:translate-x-0.5 group-hover:text-fg"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"

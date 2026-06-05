@@ -29,7 +29,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
     <article className="container-prose py-16 sm:py-20">
       <Link
         href="/blog"
-        className="inline-flex items-center gap-1.5 text-[0.875rem] text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]"
+        className="inline-flex items-center gap-1.5 text-[0.875rem] text-fg-muted transition-colors hover:text-fg"
       >
         <svg
           viewBox="0 0 24 24"
@@ -43,7 +43,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
         All posts
       </Link>
 
-      <header className="mt-10 border-b border-[var(--color-border)] pb-10">
+      <header className="mt-10 border-b border-border pb-10">
         <div className="flex flex-wrap items-center gap-2">
           {post.tags.map((tag) => (
             <span key={tag} className="badge badge-accent">
@@ -54,11 +54,11 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
         <h1 className="mt-5 text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
           {post.title}
         </h1>
-        <p className="mt-5 text-pretty text-lg leading-relaxed text-[var(--color-fg-muted)]">
+        <p className="mt-5 text-pretty text-lg leading-relaxed text-fg-muted">
           {post.excerpt}
         </p>
-        <div className="mt-8 flex items-center gap-3 text-[0.875rem] text-[var(--color-fg-subtle)]">
-          <span className="font-medium text-[var(--color-fg)]">{post.author.name}</span>
+        <div className="mt-8 flex items-center gap-3 text-[0.875rem] text-fg-subtle">
+          <span className="font-medium text-fg">{post.author.name}</span>
           <span>·</span>
           <time dateTime={post.date}>{formatDate(post.date)}</time>
           <span>·</span>
@@ -75,11 +75,11 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
           placeholder="blur"
           blurDataURL={BLUR}
           loader={({ src }) => src}
-          className="mt-10 aspect-[1200/630] w-full rounded-2xl border border-[var(--color-border)] object-cover"
+          className="mt-10 aspect-[1200/630] w-full rounded-2xl border border-border object-cover"
         />
       ) : null}
 
-      <div className="prose prose-stone mt-10 max-w-none text-[1.0625rem] leading-[1.8] text-[var(--color-fg)]">
+      <div className="prose prose-stone mt-10 max-w-none text-[1.0625rem] leading-[1.8] text-fg">
         {post.body.split("\n\n").map((paragraph, i) => (
           <p key={i} className="mb-6">
             {paragraph}
@@ -88,21 +88,21 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
       </div>
 
       {related.length > 0 ? (
-        <div className="mt-20 border-t border-[var(--color-border)] pt-12">
-          <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
+        <div className="mt-20 border-t border-border pt-12">
+          <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-fg-subtle">
             Keep reading
           </h2>
-          <ul className="mt-6 grid gap-px overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-border)] sm:grid-cols-2">
+          <ul className="mt-6 grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2">
             {related.map((p) => (
-              <li key={p.slug} className="bg-[var(--color-surface)]">
+              <li key={p.slug} className="bg-surface">
                 <Link
                   href={`/blog/${p.slug}`}
-                  className="group block p-5 transition-colors hover:bg-[var(--color-surface-2)]"
+                  className="group block p-5 transition-colors hover:bg-surface-2"
                 >
-                  <p className="text-[0.75rem] text-[var(--color-fg-subtle)]">
+                  <p className="text-[0.75rem] text-fg-subtle">
                     <time dateTime={p.date}>{formatDate(p.date)}</time>
                   </p>
-                  <h3 className="mt-2 text-[1rem] font-semibold text-[var(--color-fg)] group-hover:text-[var(--color-accent)]">
+                  <h3 className="mt-2 text-[1rem] font-semibold text-fg group-hover:text-accent">
                     {p.title}
                   </h3>
                 </Link>

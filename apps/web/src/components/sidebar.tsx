@@ -21,14 +21,14 @@ const ITEMS = [
 
 export function Sidebar({ pathname = "" }: { pathname?: string }) {
   return (
-    <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-60 shrink-0 self-start flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] lg:flex">
-      <div className="flex h-14 items-center border-b border-[var(--color-border)] px-5">
+    <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-60 shrink-0 self-start flex-col border-r border-border bg-surface lg:flex">
+      <div className="flex h-14 items-center border-b border-border px-5">
         <Logo />
       </div>
       <nav className="flex-1 space-y-8 overflow-y-auto p-5">
         {ITEMS.map((group) => (
           <div key={group.section}>
-            <h3 className="mb-2 px-2 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
+            <h3 className="mb-2 px-2 text-[0.7rem] font-semibold uppercase tracking-wider text-fg-subtle">
               {group.section}
             </h3>
             <ul className="space-y-0.5">
@@ -44,8 +44,8 @@ export function Sidebar({ pathname = "" }: { pathname?: string }) {
                       href={link.href}
                       className={`flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[0.875rem] transition-colors ${
                         active
-                          ? "bg-[var(--color-accent-soft)] font-medium text-[var(--color-accent)]"
-                          : "text-[var(--color-fg-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
+                          ? "bg-accent-soft font-medium text-accent"
+                          : "text-fg-muted hover:bg-surface-2 hover:text-fg"
                       }`}
                     >
                       <Icon className="h-4 w-4" />
@@ -58,11 +58,11 @@ export function Sidebar({ pathname = "" }: { pathname?: string }) {
           </div>
         ))}
       </nav>
-      <div className="border-t border-[var(--color-border)] p-4">
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
-          <p className="text-[0.75rem] font-medium text-[var(--color-fg)]">Pro tip</p>
-          <p className="mt-1 text-[0.75rem] leading-relaxed text-[var(--color-fg-muted)]">
-            Press <kbd className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-1 font-mono text-[0.6875rem]">⌘K</kbd> for quick search.
+      <div className="border-t border-border p-4">
+        <div className="rounded-lg border border-border bg-surface-2 p-3">
+          <p className="text-[0.75rem] font-medium text-fg">Pro tip</p>
+          <p className="mt-1 text-[0.75rem] leading-relaxed text-fg-muted">
+            Press <kbd className="rounded border border-border bg-surface px-1 font-mono text-[0.6875rem]">⌘K</kbd> for quick search.
           </p>
         </div>
       </div>

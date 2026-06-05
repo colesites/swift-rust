@@ -33,13 +33,13 @@ export default function ContactPage() {
     <div className="container-page py-16 sm:py-20">
       <div className="grid gap-16 lg:grid-cols-[1fr_1fr]">
         <div>
-          <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
+          <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-fg-subtle">
             Contact
           </p>
           <h1 className="mt-2 text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
             Let&apos;s talk.
           </h1>
-          <p className="mt-5 text-pretty text-lg leading-relaxed text-[var(--color-fg-muted)]">
+          <p className="mt-5 text-pretty text-lg leading-relaxed text-fg-muted">
             Bug reports, feature requests, partnership ideas, or just to say hi. Pick a channel or use
             the form.
           </p>
@@ -49,20 +49,20 @@ export default function ContactPage() {
               <li key={c.name} className="group">
                 <Link
                   href={c.href}
-                  className="flex items-start justify-between gap-6 border-b border-[var(--color-border)] pb-6 transition-colors last:border-0"
+                  className="flex items-start justify-between gap-6 border-b border-border pb-6 transition-colors last:border-0"
                 >
                   <div>
-                    <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
+                    <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-fg-subtle">
                       {c.name}
                     </p>
-                    <p className="mt-1 font-mono text-[0.9375rem] text-[var(--color-fg)] group-hover:text-[var(--color-accent)]">
+                    <p className="mt-1 font-mono text-[0.9375rem] text-fg group-hover:text-accent">
                       {c.handle}
                     </p>
-                    <p className="mt-1 text-[0.875rem] text-[var(--color-fg-muted)]">{c.description}</p>
+                    <p className="mt-1 text-[0.875rem] text-fg-muted">{c.description}</p>
                   </div>
                   <svg
                     viewBox="0 0 24 24"
-                    className="mt-1 h-4 w-4 shrink-0 text-[var(--color-fg-subtle)] transition-all group-hover:translate-x-0.5 group-hover:text-[var(--color-fg)]"
+                    className="mt-1 h-4 w-4 shrink-0 text-fg-subtle transition-all group-hover:translate-x-0.5 group-hover:text-fg"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
@@ -78,7 +78,7 @@ export default function ContactPage() {
         <div>
           <form className="card p-6 sm:p-8">
             <h2 className="text-[0.95rem] font-semibold">Send a message</h2>
-            <p className="mt-1 text-[0.8125rem] text-[var(--color-fg-muted)]">
+            <p className="mt-1 text-[0.8125rem] text-fg-muted">
               We&apos;ll get back to you within a business day.
             </p>
             <div className="mt-6 space-y-5">

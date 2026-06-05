@@ -45,7 +45,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         ["--font-mono" as string]: "'Geist Mono', ui-monospace, monospace",
       }}
     >
-      <body className="min-h-screen bg-[var(--color-bg)] font-sans text-[var(--color-fg)] antialiased">
+      <body className="min-h-screen bg-bg font-sans text-fg antialiased">
         <Nav />
         <main className="min-h-[calc(100vh-3.5rem)]">{children}</main>
         <Footer />

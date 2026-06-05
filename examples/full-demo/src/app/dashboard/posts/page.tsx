@@ -10,11 +10,11 @@ export default function PostsPage() {
     <div className="px-6 py-10 sm:px-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
+          <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-fg-subtle">
             Dashboard
           </p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">Posts</h1>
-          <p className="mt-1 text-[var(--color-fg-muted)]">{posts.length} total</p>
+          <p className="mt-1 text-fg-muted">{posts.length} total</p>
         </div>
         <Link href="/dashboard/posts/new" className="btn btn-primary btn-sm">
           <svg
@@ -33,7 +33,7 @@ export default function PostsPage() {
       <div className="mt-8 card overflow-hidden">
         <table className="w-full text-left text-[0.875rem]">
           <thead>
-            <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-2)] text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
+            <tr className="border-b border-border bg-surface-2 text-[0.7rem] font-semibold uppercase tracking-wider text-fg-subtle">
               <th className="px-5 py-3 font-semibold">Title</th>
               <th className="px-5 py-3 font-semibold">Author</th>
               <th className="px-5 py-3 font-semibold">Status</th>
@@ -45,17 +45,17 @@ export default function PostsPage() {
             {posts.map((p) => (
               <tr
                 key={p.slug}
-                className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]"
+                className="border-b border-border last:border-0 hover:bg-surface-2"
               >
                 <td className="px-5 py-3.5">
                   <Link
                     href={`/dashboard/posts/${p.slug}`}
-                    className="font-medium text-[var(--color-fg)] hover:text-[var(--color-accent)]"
+                    className="font-medium text-fg hover:text-accent"
                   >
                     {p.title}
                   </Link>
                 </td>
-                <td className="px-5 py-3.5 text-[var(--color-fg-muted)]">{p.author.name}</td>
+                <td className="px-5 py-3.5 text-fg-muted">{p.author.name}</td>
                 <td className="px-5 py-3.5">
                   <span className="badge badge-success badge-dot">Published</span>
                 </td>
@@ -68,7 +68,7 @@ export default function PostsPage() {
                     ))}
                   </div>
                 </td>
-                <td className="px-5 py-3.5 text-right text-[var(--color-fg-subtle)]">
+                <td className="px-5 py-3.5 text-right text-fg-subtle">
                   <time dateTime={p.date}>{formatDate(p.date)}</time>
                 </td>
               </tr>

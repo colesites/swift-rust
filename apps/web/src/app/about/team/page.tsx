@@ -16,7 +16,7 @@ export default function TeamPage() {
     <div className="mx-auto max-w-3xl">
       <Link
         href="/about"
-        className="inline-flex items-center gap-1.5 text-[0.875rem] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]"
+        className="inline-flex items-center gap-1.5 text-[0.875rem] text-fg-muted hover:text-fg"
       >
         <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M19 12H5M11 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
@@ -24,11 +24,11 @@ export default function TeamPage() {
         About
       </Link>
       <h1 className="mt-6 text-4xl font-semibold tracking-tight sm:text-5xl">Team</h1>
-      <p className="mt-4 text-[var(--color-fg-muted)]">Five engineers, one framework.</p>
+      <p className="mt-4 text-fg-muted">Five engineers, one framework.</p>
 
-      <ul className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-border)] sm:grid-cols-2">
+      <ul className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
         {TEAM.map((person) => (
-          <li key={person.name} className="bg-[var(--color-surface)] p-6">
+          <li key={person.name} className="bg-surface p-6">
             <div className="flex items-center gap-3">
               <div
                 className="flex h-10 w-10 items-center justify-center rounded-full font-mono text-[0.875rem] font-semibold text-white"
@@ -41,10 +41,10 @@ export default function TeamPage() {
               </div>
               <div>
                 <p className="font-semibold">{person.name}</p>
-                <p className="text-[0.8125rem] text-[var(--color-fg-muted)]">{person.role}</p>
+                <p className="text-[0.8125rem] text-fg-muted">{person.role}</p>
               </div>
             </div>
-            <p className="mt-4 text-[0.875rem] leading-relaxed text-[var(--color-fg-muted)]">{person.bio}</p>
+            <p className="mt-4 text-[0.875rem] leading-relaxed text-fg-muted">{person.bio}</p>
           </li>
         ))}
       </ul>

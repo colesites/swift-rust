@@ -128,11 +128,11 @@ function ZimulaLadder() {
           key={`${w.weight}-${w.style}`}
           className="flex items-baseline gap-4"
         >
-          <span className="w-20 shrink-0 font-mono text-xs text-[var(--color-fg-subtle)]">
+          <span className="w-20 shrink-0 font-mono text-xs text-fg-subtle">
             {w.weight} {w.label}
           </span>
           <span
-            className="truncate text-[var(--color-fg)]"
+            className="truncate text-fg"
             style={{
               fontFamily: ZIMULA_FAMILY(w.style),
               fontWeight: w.weight,
@@ -165,12 +165,12 @@ export default function FontsPage() {
           <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-current" />
           Typography
         </div>
-        <h1 className="text-balance text-5xl font-semibold tracking-tight text-[var(--color-fg)] sm:text-6xl">
+        <h1 className="text-balance text-5xl font-semibold tracking-tight text-fg sm:text-6xl">
           Every font, every weight,
           <br />
           live in your browser.
         </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-[var(--color-fg-muted)]">
+        <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-fg-muted">
           2,071 Google fonts and 8 local font families, all available as on-demand imports. Pick a
           font, see it in action, and copy the import statement into your project.
         </p>
@@ -183,10 +183,10 @@ export default function FontsPage() {
           ].map((s) => (
             <div
               key={s.l}
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
+              className="rounded-lg border border-border bg-surface p-4"
             >
-              <dt className="font-mono text-2xl font-semibold text-[var(--color-fg)]">{s.v}</dt>
-              <dd className="mt-1 text-xs uppercase tracking-wider text-[var(--color-fg-subtle)]">
+              <dt className="font-mono text-2xl font-semibold text-fg">{s.v}</dt>
+              <dd className="mt-1 text-xs uppercase tracking-wider text-fg-subtle">
                 {s.l}
               </dd>
             </div>
@@ -196,10 +196,10 @@ export default function FontsPage() {
 
       <section className="mt-20">
         <div className="mb-6 flex items-baseline justify-between">
-          <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-fg)]">
+          <h2 className="text-2xl font-semibold tracking-tight text-fg">
             Live preview
           </h2>
-          <span className="text-sm text-[var(--color-fg-muted)]">
+          <span className="text-sm text-fg-muted">
             Type a name to load any of the 2,071 Google fonts.
           </span>
         </div>
@@ -208,20 +208,20 @@ export default function FontsPage() {
 
       <section className="mt-24">
         <div className="mb-2 flex items-baseline justify-between">
-          <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-fg)]">
+          <h2 className="text-2xl font-semibold tracking-tight text-fg">
             Featured Google fonts
           </h2>
-          <span className="text-sm text-[var(--color-fg-muted)]">
+          <span className="text-sm text-fg-muted">
             25 of 2,071 — every one ships the same way.
           </span>
         </div>
-        <p className="mb-8 max-w-2xl text-[var(--color-fg-muted)]">
+        <p className="mb-8 max-w-2xl text-fg-muted">
           These are the fonts most teams reach for. Use the search above to preview any of the
           remaining 2,046.
         </p>
         {FEATURED_GROUPS.map((group) => (
           <div key={group.name} className="mb-10">
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
               {group.name}
             </h3>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -230,15 +230,15 @@ export default function FontsPage() {
                 return (
                   <div
                     key={f.name}
-                    className="group flex flex-col gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-colors hover:border-[var(--color-border-strong)]"
+                    className="group flex flex-col gap-2 rounded-lg border border-border bg-surface p-5 transition-colors hover:border-border-strong"
                     style={font.style}
                   >
                     <div className="flex items-baseline justify-between gap-2">
-                      <h4 className="text-sm font-medium text-[var(--color-fg)]">{f.name}</h4>
-                      <span className="text-xs text-[var(--color-fg-subtle)]">{f.blurb}</span>
+                      <h4 className="text-sm font-medium text-fg">{f.name}</h4>
+                      <span className="text-xs text-fg-subtle">{f.blurb}</span>
                     </div>
-                    <div className="truncate text-2xl text-[var(--color-fg)]">Beautiful type</div>
-                    <code className="mt-auto truncate font-mono text-[11px] text-[var(--color-fg-muted)]" style={{ fontFamily: "ui-monospace, monospace" }}>
+                    <div className="truncate text-2xl text-fg">Beautiful type</div>
+                    <code className="mt-auto truncate font-mono text-[11px] text-fg-muted" style={{ fontFamily: "ui-monospace, monospace" }}>
                       import {"{ "}{f.importName}{" }"} from &quot;swift-rust/font/google&quot;
                     </code>
                   </div>
@@ -251,14 +251,14 @@ export default function FontsPage() {
 
       <section className="mt-24">
         <div className="mb-2 flex items-baseline justify-between">
-          <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-fg)]">
+          <h2 className="text-2xl font-semibold tracking-tight text-fg">
             Local fonts
           </h2>
-          <span className="text-sm text-[var(--color-fg-muted)]">
+          <span className="text-sm text-fg-muted">
             8 families bundled in the framework.
           </span>
         </div>
-        <p className="mb-8 max-w-2xl text-[var(--color-fg-muted)]">
+        <p className="mb-8 max-w-2xl text-fg-muted">
           Bundled in <code className="font-mono text-xs">packages/font/src/local/</code> and
           served from <code className="font-mono text-xs">/_swift-rust/fonts/</code>. Use them
           when you need exact control over weights or want to avoid a network round-trip.
@@ -271,18 +271,18 @@ export default function FontsPage() {
             return (
               <div
                 key={f.name}
-                className="flex flex-col gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6"
+                className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-6"
                 style={font.style}
               >
                 <div className="flex items-baseline justify-between gap-2">
-                  <h4 className="text-sm font-medium text-[var(--color-fg)]">{f.name}</h4>
-                  <span className="font-mono text-[11px] text-[var(--color-fg-subtle)]" style={{ fontFamily: "ui-monospace, monospace" }}>
+                  <h4 className="text-sm font-medium text-fg">{f.name}</h4>
+                  <span className="font-mono text-[11px] text-fg-subtle" style={{ fontFamily: "ui-monospace, monospace" }}>
                     {f.weights}
                   </span>
                 </div>
-                <div className="text-3xl text-[var(--color-fg)]">Aa Bb Cc 123</div>
-                <p className="text-xs text-[var(--color-fg-muted)]">{f.blurb}</p>
-                <code className="mt-auto truncate font-mono text-[11px] text-[var(--color-fg-muted)]" style={{ fontFamily: "ui-monospace, monospace" }}>
+                <div className="text-3xl text-fg">Aa Bb Cc 123</div>
+                <p className="text-xs text-fg-muted">{f.blurb}</p>
+                <code className="mt-auto truncate font-mono text-[11px] text-fg-muted" style={{ fontFamily: "ui-monospace, monospace" }}>
                   import {"{ "}{f.importName}{" }"} from &quot;swift-rust/font&quot;
                 </code>
               </div>
@@ -290,30 +290,30 @@ export default function FontsPage() {
           })}
         </div>
 
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+        <div className="rounded-lg border border-border bg-surface p-6">
           <div className="mb-4 flex items-baseline justify-between gap-2">
             <div>
-              <h4 className="text-sm font-medium text-[var(--color-fg)]">Zimula</h4>
-              <p className="mt-0.5 text-xs text-[var(--color-fg-muted)]">
+              <h4 className="text-sm font-medium text-fg">Zimula</h4>
+              <p className="mt-0.5 text-xs text-fg-muted">
                 Full weight ladder 100–900 in three styles (normal, ink-trap, ink-spot)
               </p>
             </div>
-            <span className="font-mono text-[11px] text-[var(--color-fg-subtle)]">
+            <span className="font-mono text-[11px] text-fg-subtle">
               27 weights
             </span>
           </div>
           <ZimulaLadder />
-          <code className="mt-6 block truncate font-mono text-[11px] text-[var(--color-fg-muted)]">
+          <code className="mt-6 block truncate font-mono text-[11px] text-fg-muted">
             import {"{ "}Zimula{" }"} from &quot;swift-rust/font&quot;
           </code>
         </div>
       </section>
 
       <section className="mt-24">
-        <h2 className="mb-2 text-2xl font-semibold tracking-tight text-[var(--color-fg)]">
+        <h2 className="mb-2 text-2xl font-semibold tracking-tight text-fg">
           How to use
         </h2>
-        <p className="mb-8 max-w-2xl text-[var(--color-fg-muted)]">
+        <p className="mb-8 max-w-2xl text-fg-muted">
           Three patterns cover almost every case. Drop them into your{" "}
           <code className="font-mono text-xs">app/layout.tsx</code> and you&apos;re shipping.
         </p>
@@ -384,12 +384,12 @@ function CodeBlock({
   code: string;
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
-      <div className="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-2.5">
-        <span className="font-mono text-xs text-[var(--color-fg-muted)]">{filename}</span>
-        <span className="text-xs text-[var(--color-fg-subtle)]">{caption}</span>
+    <div className="overflow-hidden rounded-lg border border-border bg-surface">
+      <div className="flex items-center justify-between border-b border-border bg-surface-2 px-4 py-2.5">
+        <span className="font-mono text-xs text-fg-muted">{filename}</span>
+        <span className="text-xs text-fg-subtle">{caption}</span>
       </div>
-      <pre className="overflow-x-auto bg-[var(--color-bg)] p-5 font-mono text-xs leading-relaxed text-[var(--color-fg)]">
+      <pre className="overflow-x-auto bg-bg p-5 font-mono text-xs leading-relaxed text-fg">
         <code>{code}</code>
       </pre>
     </div>

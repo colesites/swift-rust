@@ -34,19 +34,19 @@ const COLUMNS: Array<{ title: string; links: Array<{ href: string; label: string
 export function Footer() {
   const year = new Date().getFullYear();
   return (
-    <footer className="mt-32 border-t border-[var(--color-border)] bg-[var(--color-surface)]">
+    <footer className="mt-32 border-t border-border bg-surface">
       <div className="container-page py-16">
         <div className="grid gap-12 md:grid-cols-[1.5fr_2fr]">
           <div>
             <Logo />
-            <p className="mt-4 max-w-xs text-[0.875rem] leading-relaxed text-[var(--color-fg-muted)]">
+            <p className="mt-4 max-w-xs text-[0.875rem] leading-relaxed text-fg-muted">
               A full-stack React framework powered with Rust + Bun. TSX-first, single binary, four rendering modes.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
             {COLUMNS.map((col) => (
               <div key={col.title}>
-                <h3 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
+                <h3 className="text-[0.75rem] font-semibold uppercase tracking-wider text-fg-subtle">
                   {col.title}
                 </h3>
                 <ul className="mt-4 space-y-2.5">
@@ -54,7 +54,7 @@ export function Footer() {
                     <li key={link.href}>
                       <Link
                         href={link.href}
-                        className="text-[0.875rem] text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]"
+                        className="text-[0.875rem] text-fg-muted transition-colors hover:text-fg"
                       >
                         {link.label}
                       </Link>
@@ -65,7 +65,7 @@ export function Footer() {
             ))}
           </div>
         </div>
-        <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-[var(--color-border)] pt-8 text-[0.8125rem] text-[var(--color-fg-subtle)] sm:flex-row sm:items-center">
+        <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-border pt-8 text-[0.8125rem] text-fg-subtle sm:flex-row sm:items-center">
           <p>© {year} swift-rust. Built with Rust + Bun.</p>
           <p className="font-mono">v{siteConfig.version} · MIT</p>
         </div>

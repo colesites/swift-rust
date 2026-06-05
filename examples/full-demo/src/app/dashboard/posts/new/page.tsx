@@ -8,7 +8,7 @@ export default function NewPostPage() {
     <div className="mx-auto max-w-2xl px-6 py-10 sm:px-10">
       <Link
         href="/dashboard/posts"
-        className="inline-flex items-center gap-1.5 text-[0.875rem] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]"
+        className="inline-flex items-center gap-1.5 text-[0.875rem] text-fg-muted hover:text-fg"
       >
         <svg
           viewBox="0 0 24 24"
@@ -23,7 +23,7 @@ export default function NewPostPage() {
       </Link>
 
       <h1 className="mt-6 text-3xl font-semibold tracking-tight">New post</h1>
-      <p className="mt-1 text-[var(--color-fg-muted)]">
+      <p className="mt-1 text-fg-muted">
         Compose a draft. Save without publishing, or hit publish when you&apos;re ready.
       </p>
 
@@ -31,7 +31,7 @@ export default function NewPostPage() {
         <div>
           <label
             htmlFor="title"
-            className="block text-[0.8125rem] font-medium text-[var(--color-fg)]"
+            className="block text-[0.8125rem] font-medium text-fg"
           >
             Title
           </label>
@@ -46,7 +46,7 @@ export default function NewPostPage() {
         <div>
           <label
             htmlFor="slug"
-            className="block text-[0.8125rem] font-medium text-[var(--color-fg)]"
+            className="block text-[0.8125rem] font-medium text-fg"
           >
             Slug
           </label>
@@ -61,7 +61,7 @@ export default function NewPostPage() {
         <div>
           <label
             htmlFor="excerpt"
-            className="block text-[0.8125rem] font-medium text-[var(--color-fg)]"
+            className="block text-[0.8125rem] font-medium text-fg"
           >
             Excerpt
           </label>
@@ -75,7 +75,7 @@ export default function NewPostPage() {
         <div>
           <label
             htmlFor="body"
-            className="block text-[0.8125rem] font-medium text-[var(--color-fg)]"
+            className="block text-[0.8125rem] font-medium text-fg"
           >
             Body
           </label>
@@ -86,7 +86,7 @@ export default function NewPostPage() {
             className="textarea mt-2 min-h-[16rem] font-mono"
           />
         </div>
-        <div className="flex items-center justify-end gap-2 border-t border-[var(--color-border)] pt-6">
+        <div className="flex items-center justify-end gap-2 border-t border-border pt-6">
           <Link href="/dashboard/posts" className="btn btn-outline">
             Cancel
           </Link>

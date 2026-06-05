@@ -20,11 +20,11 @@ export default function GlobalError({
           Runtime error
         </span>
         <h1 className="mt-5 text-4xl font-semibold tracking-tight">Something went wrong.</h1>
-        <p className="mt-4 text-[var(--color-fg-muted)]">
+        <p className="mt-4 text-fg-muted">
           We logged the error. You can try again, or head back to the homepage.
         </p>
         {error.digest ? (
-          <p className="mt-2 font-mono text-[0.75rem] text-[var(--color-fg-subtle)]">
+          <p className="mt-2 font-mono text-[0.75rem] text-fg-subtle">
             digest: {error.digest}
           </p>
         ) : null}

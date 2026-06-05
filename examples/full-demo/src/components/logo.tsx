@@ -18,8 +18,8 @@ export function Logo({ className = "" }: { className?: string }) {
         loader={({ src }) => src}
         className="h-6 w-6"
       />
-      <span className="text-[0.95rem] font-semibold tracking-tight text-[var(--color-fg)]">
-        swift<span className="text-[var(--color-accent)]">·</span>rust
+      <span className="text-[0.95rem] font-semibold tracking-tight text-fg">
+        swift<span className="text-accent">·</span>rust
       </span>
     </span>
   );

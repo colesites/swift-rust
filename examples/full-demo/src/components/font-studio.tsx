@@ -129,26 +129,26 @@ export function FontStudio() {
   const activeImportName = customFont.trim() ? toImportName(customFont) : entry.importName;
 
   return (
-    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-sm">
-      <div className="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface-2)] px-6 py-3">
+    <div className="rounded-2xl border border-border bg-surface overflow-hidden shadow-sm">
+      <div className="flex items-center justify-between border-b border-border bg-surface-2 px-6 py-3">
         <div className="flex items-center gap-2">
-          <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-[var(--color-accent)]" />
-          <span className="text-xs font-medium uppercase tracking-wider text-[var(--color-fg-muted)]">
+          <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-accent" />
+          <span className="text-xs font-medium uppercase tracking-wider text-fg-muted">
             Typography studio
           </span>
         </div>
-        <span className="font-mono text-xs text-[var(--color-fg-subtle)]">
+        <span className="font-mono text-xs text-fg-subtle">
           {entry.name} · {weight} · {italic ? "italic" : "roman"}
         </span>
       </div>
 
       <div className="grid gap-0 lg:grid-cols-[20rem_1fr]">
-        <div className="border-b border-[var(--color-border)] p-6 lg:border-b-0 lg:border-r">
+        <div className="border-b border-border p-6 lg:border-b-0 lg:border-r">
           <div className="space-y-5">
             <div>
               <label
                 htmlFor="studio-font"
-                className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[var(--color-fg-subtle)]"
+                className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-fg-subtle"
               >
                 Font
               </label>
@@ -159,7 +159,7 @@ export function FontStudio() {
                   setFontName(e.target.value);
                   setCustomFont("");
                 }}
-                className="h-10 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-fg)] focus:border-[var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-soft)]"
+                className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-fg focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-soft"
               >
                 {STUDIO_FONTS.map((f) => (
                   <option key={f.name} value={f.name}>
@@ -172,7 +172,7 @@ export function FontStudio() {
             <div>
               <label
                 htmlFor="studio-weight"
-                className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[var(--color-fg-subtle)]"
+                className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-fg-subtle"
               >
                 Weight
               </label>
@@ -182,7 +182,7 @@ export function FontStudio() {
                 onChange={(e: ChangeEvent<HTMLSelectElement>) =>
                   setWeight(Number(e.target.value))
                 }
-                className="h-10 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-fg)] focus:border-[var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-soft)]"
+                className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-fg focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-soft"
               >
                 {WEIGHTS.map((w) => (
                   <option key={w.value} value={w.value}>
@@ -193,7 +193,7 @@ export function FontStudio() {
             </div>
 
             <div>
-              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[var(--color-fg-subtle)]">
+              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-fg-subtle">
                 Style
               </span>
               <div className="flex gap-2">
@@ -202,8 +202,8 @@ export function FontStudio() {
                   onClick={() => setItalic(false)}
                   className={`flex-1 h-10 rounded-md text-sm font-medium transition-colors ${
                     !italic
-                      ? "bg-[var(--color-fg)] text-[var(--color-bg)]"
-                      : "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]"
+                      ? "bg-fg text-bg"
+                      : "border border-border bg-surface text-fg-muted hover:text-fg"
                   }`}
                 >
                   Regular
@@ -213,8 +213,8 @@ export function FontStudio() {
                   onClick={() => setItalic(true)}
                   className={`flex-1 h-10 rounded-md text-sm font-medium transition-colors ${
                     italic
-                      ? "bg-[var(--color-fg)] text-[var(--color-bg)]"
-                      : "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]"
+                      ? "bg-fg text-bg"
+                      : "border border-border bg-surface text-fg-muted hover:text-fg"
                   }`}
                 >
                   Italic
@@ -226,11 +226,11 @@ export function FontStudio() {
               <div className="mb-1.5 flex items-baseline justify-between">
                 <label
                   htmlFor="studio-size"
-                  className="text-xs font-medium uppercase tracking-wider text-[var(--color-fg-subtle)]"
+                  className="text-xs font-medium uppercase tracking-wider text-fg-subtle"
                 >
                   Size
                 </label>
-                <span className="font-mono text-xs text-[var(--color-fg-muted)]">{size}px</span>
+                <span className="font-mono text-xs text-fg-muted">{size}px</span>
               </div>
               <input
                 id="studio-size"
@@ -241,7 +241,7 @@ export function FontStudio() {
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   setSize(Number(e.target.value))
                 }
-                className="w-full accent-[var(--color-accent)]"
+                className="w-full accent-accent"
               />
             </div>
 
@@ -249,11 +249,11 @@ export function FontStudio() {
               <div className="mb-1.5 flex items-baseline justify-between">
                 <label
                   htmlFor="studio-tracking"
-                  className="text-xs font-medium uppercase tracking-wider text-[var(--color-fg-subtle)]"
+                  className="text-xs font-medium uppercase tracking-wider text-fg-subtle"
                 >
                   Tracking
                 </label>
-                <span className="font-mono text-xs text-[var(--color-fg-muted)]">
+                <span className="font-mono text-xs text-fg-muted">
                   {tracking >= 0 ? "+" : ""}
                   {tracking}
                 </span>
@@ -267,7 +267,7 @@ export function FontStudio() {
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   setTracking(Number(e.target.value))
                 }
-                className="w-full accent-[var(--color-accent)]"
+                className="w-full accent-accent"
               />
             </div>
 
@@ -275,11 +275,11 @@ export function FontStudio() {
               <div className="mb-1.5 flex items-baseline justify-between">
                 <label
                   htmlFor="studio-leading"
-                  className="text-xs font-medium uppercase tracking-wider text-[var(--color-fg-subtle)]"
+                  className="text-xs font-medium uppercase tracking-wider text-fg-subtle"
                 >
                   Line height
                 </label>
-                <span className="font-mono text-xs text-[var(--color-fg-muted)]">
+                <span className="font-mono text-xs text-fg-muted">
                   {leading.toFixed(2)}
                 </span>
               </div>
@@ -293,14 +293,14 @@ export function FontStudio() {
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   setLeading(Number(e.target.value))
                 }
-                className="w-full accent-[var(--color-accent)]"
+                className="w-full accent-accent"
               />
             </div>
 
             <div>
               <label
                 htmlFor="studio-custom"
-                className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[var(--color-fg-subtle)]"
+                className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-fg-subtle"
               >
                 Any of 2,071 Google fonts
               </label>
@@ -310,7 +310,7 @@ export function FontStudio() {
                 value={customFont}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setCustomFont(e.target.value)}
                 placeholder="e.g. Fraunces, IBM Plex Sans KR, Anton"
-                className="h-10 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-fg)] placeholder:text-[var(--color-fg-subtle)] focus:border-[var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-soft)]"
+                className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-soft"
               />
             </div>
           </div>
@@ -333,8 +333,8 @@ export function FontStudio() {
             {sample}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 border-t border-[var(--color-border)] bg-[var(--color-surface-2)] px-6 py-3">
-            <span className="text-xs font-medium uppercase tracking-wider text-[var(--color-fg-subtle)]">
+          <div className="flex flex-wrap items-center gap-2 border-t border-border bg-surface-2 px-6 py-3">
+            <span className="text-xs font-medium uppercase tracking-wider text-fg-subtle">
               Sample
             </span>
             <div className="flex flex-wrap gap-1.5">
@@ -345,8 +345,8 @@ export function FontStudio() {
                   onClick={() => setSample(s)}
                   className={`rounded-full px-2.5 py-1 text-xs transition-colors ${
                     sample === s
-                      ? "bg-[var(--color-fg)] text-[var(--color-bg)]"
-                      : "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]"
+                      ? "bg-fg text-bg"
+                      : "border border-border bg-surface text-fg-muted hover:text-fg"
                   }`}
                 >
                   {s.length > 24 ? `${s.slice(0, 22)}…` : s}
@@ -357,21 +357,21 @@ export function FontStudio() {
               type="text"
               value={sample}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setSample(e.target.value)}
-              className="ml-auto h-8 min-w-0 max-w-xs flex-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-xs text-[var(--color-fg)] focus:border-[var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-soft)]"
+              className="ml-auto h-8 min-w-0 max-w-xs flex-1 rounded-md border border-border bg-surface px-3 text-xs text-fg focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-soft"
               placeholder="Type to preview…"
             />
           </div>
         </div>
       </div>
 
-      <div className="border-t border-[var(--color-border)] bg-[var(--color-bg)] px-6 py-4 font-mono text-xs">
-        <span className="text-[var(--color-accent)]">import</span>
+      <div className="border-t border-border bg-bg px-6 py-4 font-mono text-xs">
+        <span className="text-accent">import</span>
         {" { "}
-        <span className="text-[var(--color-fg)]">{activeImportName}</span>
+        <span className="text-fg">{activeImportName}</span>
         {" } "}
-        <span className="text-[var(--color-accent)]">from</span>
-        <span className="text-[var(--color-success)]">{" "}&quot;swift-rust/font/google&quot;</span>
-        <span className="text-[var(--color-fg-muted)]">;</span>
+        <span className="text-accent">from</span>
+        <span className="text-success">{" "}&quot;swift-rust/font/google&quot;</span>
+        <span className="text-fg-muted">;</span>
       </div>
     </div>
   );
