@@ -15,7 +15,8 @@
     "docs",
     "scripts",
     "test",
-    "examples/*"
+    "examples/*",
+    "test/fixtures/*"
   ],
   "scripts": {
     "build": "turbo run build",

@@ -312,6 +312,8 @@ function discoverPages(dir, base = "") {
   if (!existsSync(dir)) return pages;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
+    // @slot dirs (parallel routes) are not URL segments — composed into layouts.
+    if (entry.name.startsWith("@")) continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       const catchAll = entry.name.match(CATCH_PARAM);

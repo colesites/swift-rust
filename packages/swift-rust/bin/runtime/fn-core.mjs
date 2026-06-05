@@ -255,6 +255,12 @@ export function makeRouteHandler(opts) {
       }
       const metaHead = metadataToHead(mergeMetadata(...metas));
 
+      // Expose loader/action data to useLoaderData()/useActionData() via the
+      // router's globalThis context box (same channel the dev server uses).
+      const g = globalThis;
+      g.__SR_ROUTE_CTX__ = g.__SR_ROUTE_CTX__ || { current: null };
+      g.__SR_ROUTE_CTX__.current = { request: ctx, loaderData, actionData, loaders: {} };
+
       // render: page → (slots) → layouts
       const Page = pick(opts.page, "default", "Page", "page");
       let tree = createElement(Page, { params: ctx.params, loaderData });
@@ -274,6 +280,7 @@ export function makeRouteHandler(opts) {
         tree = createElement(Layout, slotProps, tree);
       }
       const body = await renderTree(tree);
+      g.__SR_ROUTE_CTX__.current = null;
 
       // head: captured assets (metadata stripped) + per-request metadata + seo
       let head = stripMeta(opts.head || "");
