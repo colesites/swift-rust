@@ -1,6 +1,6 @@
 {
   "name": "@swift-rust/font",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Font component for swift-rust.",
   "license": "MIT",
   "homepage": "https://swift-rust.dev",
@@ -28,7 +28,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "src/local"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",

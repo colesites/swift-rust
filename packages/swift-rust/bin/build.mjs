@@ -13,6 +13,7 @@ import {
 } from "node:fs";
 import { join, resolve, dirname, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 const cwd = process.cwd();
 const APP_DIR_CANDIDATES = [resolve(cwd, "src", "app"), resolve(cwd, "app")];
@@ -21,6 +22,20 @@ const PUBLIC_DIR = resolve(cwd, "public");
 const OUT_DIR = resolve(cwd, ".vercel", "output");
 const STATIC_DIR = join(OUT_DIR, "static");
 const RUNTIME_DIR = resolve(fileURLToPath(import.meta.url), "..", "runtime");
+
+// Locate the bundled local fonts (installed @swift-rust/font, else monorepo).
+function resolveLocalFontDir() {
+  const candidates = [];
+  try {
+    const req = createRequire(import.meta.url);
+    const pkg = req.resolve("@swift-rust/font/package.json");
+    candidates.push(join(dirname(pkg), "src", "local"), join(dirname(pkg), "dist", "local"));
+  } catch {}
+  candidates.push(
+    resolve(fileURLToPath(import.meta.url), "..", "..", "..", "..", "packages", "font", "src", "local"),
+  );
+  return candidates.find((d) => existsSync(d)) ?? null;
+}
 
 const PORT_START = parseInt(process.env.SWIFT_RUST_BUILD_PORT || "47321", 10);
 const HOST = "127.0.0.1";
@@ -419,6 +434,14 @@ async function main() {
     if (existsSync(navSrc)) {
       writeRawFile(STATIC_DIR, "_swift-rust/navigator.js", readFileSync(navSrc));
       process.stdout.write(`  ${paint("green", "✓")} _swift-rust/navigator.js\n`);
+    }
+
+    // Bundled local fonts — the dev server serves these from
+    // /_swift-rust/fonts/; emit them so deployed @font-face URLs resolve.
+    const fontDir = resolveLocalFontDir();
+    if (fontDir) {
+      cpSync(fontDir, join(STATIC_DIR, "_swift-rust", "fonts"), { recursive: true });
+      process.stdout.write(`  ${paint("green", "✓")} _swift-rust/fonts/\n`);
     }
 
     writeConfigJson(OUT_DIR, hasPublic);

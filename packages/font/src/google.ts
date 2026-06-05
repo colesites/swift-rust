@@ -7,6 +7,14 @@ type FontFactory = (options?: FontOptions) => LoadedFont;
 void (null as unknown as FontFactory);
 
 function buildGoogleFont(family: string, options: FontOptions): LoadedFont {
+  // Register the family so the framework injects its <link> for ANY page that
+  // uses it (not just layouts). Read by the dev server / build after render.
+  try {
+    const g = globalThis as unknown as { __SR_GOOGLE_FONTS__?: Set<string> };
+    (g.__SR_GOOGLE_FONTS__ ??= new Set<string>()).add(family);
+  } catch {
+    /* no-op */
+  }
   const className = options.variable
     ? `${normalizeClassName(family)} ${buildCssVariable(family)}`
     : normalizeClassName(family);

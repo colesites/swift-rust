@@ -2,8 +2,26 @@
 import { existsSync, statSync, readFileSync, readdirSync, writeFileSync, unlinkSync, watch as fsWatch } from "node:fs";
 import { join, resolve, extname, relative, dirname, basename, sep } from "node:path";
 import { pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
 import { performance } from "node:perf_hooks";
 import { errorOverlayHTML as renderErrorOverlay } from "./error-overlay.mjs";
+
+// Locate the bundled local fonts. Prefers the installed @swift-rust/font
+// package (so it works when swift-rust is installed from npm), falling back to
+// the monorepo source dir during local development.
+let _localFontDir;
+export function resolveLocalFontDir() {
+  if (_localFontDir) return _localFontDir;
+  const candidates = [];
+  try {
+    const req = createRequire(import.meta.url);
+    const pkg = req.resolve("@swift-rust/font/package.json");
+    candidates.push(join(dirname(pkg), "src", "local"), join(dirname(pkg), "dist", "local"));
+  } catch {}
+  candidates.push(join(import.meta.dirname, "..", "..", "..", "packages", "font", "src", "local"));
+  _localFontDir = candidates.find((d) => existsSync(d)) ?? candidates[candidates.length - 1];
+  return _localFontDir;
+}
 
 const cwd = process.cwd();
 const args = process.argv.slice(2);
@@ -590,8 +608,12 @@ async function scanFontsFromLayouts() {
 }
 
 function buildGoogleFontsLinkTag() {
-  if (GOOGLE_FONT_FAMILIES.size === 0) return "";
-  const families = Array.from(GOOGLE_FONT_FAMILIES)
+  // Layout-scanned families + families any factory registered during this
+  // render (globalThis.__SR_GOOGLE_FONTS__), so page-only fonts get a <link>.
+  const registered = globalThis.__SR_GOOGLE_FONTS__ instanceof Set ? globalThis.__SR_GOOGLE_FONTS__ : null;
+  const all = registered ? new Set([...GOOGLE_FONT_FAMILIES, ...registered]) : GOOGLE_FONT_FAMILIES;
+  if (all.size === 0) return "";
+  const families = Array.from(all)
     .map((f) => `family=${encodeURIComponent(f).replace(/%20/g, "+")}:wght@300..900`)
     .join("&");
   return `<link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -1229,6 +1251,10 @@ async function renderRoute(urlPath, req) {
   const errorFile = findErrorBoundary(segments);
   const loadingFile = findLoading(segments);
 
+  // Reset per-render Google font registry so each page only requests the
+  // families it actually uses (factories re-register during render).
+  globalThis.__SR_GOOGLE_FONTS__ = new Set();
+
   try {
     const React = await import("react");
     const url = req ? new URL(req.url) : new URL(urlPath, "http://localhost");
@@ -1748,15 +1774,8 @@ async function handleRequest(req, res) {
 
   if (pathname.startsWith("/_swift-rust/fonts/")) {
     const fontPath = join(
-      import.meta.dirname,
-      "..",
-      "..",
-      "..",
-      "packages",
-      "font",
-      "src",
-      "local",
-      decodeURIComponent(pathname.replace("/_swift-rust/fonts/", ""))
+      resolveLocalFontDir(),
+      decodeURIComponent(pathname.replace("/_swift-rust/fonts/", "")),
     );
     if (existsSync(fontPath) && statSync(fontPath).isFile()) {
       const ext = extname(fontPath).toLowerCase();
