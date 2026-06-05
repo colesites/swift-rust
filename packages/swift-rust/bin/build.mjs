@@ -195,7 +195,11 @@ async function fetchRoute(pathname, timeoutMs = ROUTE_TIMEOUT_MS) {
       signal: controller.signal,
       redirect: "manual",
     });
-    return { status: res.status, body: await res.text() };
+    return {
+      status: res.status,
+      body: await res.text(),
+      runtime: res.headers.get("x-swift-rust-runtime") || "bun",
+    };
   } finally {
     clearTimeout(timer);
   }
@@ -357,12 +361,17 @@ async function main() {
 
     for (const route of allRoutes) {
       try {
-        const { status, body } = await fetchRoute(route);
+        const { status, body, runtime } = await fetchRoute(route);
         if (status === 200) {
           const cleaned = rewriteImageUrls(await localizeIslands(stripHmrScript(body)));
           writeStaticFile(STATIC_DIR, route, cleaned);
           okCount++;
-          process.stdout.write(`  ${paint("green", "✓")} ${route}\n`);
+          // Surface the route's resolved runtime. "bun" prerenders to static
+          // HTML served from the global edge CDN; edge/node are declared for
+          // request-time functions (see runtime notes).
+          const rt =
+            runtime && runtime !== "bun" ? ` ${paint("yellow", `[${runtime}]`)}` : "";
+          process.stdout.write(`  ${paint("green", "✓")} ${route}${rt}\n`);
         } else if (status === 404) {
           skipCount++;
           process.stdout.write(`  ${paint("dim", "○")} ${route} ${paint("dim", "(404, skipped)")}\n`);
