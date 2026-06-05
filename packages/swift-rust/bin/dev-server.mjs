@@ -1730,12 +1730,25 @@ function setupWatcher() {
   if (!existsSync(APP_DIR)) return;
   const watchers = new Map();
 
+  const IGNORE_DIRS = new Set([
+    "node_modules",
+    "dist",
+    "build",
+    "out",
+    "coverage",
+    "target",
+    ".git",
+    ".vercel",
+    ".turbo",
+    ".swift-rust",
+    ".next",
+  ]);
   function walk(dir) {
     if (watchers.has(dir)) return;
     try {
       const entries = readdirSync(dir, { withFileTypes: true });
       for (const e of entries) {
-        if (e.isDirectory() && !e.name.startsWith(".") && e.name !== "node_modules") {
+        if (e.isDirectory() && !e.name.startsWith(".") && !IGNORE_DIRS.has(e.name)) {
           walk(join(dir, e.name));
         }
       }
@@ -1776,20 +1789,10 @@ function setupWatcher() {
       logLine([` ${paint("dim", "watch error:")} ${paint("red", err.message)}`], 1);
     }
   }
-  walk(APP_DIR);
-  // Also watch the source dirs that pages/layouts import from — without this,
-  // edits to components/, lib/, etc. never trigger a reload (stale-until-restart).
-  const srcRoot = dirname(APP_DIR);
-  const usesSrc = basename(APP_DIR) === "app" && basename(srcRoot) === "src";
-  if (usesSrc) {
-    // src/ project: watch the whole src/ tree (components, lib, proxy.ts, …).
-    walk(srcRoot);
-  } else {
-    for (const extra of ["components", "lib", "app"]) {
-      const p = resolve(cwd, extra);
-      if (existsSync(p)) walk(p);
-    }
-  }
+  // Watch the WHOLE project (minus dep/build dirs) so a change to *any* source
+  // file — pages, components, lib, hooks, content, config, wherever — triggers
+  // a recompile + reload. No more "edit this folder and nothing happens".
+  walk(cwd);
 }
 
 const networkUrls = [];

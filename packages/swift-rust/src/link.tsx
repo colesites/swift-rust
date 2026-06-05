@@ -21,3 +21,7 @@ export function Link({ href, prefetch, replace, scroll, children, ...rest }: Lin
     </a>
   );
 }
+
+// Default export too, so both `import { Link } from "swift-rust"` and the
+// Next.js-style `import Link from "swift-rust/link"` work.
+export default Link;
