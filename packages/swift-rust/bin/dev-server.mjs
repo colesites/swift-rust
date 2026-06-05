@@ -1777,11 +1777,18 @@ function setupWatcher() {
     }
   }
   walk(APP_DIR);
-  // Also watch sibling source dirs that pages/layouts import from — without
-  // this, edits to components/, lib/, etc. never trigger a reload.
-  for (const extra of ["components", "lib", "app"]) {
-    const p = resolve(cwd, extra);
-    if (existsSync(p)) walk(p);
+  // Also watch the source dirs that pages/layouts import from — without this,
+  // edits to components/, lib/, etc. never trigger a reload (stale-until-restart).
+  const srcRoot = dirname(APP_DIR);
+  const usesSrc = basename(APP_DIR) === "app" && basename(srcRoot) === "src";
+  if (usesSrc) {
+    // src/ project: watch the whole src/ tree (components, lib, proxy.ts, …).
+    walk(srcRoot);
+  } else {
+    for (const extra of ["components", "lib", "app"]) {
+      const p = resolve(cwd, extra);
+      if (existsSync(p)) walk(p);
+    }
   }
 }
 

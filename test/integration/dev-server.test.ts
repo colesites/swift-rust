@@ -1,4 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
@@ -71,5 +72,26 @@ describe("dev server route pipeline", () => {
     const r = await get("/_swift-rust/navigator.js");
     expect(r.status).toBe(200);
     expect(await r.text()).toContain("__SR_NAV__");
+  });
+
+  // Regression guard for the stale-until-restart bug: editing a file under
+  // src/components/ (imported transitively by a page) must re-render on the
+  // next request without restarting the server.
+  test("HMR: editing a src/components file re-renders without a restart", async () => {
+    const widget = join(FIX, "src", "components", "widget.tsx");
+    const original = readFileSync(widget, "utf8");
+    try {
+      expect(await (await get("/")).text()).toContain("VERSION1");
+      writeFileSync(widget, original.replace("VERSION1", "HMR_RELOADED"));
+      let after = "";
+      for (let i = 0; i < 30; i++) {
+        await new Promise((r) => setTimeout(r, 150));
+        after = await (await get("/")).text();
+        if (after.includes("HMR_RELOADED")) break;
+      }
+      expect(after).toContain("HMR_RELOADED");
+    } finally {
+      writeFileSync(widget, original);
+    }
   });
 });
