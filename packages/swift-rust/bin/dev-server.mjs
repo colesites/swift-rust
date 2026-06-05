@@ -1314,10 +1314,25 @@ async function renderRoute(urlPath, req) {
         }
       }
     }
+    // shell.tsx — root-only. Lets the app own the outer document
+    // (<html>/<body>/providers); the framework injects head assets + body
+    // scripts into what it renders (see the fullDocument branch in handleFetch).
+    let fullDocument = false;
+    const shellFile = findFile(APP_DIR, "shell");
+    if (shellFile) {
+      try {
+        const sm = await loadModuleFresh(shellFile);
+        const Shell = sm.default ?? sm.Shell ?? sm.shell;
+        if (Shell) {
+          tree = React.createElement(Shell, null, tree);
+          fullDocument = true;
+        }
+      } catch {}
+    }
     const html = await renderToStringCompat(tree);
     if (runtime?.__setRouteContext) runtime.__setRouteContext(null);
     const metadata = await resolveMetadata(layouts.map((l) => l.file), route.file, route.params, segments);
-    return { status: 200, html, metadata, error: null, clientPage, pageFile: route.file, layoutFiles: layouts.map((l) => l.file), notFoundFile, errorFile, loadingFile, segments, setCookies: pipeline.setCookies, actionData: pipeline.actionData, config: pipeline.config, revalidatePlan: pipeline.revalidatePlan, seoHead: pipeline.seoHead, serverState: pipeline.serverState };
+    return { status: 200, html, metadata, error: null, clientPage, pageFile: route.file, layoutFiles: layouts.map((l) => l.file), notFoundFile, errorFile, loadingFile, segments, setCookies: pipeline.setCookies, actionData: pipeline.actionData, config: pipeline.config, revalidatePlan: pipeline.revalidatePlan, seoHead: pipeline.seoHead, serverState: pipeline.serverState, fullDocument };
   } catch (err) {
     const rt = await routerRuntime();
     if (rt?.__setRouteContext) rt.__setRouteContext(null);
@@ -2190,7 +2205,19 @@ async function handleFetch(req) {
   await scanFontsFromLayouts();
   // seo.tsx head + metadata head
   const headExtra = [metadataToHead(renderResult.metadata), renderResult.seoHead || ""].filter(Boolean).join("\n");
-  let doc = await wrapInDocumentAsync({ head: headExtra, body: renderResult.html || "" });
+  let doc;
+  if (renderResult.fullDocument) {
+    // shell.tsx already rendered <html>/<head>/<body>. Inject framework head
+    // assets (metadata, fonts, globals CSS, navigator/HMR scripts) into its
+    // <head>; body scripts below still append before </body>.
+    const inject = `${await buildHead(headExtra)}\n<script src="/_swift-rust/navigator.js" defer></script>\n<script src="/_swift-rust/hmr-client.js" defer></script>`;
+    doc = renderResult.html || "";
+    if (!/^\s*<!doctype/i.test(doc)) doc = `<!DOCTYPE html>${doc}`;
+    if (doc.includes("</head>")) doc = doc.replace("</head>", `${inject}\n</head>`);
+    else doc = doc.replace(/<body([\s>])/i, `<head>${inject}</head><body$1`);
+  } else {
+    doc = await wrapInDocumentAsync({ head: headExtra, body: renderResult.html || "" });
+  }
   // state.ts → window.__SR_STATE__ for client stores
   if (renderResult.serverState !== undefined) {
     const json = JSON.stringify(renderResult.serverState).replace(/</g, "\\u003c");

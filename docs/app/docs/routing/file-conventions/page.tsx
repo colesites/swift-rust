@@ -346,12 +346,25 @@ export const duration = 250;    // ms`}</Code>
         </li>
       </ul>
 
-      <h2>Coming soon</h2>
+      <h2>shell.tsx — the outer document</h2>
       <p>
-        One convention remains in progress: <code>shell.tsx</code> — let a route own the outer
-        document (<code>&lt;html&gt;</code> / <code>&lt;body&gt;</code> / providers) while the
-        framework still injects head assets.
+        A root‑only file that owns the outer document — <code>&lt;html&gt;</code>,{" "}
+        <code>&lt;body&gt;</code>, and top‑level providers. The framework still injects its head
+        assets (metadata, fonts, global CSS, the client navigator) into your{" "}
+        <code>&lt;head&gt;</code>, and client scripts before <code>&lt;/body&gt;</code>. Use it for
+        app‑wide context providers or a custom document structure; with a shell, your root{" "}
+        <code>layout.tsx</code> returns a fragment rather than its own <code>&lt;html&gt;</code>.
       </p>
+      <Code lang="app/shell.tsx">{`export default function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <head />
+      <body>
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
+    </html>
+  );
+}`}</Code>
     </DocArticle>
   );
 }
