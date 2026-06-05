@@ -212,8 +212,9 @@ export default function Dashboard() {
       <p>
         <strong>What each runtime builds to.</strong> A route that explicitly opts into a runtime
         (a directive or <code>config.ts</code> runtime) is emitted as a request‑time{" "}
-        <strong>Vercel Function</strong> on that runtime — its <code>guard</code> and{" "}
-        <code>loader</code> run per request:
+        <strong>Vercel Function</strong> on that runtime — its full pipeline (<code>proxy</code>,{" "}
+        <code>schema</code>, <code>guard</code>, <code>action</code>, <code>loader</code>,{" "}
+        <code>state</code>, <code>seo</code>) runs per request:
       </p>
       <ul>
         <li>

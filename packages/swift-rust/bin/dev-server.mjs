@@ -1123,6 +1123,7 @@ async function runRoutePipeline(route, ctx) {
   // guard.ts — outer → inner. Opt-in via 'use guard' / config.guard /
   // global autoApplyGuard (see shouldRunGuard).
   if (shouldRunGuard(route, chain, config)) {
+    config.headers = { ...config.headers, "x-swift-rust-guard": "1" };
     for (const { file } of collectRouteFiles(chain, "guard")) {
       const mod = await loadModuleFresh(file);
       const fn = mod.default ?? mod.guard;

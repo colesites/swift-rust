@@ -24,6 +24,41 @@ const STATIC_DIR = join(OUT_DIR, "static");
 const RUNTIME_DIR = resolve(fileURLToPath(import.meta.url), "..", "runtime");
 
 const ROUTING_EXTS = [".tsx", ".ts", ".jsx", ".js"];
+
+// Scan a file's leading directives for a runtime / guard opt-in.
+function scanFileDirectives(file) {
+  const out = { runtime: null, guard: false };
+  try {
+    for (const line of readFileSync(file, "utf8").split("\n")) {
+      const t = line.trim();
+      if (!t || t.startsWith("//") || t.startsWith("/*") || t.startsWith("*")) continue;
+      const m = t.match(/^["']use (bun|edge|node|worker|guard)["'];?$/);
+      if (m) {
+        if (m[1] === "guard") out.guard = true;
+        else if (!out.runtime) out.runtime = m[1];
+        continue;
+      }
+      if (/^["']use [a-z]+["'];?$/.test(t)) continue;
+      break;
+    }
+  } catch {}
+  return out;
+}
+
+// Source-level detection of a route's runtime/guard opt-in (page + layouts),
+// so dynamic routes are emitted even when a build-time GET redirects.
+function scanDirectives(pageFile) {
+  const { layouts } = collectChainFiles(pageFile);
+  let runtime = null;
+  let guard = false;
+  for (const f of [pageFile, ...layouts]) {
+    const d = scanFileDirectives(f);
+    if (d.runtime && !runtime) runtime = d.runtime;
+    if (d.guard) guard = true;
+  }
+  return { runtime, guardEnabled: guard };
+}
+
 function findRoutingFile(dir, base) {
   for (const ext of ROUTING_EXTS) {
     const f = join(dir, `${base}${ext}`);
@@ -32,54 +67,90 @@ function findRoutingFile(dir, base) {
   return null;
 }
 
-// Collect the layout / guard / loader files along a page's dir chain (outer →
-// inner) plus the URL pattern segments (with [param] markers preserved).
+// Collect the routing files along a page's dir chain (outer → inner) plus the
+// URL pattern segments (with [param] markers preserved). Mirrors the dev
+// server's pipeline so the emitted function has the same behavior.
 function collectChainFiles(pageFile) {
   const layouts = [];
+  const proxies = [];
+  const schemas = [];
   const guards = [];
   const loaders = [];
+  let actionFile = null;
+  let queryFile = null;
+  let stateFile = null;
+  let seoFile = null;
   const pattern = [];
   const rel = dirname(pageFile).slice(APP_DIR.length).replace(/^[/\\]/, "");
   const segs = rel ? rel.split(sep) : [];
+  // Root src/proxy.ts (sibling of src/app) runs before any in-app proxy.
+  if (APP_DIR.endsWith(`${sep}app`) && dirname(APP_DIR).endsWith(`${sep}src`)) {
+    const rp = findRoutingFile(dirname(APP_DIR), "proxy");
+    if (rp) proxies.push(rp);
+  }
   let dir = APP_DIR;
-  const scan = (d) => {
+  const scan = (d, isLeaf) => {
     const l = findRoutingFile(d, "layout");
     if (l) layouts.push(l);
+    const p = findRoutingFile(d, "proxy");
+    if (p) proxies.push(p);
+    const s = findRoutingFile(d, "schema");
+    if (s) schemas.push(s);
     const g = findRoutingFile(d, "guard");
     if (g) guards.push(g);
     const ld = findRoutingFile(d, "loader");
     if (ld) loaders.push(ld);
+    const q = findRoutingFile(d, "query");
+    if (q) queryFile = q;
+    const st = findRoutingFile(d, "state");
+    if (st) stateFile = st;
+    const se = findRoutingFile(d, "seo");
+    if (se) seoFile = se;
+    if (isLeaf) {
+      const a = findRoutingFile(d, "action");
+      if (a) actionFile = a;
+    }
   };
-  scan(dir);
-  for (const s of segs) {
-    dir = join(dir, s);
-    pattern.push(s);
-    scan(dir);
+  scan(dir, segs.length === 0);
+  for (let i = 0; i < segs.length; i++) {
+    dir = join(dir, segs[i]);
+    pattern.push(segs[i]);
+    scan(dir, i === segs.length - 1);
   }
-  return { layouts, guards, loaders, pattern };
+  return { layouts, proxies, schemas, guards, loaders, actionFile, queryFile, stateFile, seoFile, pattern };
 }
 
 // Generate + bundle a Vercel function (.func) for one dynamic route.
-async function emitFunction({ route, pageFile, runtime, head }) {
+async function emitFunction({ route, pageFile, runtime, head, guardEnabled }) {
   if (typeof Bun === "undefined" || typeof Bun.build !== "function") return false;
-  const { layouts, guards, loaders, pattern } = collectChainFiles(pageFile);
+  const f = collectChainFiles(pageFile);
   const fnCore = join(RUNTIME_DIR, "fn-core.mjs");
-  const imp = (n, f) => `import * as ${n} from ${JSON.stringify(f)};`;
-  const pick = (n, ...keys) => keys.map((k) => `${n}.${k}`).join(" ?? ");
+  const imports = [`import { makeRouteHandler } from ${JSON.stringify(fnCore)};`];
+  const ns = (prefix, file) => {
+    const name = `__${prefix}`;
+    imports.push(`import * as ${name} from ${JSON.stringify(file)};`);
+    return name;
+  };
+  const arr = (prefix, files) => `[${files.map((file, i) => ns(`${prefix}${i}`, file)).join(", ")}]`;
+  const pageNs = ns("page", pageFile);
+  const layoutsArr = arr("l", f.layouts);
+  const proxiesArr = arr("p", f.proxies);
+  const schemasArr = arr("s", f.schemas);
+  const guardsArr = arr("g", f.guards);
+  const loadersArr = arr("d", f.loaders);
+  const actionNs = f.actionFile ? ns("a", f.actionFile) : "undefined";
+  const queryNs = f.queryFile ? ns("q", f.queryFile) : "undefined";
+  const stateNs = f.stateFile ? ns("st", f.stateFile) : "undefined";
+  const seoNs = f.seoFile ? ns("seo", f.seoFile) : "undefined";
+
   const entry =
-    `import { makeRouteHandler } from ${JSON.stringify(fnCore)};\n` +
-    `${imp("__page", pageFile)}\n` +
-    layouts.map((f, i) => imp(`__l${i}`, f)).join("\n") +
-    "\n" +
-    guards.map((f, i) => imp(`__g${i}`, f)).join("\n") +
-    "\n" +
-    loaders.map((f, i) => imp(`__d${i}`, f)).join("\n") +
-    "\n" +
-    `const page = ${pick("__page", "default", "Page", "page")};\n` +
-    `const layouts = [${layouts.map((_, i) => pick(`__l${i}`, "default", "Layout", "layout")).join(", ")}];\n` +
-    `const guards = [${guards.map((_, i) => pick(`__g${i}`, "default", "guard")).join(", ")}].filter(Boolean);\n` +
-    `const loaders = [${loaders.map((_, i) => pick(`__d${i}`, "default", "loader")).join(", ")}].filter(Boolean);\n` +
-    `const handler = makeRouteHandler({ page, layouts, guards, loaders, pattern: ${JSON.stringify(pattern)}, runtime: ${JSON.stringify(runtime)}, head: ${JSON.stringify(head)} });\n` +
+    `${imports.join("\n")}\n` +
+    `const handler = makeRouteHandler({\n` +
+    `  page: ${pageNs}, layouts: ${layoutsArr}, proxies: ${proxiesArr}, schemas: ${schemasArr},\n` +
+    `  guards: ${guardsArr}, guardEnabled: ${guardEnabled ? "true" : "false"}, action: ${actionNs},\n` +
+    `  loaders: ${loadersArr}, query: ${queryNs}, state: ${stateNs}, seo: ${seoNs},\n` +
+    `  pattern: ${JSON.stringify(f.pattern)}, runtime: ${JSON.stringify(runtime)}, head: ${JSON.stringify(head)},\n` +
+    `});\n` +
     (runtime === "bun" ? `export default { fetch: handler };\n` : `export default handler;\n`);
 
   const funcRel = route === "/" ? "index.func" : `${route.replace(/^\//, "")}.func`;
@@ -306,6 +377,7 @@ async function fetchRoute(pathname, timeoutMs = ROUTE_TIMEOUT_MS) {
       body: await res.text(),
       runtime: res.headers.get("x-swift-rust-runtime") || "bun",
       dynamic: res.headers.get("x-swift-rust-dynamic") === "1",
+      guardEnabled: res.headers.get("x-swift-rust-guard") === "1",
     };
   } finally {
     clearTimeout(timer);
@@ -468,32 +540,55 @@ async function main() {
   let failCount = 0;
   let fnCount = 0;
   let usesBunFns = false;
+  let fallbackHead = null;
   try {
     await waitForServer();
     process.stdout.write(`  ${paint("green", "✓")} server ready\n\n`);
 
     for (const route of allRoutes) {
       try {
-        const { status, body, runtime, dynamic } = await fetchRoute(route);
-        if (status === 200) {
-          const cleaned = rewriteImageUrls(await localizeIslands(stripHmrScript(body)));
-          // Dynamic route → emit a request-time Vercel function on its runtime.
-          if (dynamic && routeToFile.has(route)) {
-            const head = (cleaned.match(/<head>([\s\S]*?)<\/head>/i) || [, ""])[1];
-            let emitted = false;
-            try {
-              emitted = await emitFunction({ route, pageFile: routeToFile.get(route), runtime, head });
-            } catch (e) {
-              process.stdout.write(`      ${paint("dim", `fn emit failed: ${e?.message || e}`)}\n`);
-            }
-            if (emitted) {
-              fnCount++;
-              if (runtime === "bun") usesBunFns = true;
-              process.stdout.write(`  ${paint("cyan", "ƒ")} ${route} ${paint("yellow", `[${runtime}]`)}\n`);
-              continue;
-            }
-            // fall through to static if the function couldn't be emitted
+        const { status, body, runtime, dynamic, guardEnabled } = await fetchRoute(route);
+        const pageFile = routeToFile.get(route);
+        const cleaned = status === 200 ? rewriteImageUrls(await localizeIslands(stripHmrScript(body))) : null;
+        if (cleaned && fallbackHead == null) {
+          fallbackHead = (cleaned.match(/<head>([\s\S]*?)<\/head>/i) || [, ""])[1];
+        }
+
+        // Decide if this route is a request-time function. Prefer the live
+        // headers (200 render); else fall back to a source directive scan so
+        // guarded routes that redirect a build-time GET still get a function.
+        let fnRuntime = null;
+        let fnGuard = false;
+        let fnHead = null;
+        if (dynamic && pageFile) {
+          fnRuntime = runtime;
+          fnGuard = guardEnabled;
+          fnHead = (cleaned?.match(/<head>([\s\S]*?)<\/head>/i) || [, ""])[1];
+        } else if (pageFile && status !== 404) {
+          const d = scanDirectives(pageFile);
+          if (d.runtime) {
+            fnRuntime = d.runtime;
+            fnGuard = d.guardEnabled;
+            fnHead = fallbackHead || "";
           }
+        }
+
+        if (fnRuntime && pageFile) {
+          let emitted = false;
+          try {
+            emitted = await emitFunction({ route, pageFile, runtime: fnRuntime, head: fnHead, guardEnabled: fnGuard });
+          } catch (e) {
+            process.stdout.write(`      ${paint("dim", `fn emit failed: ${e?.message || e}`)}\n`);
+          }
+          if (emitted) {
+            fnCount++;
+            if (fnRuntime === "bun") usesBunFns = true;
+            process.stdout.write(`  ${paint("cyan", "ƒ")} ${route} ${paint("yellow", `[${fnRuntime}]`)}\n`);
+            continue;
+          }
+        }
+
+        if (status === 200) {
           writeStaticFile(STATIC_DIR, route, cleaned);
           okCount++;
           const rt = runtime && runtime !== "bun" ? ` ${paint("yellow", `[${runtime}]`)}` : "";
