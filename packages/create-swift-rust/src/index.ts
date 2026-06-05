@@ -51,6 +51,26 @@ async function copyTemplate(target: string, projectName: string): Promise<void> 
     const contents = await readFile(path, "utf8");
     await writeFile(path, contents.split("__PROJECT_NAME__").join(displayName));
   }
+
+  // Editor config: silence the built-in CSS linter's false "Unknown at rule"
+  // warnings on Tailwind v4 at-rules, and recommend the Tailwind extension.
+  await mkdir(join(target, ".vscode"), { recursive: true });
+  await writeFile(
+    join(target, ".vscode", "settings.json"),
+    `${JSON.stringify(
+      {
+        "css.lint.unknownAtRules": "ignore",
+        "scss.lint.unknownAtRules": "ignore",
+        "less.lint.unknownAtRules": "ignore",
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  await writeFile(
+    join(target, ".vscode", "extensions.json"),
+    `${JSON.stringify({ recommendations: ["bradlc.vscode-tailwindcss", "biomejs.biome"] }, null, 2)}\n`,
+  );
 }
 
 type Language = "ts" | "js";
