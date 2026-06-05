@@ -1022,6 +1022,7 @@ async function readMergedConfig(chain, route) {
   // Runtime resolution (highest priority first):
   //   'use bun|edge|node' directive  →  config.ts / edge.ts / worker.ts
   //   →  swift-rust.config.json "runtime"  →  default "bun".
+  const explicitRuntime = config.runtime != null; // set by config.ts / edge / worker
   const directive = resolveTreeRuntimeDirective(route, chain);
   const fromJson = loadGlobalConfig().runtime;
   let runtime = directive ?? config.runtime ?? fromJson ?? "bun";
@@ -1032,7 +1033,14 @@ async function readMergedConfig(chain, route) {
     runtime = "bun";
   }
   config.runtime = runtime;
-  config.headers = { "x-swift-rust-runtime": runtime, ...config.headers };
+  // A route is "dynamic" (emitted as a request-time function) when it explicitly
+  // opts into a runtime via a directive, config.ts/edge/worker, or config.dynamic.
+  config.dynamic = Boolean(directive) || explicitRuntime || config.dynamic === true;
+  config.headers = {
+    "x-swift-rust-runtime": runtime,
+    ...(config.dynamic ? { "x-swift-rust-dynamic": "1" } : {}),
+    ...config.headers,
+  };
   return config;
 }
 

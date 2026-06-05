@@ -23,6 +23,112 @@ const OUT_DIR = resolve(cwd, ".vercel", "output");
 const STATIC_DIR = join(OUT_DIR, "static");
 const RUNTIME_DIR = resolve(fileURLToPath(import.meta.url), "..", "runtime");
 
+const ROUTING_EXTS = [".tsx", ".ts", ".jsx", ".js"];
+function findRoutingFile(dir, base) {
+  for (const ext of ROUTING_EXTS) {
+    const f = join(dir, `${base}${ext}`);
+    if (existsSync(f)) return f;
+  }
+  return null;
+}
+
+// Collect the layout / guard / loader files along a page's dir chain (outer →
+// inner) plus the URL pattern segments (with [param] markers preserved).
+function collectChainFiles(pageFile) {
+  const layouts = [];
+  const guards = [];
+  const loaders = [];
+  const pattern = [];
+  const rel = dirname(pageFile).slice(APP_DIR.length).replace(/^[/\\]/, "");
+  const segs = rel ? rel.split(sep) : [];
+  let dir = APP_DIR;
+  const scan = (d) => {
+    const l = findRoutingFile(d, "layout");
+    if (l) layouts.push(l);
+    const g = findRoutingFile(d, "guard");
+    if (g) guards.push(g);
+    const ld = findRoutingFile(d, "loader");
+    if (ld) loaders.push(ld);
+  };
+  scan(dir);
+  for (const s of segs) {
+    dir = join(dir, s);
+    pattern.push(s);
+    scan(dir);
+  }
+  return { layouts, guards, loaders, pattern };
+}
+
+// Generate + bundle a Vercel function (.func) for one dynamic route.
+async function emitFunction({ route, pageFile, runtime, head }) {
+  if (typeof Bun === "undefined" || typeof Bun.build !== "function") return false;
+  const { layouts, guards, loaders, pattern } = collectChainFiles(pageFile);
+  const fnCore = join(RUNTIME_DIR, "fn-core.mjs");
+  const imp = (n, f) => `import * as ${n} from ${JSON.stringify(f)};`;
+  const pick = (n, ...keys) => keys.map((k) => `${n}.${k}`).join(" ?? ");
+  const entry =
+    `import { makeRouteHandler } from ${JSON.stringify(fnCore)};\n` +
+    `${imp("__page", pageFile)}\n` +
+    layouts.map((f, i) => imp(`__l${i}`, f)).join("\n") +
+    "\n" +
+    guards.map((f, i) => imp(`__g${i}`, f)).join("\n") +
+    "\n" +
+    loaders.map((f, i) => imp(`__d${i}`, f)).join("\n") +
+    "\n" +
+    `const page = ${pick("__page", "default", "Page", "page")};\n` +
+    `const layouts = [${layouts.map((_, i) => pick(`__l${i}`, "default", "Layout", "layout")).join(", ")}];\n` +
+    `const guards = [${guards.map((_, i) => pick(`__g${i}`, "default", "guard")).join(", ")}].filter(Boolean);\n` +
+    `const loaders = [${loaders.map((_, i) => pick(`__d${i}`, "default", "loader")).join(", ")}].filter(Boolean);\n` +
+    `const handler = makeRouteHandler({ page, layouts, guards, loaders, pattern: ${JSON.stringify(pattern)}, runtime: ${JSON.stringify(runtime)}, head: ${JSON.stringify(head)} });\n` +
+    (runtime === "bun" ? `export default { fetch: handler };\n` : `export default handler;\n`);
+
+  const funcRel = route === "/" ? "index.func" : `${route.replace(/^\//, "")}.func`;
+  const funcDir = join(OUT_DIR, "functions", funcRel);
+  mkdirSync(funcDir, { recursive: true });
+  const entryTmp = join(dirname(pageFile), `.__sr_fn_${process.pid}_${simpleHash(route)}.js`);
+  writeFileSync(entryTmp, entry);
+  try {
+    const isEdge = runtime === "edge";
+    const result = await Bun.build({
+      entrypoints: [entryTmp],
+      target: isEdge ? "browser" : "node",
+      format: "esm",
+      minify: true,
+      external: isEdge ? ["react-dom/server"] : [],
+    });
+    if (!result.success) throw new AggregateError(result.logs, "function bundle failed");
+    const code = await result.outputs[0].text();
+    writeFileSync(join(funcDir, "index.js"), code);
+    const vcConfig = isEdge
+      ? { runtime: "edge", entrypoint: "index.js" }
+      : { runtime: "nodejs22.x", handler: "index.js", launcherType: "Nodejs", supportsResponseStreaming: true };
+    writeFileSync(join(funcDir, ".vc-config.json"), `${JSON.stringify(vcConfig, null, 2)}\n`);
+    return true;
+  } finally {
+    try {
+      unlinkSync(entryTmp);
+    } catch {}
+  }
+}
+
+// Vercel runs functions on Bun when vercel.json sets bunVersion. Ensure it's
+// present (preserving the rest of the file) so 'use bun' routes run on Bun.
+function ensureBunVersion() {
+  const file = resolve(cwd, "vercel.json");
+  let json = {};
+  if (existsSync(file)) {
+    try {
+      json = JSON.parse(readFileSync(file, "utf8"));
+    } catch {
+      json = {};
+    }
+  }
+  if (json.bunVersion) return;
+  json.bunVersion = "1.x";
+  writeFileSync(file, `${JSON.stringify(json, null, 2)}\n`);
+  process.stdout.write(`  ${paint("cyan", "•")} set ${paint("bold", 'vercel.json "bunVersion": "1.x"')} for Bun functions\n`);
+}
+
 // Locate the bundled local fonts (installed @swift-rust/font, else monorepo).
 function resolveLocalFontDir() {
   const candidates = [];
@@ -199,6 +305,7 @@ async function fetchRoute(pathname, timeoutMs = ROUTE_TIMEOUT_MS) {
       status: res.status,
       body: await res.text(),
       runtime: res.headers.get("x-swift-rust-runtime") || "bun",
+      dynamic: res.headers.get("x-swift-rust-dynamic") === "1",
     };
   } finally {
     clearTimeout(timer);
@@ -343,6 +450,10 @@ async function main() {
     process.stdout.write(`  ${paint("dim", "•")} dynamic ${paint("cyan", dyn.base + "/[" + dyn.paramName + "]")}: ${paint("bold", String(routes.length))}\n`);
   }
 
+  // route → page file (for static-type routes that may opt into a runtime fn).
+  const routeToFile = new Map();
+  for (const p of pages) if (p.type === "static") routeToFile.set(p.route, p.file);
+
   const allRoutes = [...new Set(staticRoutes)].sort();
   process.stdout.write(`  ${paint("dim", "•")} total: ${paint("bold", String(allRoutes.length))}\n\n`);
 
@@ -355,22 +466,37 @@ async function main() {
   let okCount = 0;
   let skipCount = 0;
   let failCount = 0;
+  let fnCount = 0;
+  let usesBunFns = false;
   try {
     await waitForServer();
     process.stdout.write(`  ${paint("green", "✓")} server ready\n\n`);
 
     for (const route of allRoutes) {
       try {
-        const { status, body, runtime } = await fetchRoute(route);
+        const { status, body, runtime, dynamic } = await fetchRoute(route);
         if (status === 200) {
           const cleaned = rewriteImageUrls(await localizeIslands(stripHmrScript(body)));
+          // Dynamic route → emit a request-time Vercel function on its runtime.
+          if (dynamic && routeToFile.has(route)) {
+            const head = (cleaned.match(/<head>([\s\S]*?)<\/head>/i) || [, ""])[1];
+            let emitted = false;
+            try {
+              emitted = await emitFunction({ route, pageFile: routeToFile.get(route), runtime, head });
+            } catch (e) {
+              process.stdout.write(`      ${paint("dim", `fn emit failed: ${e?.message || e}`)}\n`);
+            }
+            if (emitted) {
+              fnCount++;
+              if (runtime === "bun") usesBunFns = true;
+              process.stdout.write(`  ${paint("cyan", "ƒ")} ${route} ${paint("yellow", `[${runtime}]`)}\n`);
+              continue;
+            }
+            // fall through to static if the function couldn't be emitted
+          }
           writeStaticFile(STATIC_DIR, route, cleaned);
           okCount++;
-          // Surface the route's resolved runtime. "bun" prerenders to static
-          // HTML served from the global edge CDN; edge/node are declared for
-          // request-time functions (see runtime notes).
-          const rt =
-            runtime && runtime !== "bun" ? ` ${paint("yellow", `[${runtime}]`)}` : "";
+          const rt = runtime && runtime !== "bun" ? ` ${paint("yellow", `[${runtime}]`)}` : "";
           process.stdout.write(`  ${paint("green", "✓")} ${route}${rt}\n`);
         } else if (status === 404) {
           skipCount++;
@@ -459,10 +585,15 @@ async function main() {
     const outRel = OUT_DIR.startsWith(cwd + sep) ? OUT_DIR.slice(cwd.length + 1) : OUT_DIR;
     const skippedPart = skipCount > 0 ? paint("dim", `${skipCount} skipped`) : "";
     const failedPart = failCount > 0 ? paint("yellow", `${failCount} failed`) : paint("dim", "0 failed");
-    const summary = `  ${paint("green", "✓")} ${okCount} ok  ${skippedPart}  ${failedPart}\n`;
+    const fnPart = fnCount > 0 ? `  ${paint("cyan", `${fnCount} function${fnCount === 1 ? "" : "s"}`)}` : "";
+    const summary = `  ${paint("green", "✓")} ${okCount} ok  ${skippedPart}  ${failedPart}${fnPart}\n`;
     process.stdout.write(`\n  ${paint("bold", "done")} ${paint("dim", "in " + fmtMs(total))}\n`);
     process.stdout.write(summary);
-    process.stdout.write(`  ${paint("dim", "output: " + outRel)}\n\n`);
+    process.stdout.write(`  ${paint("dim", "output: " + outRel)}\n`);
+    if (usesBunFns) {
+      ensureBunVersion();
+    }
+    process.stdout.write("\n");
 
     const treatFailuresAsWarning = okCount > 0;
     process.exit(treatFailuresAsWarning || failCount === 0 ? 0 : 1);

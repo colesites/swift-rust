@@ -209,6 +209,29 @@ export default function Dashboard() {
         <code>x-swift-rust-runtime</code>. <code>edge.ts</code> / <code>worker.ts</code> remain a
         file‑based way to force the Edge / Workers runtime.
       </p>
+      <p>
+        <strong>What each runtime builds to.</strong> A route that explicitly opts into a runtime
+        (a directive or <code>config.ts</code> runtime) is emitted as a request‑time{" "}
+        <strong>Vercel Function</strong> on that runtime — its <code>guard</code> and{" "}
+        <code>loader</code> run per request:
+      </p>
+      <ul>
+        <li>
+          <code>bun</code> — a Bun function (the build sets{" "}
+          <code>vercel.json</code> → <code>{'"bunVersion": "1.x"'}</code>).
+        </li>
+        <li>
+          <code>node</code> — a Node.js serverless function.
+        </li>
+        <li>
+          <code>edge</code> — a Vercel Edge function.
+        </li>
+      </ul>
+      <p>
+        Routes with no explicit runtime keep the default: <strong>prerendered to static HTML</strong>{" "}
+        served from the global edge CDN (the fastest path). So <code>bun</code> is the default for
+        request‑time routes, and static is the default for everything else.
+      </p>
 
       <h2>revalidate.ts — cache control</h2>
       <p>
