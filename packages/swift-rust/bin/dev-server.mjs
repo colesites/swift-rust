@@ -2473,6 +2473,9 @@ try {
     serverHandle = Bun.serve({
       port,
       hostname,
+      // Bun defaults to a 10s idle timeout, which aborts slow renders / large
+      // payloads (e.g. the first compile of a heavy page). 255s is Bun's max.
+      idleTimeout: 255,
       async fetch(req) {
         return await handleFetch(req);
       },

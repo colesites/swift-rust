@@ -402,29 +402,37 @@ async function askQuestions(
 
   const srcDir: boolean = srcDirAnswer === true;
 
-  const importAliasAnswer: string | symbol =
-    (flags.importAlias as string | undefined) ??
-    (yesMode
-      ? "@/*"
-      : ((await p.text({
-          message: "Would you like to customize the import alias?",
-          placeholder: "@/*",
-          defaultValue: "@/*",
-          validate: (v) => {
-            if (!v) return "Import alias is required";
-            if (!isValidAlias(v)) return "Invalid alias. Use letters, numbers, @, /, *, -, _.";
-            return undefined;
-          },
-        })) as string));
-
-  if (p.isCancel(importAliasAnswer)) {
-    p.cancel("Aborted.");
-    return null;
-  }
-  const importAlias: string = importAliasAnswer as string;
-  if (!importAlias) {
-    p.cancel("Aborted.");
-    return null;
+  // Import alias: default @/*. Ask a yes/no first (like Next.js) so the common
+  // case is a single Enter; only prompt for a value if the user opts in.
+  let importAlias = "@/*";
+  if (typeof flags.importAlias === "string") {
+    importAlias = flags.importAlias;
+  } else if (!yesMode) {
+    const customize = await p.confirm({
+      message: "Would you like to customize the import alias (@/* by default)?",
+      initialValue: false,
+    });
+    if (p.isCancel(customize)) {
+      p.cancel("Aborted.");
+      return null;
+    }
+    if (customize) {
+      const aliasAnswer = await p.text({
+        message: "What import alias would you like configured?",
+        placeholder: "@/*",
+        defaultValue: "@/*",
+        validate: (v) => {
+          if (!v) return undefined; // empty → keep the default
+          if (!isValidAlias(v)) return "Invalid alias. Use letters, numbers, @, /, *, -, _.";
+          return undefined;
+        },
+      });
+      if (p.isCancel(aliasAnswer)) {
+        p.cancel("Aborted.");
+        return null;
+      }
+      importAlias = (aliasAnswer as string) || "@/*";
+    }
   }
 
   const installAnswer: boolean | symbol =
@@ -742,10 +750,10 @@ ${shadcnVars}`;
   }
 
   const layoutImports = `import type { ReactNode } from "react";
-import { Geist, Geist_Mono } from "swift-rust/font/google";
+import { Geist, GeistMono } from "swift-rust/font/google";
 ${tailwind ? `import "./globals.css";\n` : ""}
 const geistSans = Geist({ subsets: ["latin"], display: "swap", variable: true });
-const geistMono = Geist_Mono({ subsets: ["latin"], display: "swap", variable: true });
+const geistMono = GeistMono({ subsets: ["latin"], display: "swap", variable: true });
 
 export const metadata = {
   title: {

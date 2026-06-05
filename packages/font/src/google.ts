@@ -667,6 +667,22 @@ export const Gayathri = define("Gayathri");
 export const Geist = define("Geist");
 export const GeistMono = define("Geist Mono");
 export const GeistSans = define("Geist Sans");
+// Next.js-style snake_case aliases for the most common families, so code
+// copied from Next docs (`Geist_Mono`, `Roboto_Mono`, …) resolves unchanged.
+export const Geist_Mono = define("Geist Mono");
+export const Roboto_Mono = define("Roboto Mono");
+export const IBM_Plex_Mono = define("IBM Plex Mono");
+export const IBM_Plex_Sans = define("IBM Plex Sans");
+export const IBM_Plex_Serif = define("IBM Plex Serif");
+export const JetBrains_Mono = define("JetBrains Mono");
+export const Space_Grotesk = define("Space Grotesk");
+export const Plus_Jakarta_Sans = define("Plus Jakarta Sans");
+export const DM_Sans = define("DM Sans");
+export const DM_Serif_Display = define("DM Serif Display");
+export const Source_Code_Pro = define("Source Code Pro");
+export const Playfair_Display = define("Playfair Display");
+export const Bricolage_Grotesque = define("Bricolage Grotesque");
+export const Bebas_Neue = define("Bebas Neue");
 export const Gelasio = define("Gelasio");
 export const GemunuLibre = define("Gemunu Libre");
 export const GenjyuuGothic = define("Genjyuu Gothic");
