@@ -59,10 +59,8 @@ async function main() {
   const tsconfig = {
     extends: "swift-rust/tsconfig.base.json",
     compilerOptions: {
-      ignoreDeprecations: "6.0",
       lib: ["ESNext", "DOM", "DOM.Iterable"],
       jsx: "preserve",
-      baseUrl: ".",
       paths: { "@/*": ["./src/*"] },
     },
     include: ["src/**/*", "globals.d.ts", ".swift-rust/types/**/*"],

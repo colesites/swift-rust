@@ -2,7 +2,6 @@
   "extends": "swift-rust/tsconfig.base.json",
   "compilerOptions": {
     "jsx": "preserve",
-    "baseUrl": ".",
     "paths": {
       "@": [
         "src/*"
