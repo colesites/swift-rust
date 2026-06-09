@@ -364,6 +364,192 @@ const externalizeDepsPlugin = {
   },
 };
 
+// ── Component-level "use client" islands ───────────────────────────────────
+// A `use client` *component* imported into a server-rendered page can't just be
+// SSR'd to static HTML — its useState/effects/handlers would never run. So when
+// the SSR bundle pulls in a client component, we wrap it: on the server it still
+// renders to HTML (good for SEO + no flash), but inside a marker element that
+// carries the component's source path, export name, and serialized props. A tiny
+// client runtime then hydrates each marker from a per-component browser bundle.
+//
+// Limitations (documented): props must be JSON-serializable; `children` and
+// function props don't cross the boundary, so islands should be self-contained
+// leaves (they manage their own children). Nested client components imported by
+// a client component are bundled into that island, not re-wrapped.
+
+const ISLAND_EXTS = [".tsx", ".ts", ".jsx", ".js", ".mjs"];
+
+// Resolve a relative / absolute / "@/"-aliased specifier to a real file path.
+function resolveIslandSpecifier(spec, importer) {
+  let base;
+  if (spec.startsWith("@/")) base = resolve(cwd, "src", spec.slice(2));
+  else if (spec.startsWith("/")) base = spec;
+  else if (spec.startsWith(".")) base = resolve(dirname(importer || cwd), spec);
+  else return null;
+  const candidates = [base, ...ISLAND_EXTS.map((e) => base + e), ...ISLAND_EXTS.map((e) => join(base, "index" + e))];
+  for (const c of candidates) {
+    try { if (statSync(c).isFile()) return c; } catch {}
+  }
+  return null;
+}
+
+// Extract export names from a module's source so we can re-export wrapped
+// versions. We only wrap Capitalized exports (React component convention) + the
+// default export; lowercase exports pass through untouched.
+function detectIslandExports(src) {
+  const named = new Set();
+  let hasDefault = false;
+  // strip block/line comments cheaply to avoid false matches
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+  if (/\bexport\s+default\b/.test(code)) hasDefault = true;
+  for (const m of code.matchAll(/\bexport\s+(?:async\s+)?(?:function|class|const|let|var)\s+([A-Za-z_$][\w$]*)/g)) {
+    named.add(m[1]);
+  }
+  for (const m of code.matchAll(/\bexport\s*\{([^}]*)\}/g)) {
+    for (const part of m[1].split(",")) {
+      const name = part.trim().split(/\s+as\s+/).pop()?.trim();
+      if (name && name !== "default") named.add(name);
+    }
+  }
+  return { hasDefault, named: [...named] };
+}
+
+// Temp sibling files holding verbatim copies of client components, so the
+// wrapper can import the *real* module under a distinct on-disk path (Bun
+// dedupes modules by resolved path, so a query-string alias would collapse the
+// real module into the wrapper). Cleaned up after each SSR build.
+const islandRawTemps = [];
+
+// Build the source of an island wrapper module for a given client component file.
+function islandWrapperSource(abs) {
+  const src = readFileSync(abs, "utf8");
+  const { hasDefault, named } = detectIslandExports(src);
+  // Write the real component to a unique sibling so imports resolve identically.
+  const rawName = `.__sr_raw_${process.pid}_${Math.random().toString(36).slice(2)}__${basename(abs)}`;
+  const rawPath = join(dirname(abs), rawName);
+  writeFileSync(rawPath, src);
+  islandRawTemps.push(rawPath);
+  const rawSpec = JSON.stringify("./" + rawName);
+  let out = `import { createElement as __h } from "react";
+import * as __real from ${rawSpec};
+const __src = ${JSON.stringify(abs)};
+function __ser(props){
+  var out = {};
+  for (var k in props){
+    if (k === "children") continue;
+    var v = props[k]; var t = typeof v;
+    if (v === null || t === "string" || t === "number" || t === "boolean" || (t === "object" && typeof v.$$typeof === "undefined")){
+      try { JSON.stringify(v); out[k] = v; } catch (e) {}
+    }
+  }
+  return JSON.stringify(out).replace(/</g, "\\\\u003c");
+}
+function __wrap(Comp, name){
+  if (typeof Comp !== "function") return Comp;
+  function SrIsland(props){
+    return __h("div", {
+      "data-sr-island": "",
+      "data-sr-island-src": __src,
+      "data-sr-island-export": name,
+      "data-sr-island-props": __ser(props),
+      style: { display: "contents" },
+    }, __h(Comp, props));
+  }
+  SrIsland.displayName = "Island(" + name + ")";
+  return SrIsland;
+}
+`;
+  if (hasDefault) out += `export default __wrap(__real.default, "default");\n`;
+  for (const n of named) {
+    if (/^[A-Z]/.test(n)) out += `export const ${n} = __wrap(__real[${JSON.stringify(n)}], ${JSON.stringify(n)});\n`;
+    else out += `export const ${n} = __real[${JSON.stringify(n)}];\n`;
+  }
+  return out;
+}
+
+// Bun plugin: wrap client components imported by *server* modules as islands.
+const clientIslandPlugin = {
+  name: "sr-client-islands",
+  setup(build) {
+    build.onResolve({ filter: /.*/ }, (args) => {
+      const p = args.path;
+      if (!(p.startsWith(".") || p.startsWith("/") || p.startsWith("@/"))) return undefined;
+      // Never wrap our own temp raw copies, and don't wrap when the importer is
+      // itself a client module — nested client components belong to that
+      // island's bundle, not a new boundary.
+      if (/\.__sr_raw_/.test(p)) return undefined;
+      if (args.importer && hasUseDirective(args.importer, "client")) return undefined;
+      const abs = resolveIslandSpecifier(p, args.importer);
+      if (!abs || !hasUseDirective(abs, "client")) return undefined;
+      return { path: abs, namespace: "sr-island" };
+    });
+    build.onLoad({ filter: /.*/, namespace: "sr-island" }, (args) => ({
+      contents: islandWrapperSource(args.path),
+      loader: "js",
+      resolveDir: dirname(args.path),
+    }));
+  },
+};
+
+// Cache for per-component browser island bundles (src -> { gen, code }).
+// Each bundle is self-mounting: it imports the client component, finds every
+// marker on the page for this source, and hydrates it. React is bundled in, so a
+// single <script type="module"> per source needs no import map or shared runtime.
+const componentIslandCache = new Map();
+async function buildComponentIslandBundle(srcFile) {
+  if (typeof Bun === "undefined" || typeof Bun.build !== "function") {
+    throw new Error("client islands require the Bun runtime");
+  }
+  const cached = componentIslandCache.get(srcFile);
+  if (cached && cached.gen === buildGeneration) return cached.code;
+
+  const entryPath = join(dirname(srcFile), `.__sr_cisland_${process.pid}_${Date.now()}.js`);
+  const entry = `import { hydrateRoot, createRoot } from "react-dom/client";
+import { createElement } from "react";
+import * as __mod from ${JSON.stringify(srcFile)};
+var __src = ${JSON.stringify(srcFile)};
+var nodes = document.querySelectorAll('[data-sr-island]');
+for (var i = 0; i < nodes.length; i++) {
+  var el = nodes[i];
+  if (el.getAttribute("data-sr-island-src") !== __src || el.__srHydrated) continue;
+  el.__srHydrated = true;
+  var name = el.getAttribute("data-sr-island-export") || "default";
+  var Comp = __mod[name] || __mod.default;
+  if (typeof Comp !== "function") { console.warn("[swift-rust] island export missing:", name, __src); continue; }
+  var props = {};
+  try { props = JSON.parse(el.getAttribute("data-sr-island-props") || "{}"); } catch (e) {}
+  var element = createElement(Comp, props);
+  try { hydrateRoot(el, element); }
+  catch (err) { el.innerHTML = ""; createRoot(el).render(element); }
+}
+`;
+  writeFileSync(entryPath, entry);
+  try {
+    const result = await Bun.build({
+      entrypoints: [entryPath],
+      target: "browser",
+      minify: true,
+      define: { "process.env.NODE_ENV": '"production"' },
+    });
+    if (!result.success) throw new Error(result.logs.map((l) => l.message).join("\n"));
+    const code = await result.outputs[0].text();
+    componentIslandCache.set(srcFile, { gen: buildGeneration, code });
+    return code;
+  } finally {
+    try { unlinkSync(entryPath); } catch {}
+  }
+}
+
+// Collect unique client-island source files referenced in rendered HTML.
+function collectIslandSources(html) {
+  const srcs = new Set();
+  if (!html) return srcs;
+  for (const m of html.matchAll(/data-sr-island-src="([^"]+)"/g)) {
+    srcs.add(m[1].replace(/&amp;/g, "&").replace(/&quot;/g, '"'));
+  }
+  return srcs;
+}
+
 const ssrBundleCache = new Map(); // file -> { gen, mod }
 
 async function loadModuleFresh(filePath) {
@@ -373,11 +559,18 @@ async function loadModuleFresh(filePath) {
   const cached = ssrBundleCache.get(filePath);
   if (cached && cached.gen === buildGeneration) return cached.mod;
 
-  const result = await Bun.build({
-    entrypoints: [filePath],
-    target: "bun",
-    plugins: [externalizeDepsPlugin],
-  });
+  islandRawTemps.length = 0;
+  let result;
+  try {
+    result = await Bun.build({
+      entrypoints: [filePath],
+      target: "bun",
+      plugins: [clientIslandPlugin, externalizeDepsPlugin],
+    });
+  } finally {
+    for (const t of islandRawTemps) { try { unlinkSync(t); } catch {} }
+    islandRawTemps.length = 0;
+  }
   if (!result.success) {
     throw new Error(result.logs.map((l) => l.message).join("\n"));
   }
@@ -2236,6 +2429,26 @@ async function handleFetch(req) {
     return new Response("// island not found", { status: 404, headers: { "Content-Type": "application/javascript" } });
   }
 
+  // Per-component client-island bundle (self-mounting; hydrates its markers).
+  if (pathname === "/_swift-rust/island-comp.js") {
+    const p = url.searchParams.get("p");
+    if (p && existsSync(p)) {
+      try {
+        const code = await buildComponentIslandBundle(p);
+        return new Response(code, {
+          headers: { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "no-cache" },
+        });
+      } catch (e) {
+        logError(e, `component island bundle failed for ${p}`);
+        return new Response(`/* island build error: ${String(e?.message || e).replace(/\*\//g, "* /")} */`, {
+          status: 500,
+          headers: { "Content-Type": "application/javascript; charset=utf-8" },
+        });
+      }
+    }
+    return new Response("// island not found", { status: 404, headers: { "Content-Type": "application/javascript" } });
+  }
+
   if (pathname.startsWith("/_swift-rust/")) {
     return new Response("Not found", { status: 404 });
   }
@@ -2443,6 +2656,12 @@ async function handleFetch(req) {
   if (renderResult.clientPage && renderResult.pageFile) {
     const src = `/_swift-rust/island.js?p=${encodeURIComponent(renderResult.pageFile)}`;
     doc = doc.replace("</body>", `<script type="module" src="${src}"></script>\n</body>`);
+  }
+  // Component-level "use client" islands: one self-mounting module per unique
+  // source referenced by a marker in the rendered HTML.
+  for (const islandSrc of collectIslandSources(doc)) {
+    const s = `/_swift-rust/island-comp.js?p=${encodeURIComponent(islandSrc)}`;
+    doc = doc.replace("</body>", `<script type="module" src="${s}"></script>\n</body>`);
   }
   // pending.tsx → hidden overlay the client navigator reveals while a
   // navigation is in flight (see runtime/navigator.js).

@@ -500,23 +500,29 @@ function simpleHash(s) {
   return (h >>> 0).toString(36);
 }
 async function localizeIslands(html) {
-  const re = /\/_swift-rust\/island\.js\?p=([^"]+)/g;
-  const found = new Set();
-  let m;
-  while ((m = re.exec(html)) !== null) found.add(m[1]);
-  if (found.size === 0) return html;
   let out = html;
-  for (const enc of found) {
-    let staticUrl = islandWritten.get(enc);
-    if (!staticUrl) {
-      const { status, body } = await fetchRoute(`/_swift-rust/island.js?p=${enc}`);
-      if (status !== 200) continue;
-      const rel = `_swift-rust/island/${simpleHash(enc)}.js`;
-      writeRawFile(STATIC_DIR, rel, body);
-      staticUrl = `/${rel}`;
-      islandWritten.set(enc, staticUrl);
+  // Page-level islands (/_swift-rust/island.js) and component-level islands
+  // (/_swift-rust/island-comp.js) both reference a dev-only bundle keyed by an
+  // encoded source path. For the static export we fetch each bundle once, write
+  // it as a real file, and rewrite the script src to point at it.
+  for (const endpoint of ["island.js", "island-comp.js"]) {
+    const re = new RegExp(`/_swift-rust/${endpoint.replace(".", "\\.")}\\?p=([^"]+)`, "g");
+    const found = new Set();
+    let m;
+    while ((m = re.exec(out)) !== null) found.add(m[1]);
+    for (const enc of found) {
+      const key = `${endpoint}:${enc}`;
+      let staticUrl = islandWritten.get(key);
+      if (!staticUrl) {
+        const { status, body } = await fetchRoute(`/_swift-rust/${endpoint}?p=${enc}`);
+        if (status !== 200) continue;
+        const rel = `_swift-rust/island/${simpleHash(key)}.js`;
+        writeRawFile(STATIC_DIR, rel, body);
+        staticUrl = `/${rel}`;
+        islandWritten.set(key, staticUrl);
+      }
+      out = out.split(`/_swift-rust/${endpoint}?p=${enc}`).join(staticUrl);
     }
-    out = out.split(`/_swift-rust/island.js?p=${enc}`).join(staticUrl);
   }
   return out;
 }

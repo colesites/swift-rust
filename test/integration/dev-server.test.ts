@@ -170,4 +170,25 @@ describe("dev server route pipeline", () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   }, 12_000);
+
+  // Component-level "use client" islands: a 'use client' component imported into
+  // a server page must SSR inside a hydration marker (with serialized props) and
+  // get a self-mounting browser bundle, so it becomes interactive on the client.
+  test("a 'use client' component in a server page becomes a hydrated island", async () => {
+    const html = await (await get("/counter")).text();
+    // SSR'd inside a marker, with the server-passed props serialized.
+    expect(html).toContain("data-sr-island");
+    expect(html).toMatch(/data-sr-island-src="[^"]*counter\.tsx"/);
+    expect(html).toContain('data-sr-island-export="Counter"');
+    expect(html).toContain("&quot;start&quot;:5");
+    expect(html).toContain("&quot;label&quot;:&quot;hits&quot;");
+    // A per-component island script is injected.
+    const m = html.match(/\/_swift-rust\/island-comp\.js\?p=([^"]+)/);
+    expect(m).not.toBeNull();
+    // The bundle is self-mounting and contains the real component logic.
+    const bundle = await (await get(`/_swift-rust/island-comp.js?p=${m![1]}`)).text();
+    expect(bundle).toContain("hydrateRoot");
+    expect(bundle).toContain("useState");
+    expect(bundle).toContain("data-sr-island-src");
+  });
 });
