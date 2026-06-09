@@ -1304,9 +1304,39 @@ async function readMergedConfig(chain, route) {
   // A route is "dynamic" (emitted as a request-time function) when it explicitly
   // opts into a runtime via a directive, config.ts/edge/worker, or config.dynamic.
   config.dynamic = Boolean(directive) || explicitRuntime || config.dynamic === true;
+
+  // `use static` (page directive) or config.static: a hard guarantee that the
+  // route is purely static — no request-time/dynamic behavior. We fail loudly on
+  // any conflict so the guarantee can't silently rot, then force the route static
+  // and tag it for aggressive caching. (The actual prerender happens in build;
+  // here we enforce + emit the cache contract.)
+  const wantsStatic =
+    (route?.file && hasUseDirective(route.file, "static")) ||
+    collectRouteFiles(chain, "config").some(({ file }) => hasUseDirective(file, "static")) ||
+    config.static === true;
+  if (wantsStatic) {
+    const reasons = [];
+    if (directive) reasons.push(`a 'use ${directive}' runtime directive (declares a request-time runtime)`);
+    else if (explicitRuntime) reasons.push("a runtime set by config.ts / edge.ts / worker.ts");
+    if (config.dynamic === true && !directive && !explicitRuntime) reasons.push("config.dynamic = true");
+    if (collectRouteFiles(chain, "action").length) reasons.push("an action.ts (mutations are dynamic)");
+    if (reasons.length) {
+      const rel = route?.file ? relative(cwd, route.file) : "(route)";
+      throw new Error(
+        `Route '${rel}' is marked 'use static' but is dynamic: it has ${reasons.join(", ")}.\n\n` +
+          `A 'use static' route is prerendered and CDN-cached, so it can't use request-time features. Fix one:\n` +
+          `  • Remove 'use static' if the route really needs to be dynamic.\n` +
+          `  • Drop the runtime directive / dynamic config / action.ts so the route can be fully static.\n` +
+          `  • For periodic refresh, keep 'use static' and add a revalidate.ts (ISR), which stays static + cached.`,
+      );
+    }
+    config.dynamic = false;
+    config.static = true;
+  }
   config.headers = {
     "x-swift-rust-runtime": runtime,
     ...(config.dynamic ? { "x-swift-rust-dynamic": "1" } : {}),
+    ...(config.static ? { "x-swift-rust-render": "static" } : {}),
     ...config.headers,
   };
   return config;
@@ -2679,12 +2709,28 @@ async function handleFetch(req) {
     const json = JSON.stringify(transitionCfg).replace(/</g, "\\u003c");
     doc = doc.replace("</body>", `<script>window.__SR_TRANSITION__=${json}</script>\n</body>`);
   }
+  // `use static` guarantee: a static route must not perform request-time work.
+  // Setting cookies during render is the one dynamic signal we can catch at
+  // runtime — fail loudly rather than silently shipping a wrong cache header.
+  if (renderResult.config?.static && (renderResult.setCookies || []).length) {
+    const e = new Error(
+      "A 'use static' route set a cookie during render, which is a dynamic action. " +
+        "Remove 'use static' or stop setting cookies on this route.",
+    );
+    logError(e, "use static violation");
+    return new Response(errorOverlayHTML(e.message, e.stack || ""), {
+      status: 500,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+  }
   const headers = new Headers({ "Content-Type": "text/html; charset=utf-8" });
   for (const c of renderResult.setCookies || []) headers.append("Set-Cookie", c);
   // config.ts headers
   for (const [k, v] of Object.entries(renderResult.config?.headers || {})) headers.set(k, String(v));
-  // revalidate.ts → Cache-Control + cache tags
-  const cc = cacheControlFromPlan(renderResult.revalidatePlan);
+  // revalidate.ts → Cache-Control + cache tags. A 'use static' route with no
+  // explicit revalidate plan gets a long-lived, revalidatable CDN cache.
+  let cc = cacheControlFromPlan(renderResult.revalidatePlan);
+  if (!cc && renderResult.config?.static) cc = "public, max-age=0, s-maxage=31536000, stale-while-revalidate";
   if (cc) headers.set("Cache-Control", cc);
   const tags = renderResult.revalidatePlan?.tags || renderResult.revalidatePlan?.invalidate;
   if (Array.isArray(tags) && tags.length) headers.set("x-vercel-cache-tags", tags.join(","));

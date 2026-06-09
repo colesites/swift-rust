@@ -191,4 +191,24 @@ describe("dev server route pipeline", () => {
     expect(bundle).toContain("useState");
     expect(bundle).toContain("data-sr-island-src");
   });
+
+  // 'use static' marks a route as a hard-static guarantee: it renders, tags
+  // itself static, and gets a long-lived revalidatable CDN cache (no dynamic).
+  test("'use static' route renders static with an aggressive cache header", async () => {
+    const r = await get("/static-ok");
+    expect(r.status).toBe(200);
+    expect(r.headers.get("x-swift-rust-render")).toBe("static");
+    expect(r.headers.get("x-swift-rust-dynamic")).toBeNull();
+    expect(r.headers.get("cache-control")).toContain("s-maxage=31536000");
+  });
+
+  // 'use static' + a dynamic signal (here a 'use node' runtime directive) must
+  // fail loudly rather than silently shipping a wrong cache contract.
+  test("'use static' conflicting with a dynamic runtime fails loudly", async () => {
+    const r = await get("/static-bad");
+    expect(r.status).toBeGreaterThanOrEqual(500);
+    const body = await r.text();
+    expect(body).toContain("use static");
+    expect(body).toContain("use node");
+  });
 });
