@@ -429,7 +429,7 @@ function islandWrapperSource(abs) {
   const rawPath = join(dirname(abs), rawName);
   writeFileSync(rawPath, src);
   islandRawTemps.push(rawPath);
-  const rawSpec = JSON.stringify("./" + rawName);
+  const rawSpec = JSON.stringify(rawPath);
   let out = `import { createElement as __h } from "react";
 import * as __real from ${rawSpec};
 const __src = ${JSON.stringify(abs)};
@@ -467,6 +467,85 @@ function __wrap(Comp, name){
   return out;
 }
 
+// Which exported names of a 'use cache' module are *async functions* (the only
+// ones safe to wrap with cache(), since cache() always returns a Promise). We
+// pass everything else through untouched.
+function detectAsyncExports(src) {
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+  const asyncNamed = new Set();
+  const allNamed = new Set();
+  let defaultAsync = false;
+  let hasDefault = false;
+  if (/\bexport\s+default\b/.test(code)) {
+    hasDefault = true;
+    if (/\bexport\s+default\s+async\b/.test(code)) defaultAsync = true;
+  }
+  for (const m of code.matchAll(/\bexport\s+(async\s+)?function\s+([A-Za-z_$][\w$]*)/g)) {
+    allNamed.add(m[2]);
+    if (m[1]) asyncNamed.add(m[2]);
+  }
+  for (const m of code.matchAll(/\bexport\s+const\s+([A-Za-z_$][\w$]*)\s*=\s*(async\b)?/g)) {
+    allNamed.add(m[1]);
+    if (m[2]) asyncNamed.add(m[1]);
+  }
+  for (const m of code.matchAll(/\bexport\s*\{([^}]*)\}/g)) {
+    for (const part of m[1].split(",")) {
+      const name = part.trim().split(/\s+as\s+/).pop()?.trim();
+      if (name && name !== "default") allNamed.add(name);
+    }
+  }
+  return { asyncNamed: [...asyncNamed], allNamed: [...allNamed], defaultAsync, hasDefault };
+}
+
+// Source of a wrapper module that memoizes a 'use cache' module's async exports.
+function cacheWrapperSource(abs) {
+  const src = readFileSync(abs, "utf8");
+  const { asyncNamed, allNamed, defaultAsync, hasDefault } = detectAsyncExports(src);
+  const rawName = `.__sr_raw_${process.pid}_${Math.random().toString(36).slice(2)}__${basename(abs)}`;
+  const rawPath = join(dirname(abs), rawName);
+  writeFileSync(rawPath, src);
+  islandRawTemps.push(rawPath);
+  const tag = relative(cwd, abs);
+  let out = `import { cache as __cache } from "swift-rust/cache";
+import * as __real from ${JSON.stringify(rawPath)};
+const __opts = { tags: ${JSON.stringify([tag])} };
+`;
+  if (hasDefault) {
+    out += defaultAsync
+      ? `export default __cache(__real.default, __opts);\n`
+      : `export default __real.default;\n`;
+  }
+  for (const n of allNamed) {
+    out += asyncNamed.includes(n)
+      ? `export const ${n} = __cache(__real[${JSON.stringify(n)}], __opts);\n`
+      : `export const ${n} = __real[${JSON.stringify(n)}];\n`;
+  }
+  return out;
+}
+
+// Bun plugin: auto-memoize modules that declare a leading 'use cache' directive.
+const useCachePlugin = {
+  name: "sr-use-cache",
+  setup(build) {
+    build.onResolve({ filter: /.*/ }, (args) => {
+      const p = args.path;
+      if (!(p.startsWith(".") || p.startsWith("/") || p.startsWith("@/"))) return undefined;
+      // Our own raw temp copy: resolve it explicitly into the file namespace.
+      // (Deferring to Bun's default resolver fails from a virtual namespace.)
+      if (/\.__sr_raw_/.test(p)) return { path: p, namespace: "file" };
+      if (args.importer && hasUseDirective(args.importer, "cache")) return undefined;
+      const abs = resolveIslandSpecifier(p, args.importer);
+      if (!abs || !hasUseDirective(abs, "cache")) return undefined;
+      return { path: abs, namespace: "sr-cache" };
+    });
+    build.onLoad({ filter: /.*/, namespace: "sr-cache" }, (args) => ({
+      contents: cacheWrapperSource(args.path),
+      loader: "js",
+      resolveDir: dirname(args.path),
+    }));
+  },
+};
+
 // Bun plugin: wrap client components imported by *server* modules as islands.
 const clientIslandPlugin = {
   name: "sr-client-islands",
@@ -477,7 +556,7 @@ const clientIslandPlugin = {
       // Never wrap our own temp raw copies, and don't wrap when the importer is
       // itself a client module — nested client components belong to that
       // island's bundle, not a new boundary.
-      if (/\.__sr_raw_/.test(p)) return undefined;
+      if (/\.__sr_raw_/.test(p)) return { path: p, namespace: "file" };
       if (args.importer && hasUseDirective(args.importer, "client")) return undefined;
       const abs = resolveIslandSpecifier(p, args.importer);
       if (!abs || !hasUseDirective(abs, "client")) return undefined;
@@ -565,7 +644,7 @@ async function loadModuleFresh(filePath) {
     result = await Bun.build({
       entrypoints: [filePath],
       target: "bun",
-      plugins: [clientIslandPlugin, externalizeDepsPlugin],
+      plugins: [useCachePlugin, clientIslandPlugin, externalizeDepsPlugin],
     });
   } finally {
     for (const t of islandRawTemps) { try { unlinkSync(t); } catch {} }

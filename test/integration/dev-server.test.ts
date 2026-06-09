@@ -241,4 +241,22 @@ describe("dev server route pipeline", () => {
     const r = await get("/_swift-rust/revalidate");
     expect(r.status).toBe(405);
   });
+
+  // The 'use cache' directive auto-memoizes a module's async exports (tagged by
+  // file path), so a loader calling them is cached until revalidated.
+  test("'use cache' directive memoizes async exports until revalidated", async () => {
+    const strip = (s: string) => s.replace(/<!--[^>]*-->/g, "");
+    const read = async () => {
+      const m = strip(await (await get("/usecache")).text()).match(/data-uc[^>]*>n=(\d+)/);
+      return m ? Number(m[1]) : NaN;
+    };
+    const a = await read();
+    expect(await read()).toBe(a); // memoized by the directive
+    await fetch(`${BASE}/_swift-rust/revalidate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tag: "src/app/usecache/data.ts" }),
+    });
+    expect(await read()).toBeGreaterThan(a); // file-path tag purged it
+  });
 });
