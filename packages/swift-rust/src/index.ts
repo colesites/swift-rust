@@ -100,6 +100,8 @@ export { Link } from "./link";
 export { Head, Title, Meta, Style } from "./head";
 export { notFound, redirect, permanentRedirect } from "./router";
 export { NotFoundError, RedirectError } from "./router";
+export { cache, revalidateTag, revalidatePath, clearCache } from "./cache";
+export type { CacheOptions, CacheEntry } from "./cache";
 export {
   Video,
   BackgroundVideo,

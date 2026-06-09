@@ -2479,6 +2479,35 @@ async function handleFetch(req) {
     return new Response("// island not found", { status: 404, headers: { "Content-Type": "application/javascript" } });
   }
 
+  // On-demand revalidation: POST /_swift-rust/revalidate { tag?, path? }
+  // Purges the shared data cache (globalThis.__SR_CACHE__) by tag or path so
+  // webhooks / mutations can invalidate without a redeploy.
+  if (pathname === "/_swift-rust/revalidate") {
+    if (req.method !== "POST") {
+      return new Response(JSON.stringify({ error: "use POST" }), {
+        status: 405,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    let body = {};
+    try { body = await req.json(); } catch {}
+    const tag = body.tag ?? url.searchParams.get("tag");
+    const path = body.path ?? url.searchParams.get("path");
+    const store = globalThis.__SR_CACHE__;
+    let purged = 0;
+    if (store?.store) {
+      for (const [k, v] of store.store) {
+        if ((tag && v.tags?.includes(tag)) || (path && k.includes(path))) {
+          store.store.delete(k);
+          purged++;
+        }
+      }
+      if (tag) store.purged?.add(`tag:${tag}`);
+      if (path) store.purged?.add(`path:${path}`);
+    }
+    return Response.json({ revalidated: true, tag: tag ?? null, path: path ?? null, purged });
+  }
+
   if (pathname.startsWith("/_swift-rust/")) {
     return new Response("Not found", { status: 404 });
   }

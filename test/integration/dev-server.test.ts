@@ -211,4 +211,34 @@ describe("dev server route pipeline", () => {
     expect(body).toContain("use static");
     expect(body).toContain("use node");
   });
+
+  // cache() memoizes loader data across requests; the on-demand revalidate
+  // endpoint purges by tag so the next request recomputes.
+  test("cache() + revalidateTag invalidates loader data on demand", async () => {
+    const strip = (s: string) => s.replace(/<!--[^>]*-->/g, "");
+    const read = async () => {
+      const m = strip(await (await get("/cached")).text()).match(/data-cached[^>]*>n=(\d+)/);
+      return m ? Number(m[1]) : NaN;
+    };
+    const a = await read();
+    const b = await read();
+    expect(a).toBe(b); // cached → identical
+
+    const res = await fetch(`${BASE}/_swift-rust/revalidate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tag: "counter" }),
+    });
+    const json = (await res.json()) as { revalidated: boolean; purged: number };
+    expect(json.revalidated).toBe(true);
+    expect(json.purged).toBeGreaterThanOrEqual(1);
+
+    const c = await read();
+    expect(c).toBeGreaterThan(a); // recomputed after purge
+  });
+
+  test("revalidate endpoint rejects non-POST", async () => {
+    const r = await get("/_swift-rust/revalidate");
+    expect(r.status).toBe(405);
+  });
 });
