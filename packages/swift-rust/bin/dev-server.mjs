@@ -771,6 +771,80 @@ export function isClientPage(file) {
   return false;
 }
 
+// True when a file's leading directive prologue contains `'use server'`.
+// (Component-level "use server" is NOT supported — swift-rust does classic SSR +
+// client islands, not React Server Components / Flight. The only legitimate home
+// for 'use server' is a route action.ts file, which is loaded by the router, not
+// imported into a page's render tree.)
+function hasServerDirective(file) {
+  try {
+    for (const raw of readFileSync(file, "utf8").split("\n")) {
+      const t = raw.trim();
+      if (!t || t.startsWith("//") || t.startsWith("/*") || t.startsWith("*")) continue;
+      if (/^["']use server["'];?$/.test(t)) return true;
+      if (/^["']use [a-z]+["'];?$/.test(t)) continue;
+      return false;
+    }
+  } catch {}
+  return false;
+}
+
+// Walk a page's transitive *relative* import graph looking for a module that
+// declares `'use server'`. Returns the offending file (or null). We only follow
+// ./ and ../ specifiers — that's where a developer's own components live, and it
+// keeps the scan cheap and free of node_modules false positives.
+const RELATIVE_EXTS = [".tsx", ".ts", ".jsx", ".js", ".mjs"];
+function findServerComponentInClientGraph(entryFile, seen = new Set()) {
+  const resolved = resolve(entryFile);
+  if (seen.has(resolved)) return null;
+  seen.add(resolved);
+  let src;
+  try {
+    src = readFileSync(resolved, "utf8");
+  } catch {
+    return null;
+  }
+  // The entry (the page) is allowed to be 'use client'; we only flag *imports*.
+  for (const m of src.matchAll(/\b(?:import|export)\b[^'"]*['"](\.[^'"]+)['"]/g)) {
+    const spec = m[1];
+    const base = resolve(dirname(resolved), spec);
+    let target = null;
+    const candidates = [base, ...RELATIVE_EXTS.map((e) => base + e), ...RELATIVE_EXTS.map((e) => join(base, "index" + e))];
+    for (const c of candidates) {
+      try {
+        if (statSync(c).isFile()) { target = c; break; }
+      } catch {}
+    }
+    if (!target) continue;
+    if (hasServerDirective(target)) return target;
+    const nested = findServerComponentInClientGraph(target, seen);
+    if (nested) return nested;
+  }
+  return null;
+}
+
+// Throw a clear, actionable error when a 'use client' page pulls a component
+// that declares 'use server'. Replaces the old silent no-op (the component used
+// to be imported but its directive ignored, so nothing ran and nothing warned).
+export function assertNoServerComponentInClientPage(pageFile) {
+  if (!isClientPage(pageFile)) return;
+  const offender = findServerComponentInClientGraph(pageFile);
+  if (offender) {
+    const rel = (f) => relative(cwd, f);
+    throw new Error(
+      `Unsupported: '${rel(offender)}' declares 'use server' but is imported into the ` +
+      `'use client' page '${rel(pageFile)}'.\n\n` +
+      `swift-rust uses classic SSR + client islands, not React Server Components, so a ` +
+      `'use server' component inside a client tree cannot run on the server — React forbids ` +
+      `importing a Server Component into a Client Component.\n\n` +
+      `Fix one of these:\n` +
+      `  • Remove the 'use server' directive — the component will render normally inside the client page.\n` +
+      `  • Move server-only work into a route loader (loader.ts) or action (action.ts) and pass the data down as props.\n` +
+      `  • Keep the page server-rendered (drop 'use client' on the page) and mark only the interactive leaf with 'use client'.`,
+    );
+  }
+}
+
 const VALID_RUNTIMES = new Set(["bun", "edge", "node", "worker"]);
 
 // Detect a `'use bun' | 'use edge' | 'use node'` directive among a file's
@@ -809,6 +883,7 @@ async function buildIslandBundle(pageFile) {
   if (typeof Bun === "undefined" || typeof Bun.build !== "function") {
     throw new Error("client islands require the Bun runtime");
   }
+  assertNoServerComponentInClientPage(pageFile);
   const cached = islandBundleCache.get(pageFile);
   if (cached && cached.gen === buildGeneration) return cached.code;
 
@@ -1416,6 +1491,11 @@ async function renderRoute(urlPath, req) {
     });
 
     const clientPage = isClientPage(route.file);
+    if (clientPage) {
+      // Loud failure (was a silent no-op): a 'use server' component imported into
+      // a 'use client' page can't run on the server in this SSR+islands model.
+      assertNoServerComponentInClientPage(route.file);
+    }
     let tree = React.createElement(Page, { params: paramsProxy });
     if (clientPage) {
       // Wrap in a hydration root so the client bundle can mount into it.

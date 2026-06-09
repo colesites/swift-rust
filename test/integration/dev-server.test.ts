@@ -138,4 +138,36 @@ describe("dev server route pipeline", () => {
     }
     expect(reloadSeen).toBe(true);
   }, 12_000);
+
+  // A 'use server' component imported into a 'use client' page used to silently
+  // do nothing (the directive was ignored, the component never ran server-side,
+  // no error). It must now fail loudly with actionable guidance, because this
+  // SSR + islands model has no React Server Components / Flight to run it.
+  test("'use server' component inside a 'use client' page fails loudly", async () => {
+    const fs = await import("node:fs");
+    const dir = join(FIX, "src", "app", "badclient");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      join(dir, "thing.tsx"),
+      "'use server'\nexport function Thing(){ return <span data-thing>t</span>; }\n",
+    );
+    fs.writeFileSync(
+      join(dir, "page.tsx"),
+      "'use client'\nimport { Thing } from \"./thing\";\nexport default function Page(){ return <Thing/>; }\n",
+    );
+    try {
+      let res!: Response;
+      for (let i = 0; i < 30; i++) {
+        await new Promise((r) => setTimeout(r, 150));
+        res = await get("/badclient");
+        if (res.status >= 500) break;
+      }
+      expect(res.status).toBeGreaterThanOrEqual(500);
+      const body = await res.text();
+      expect(body).toContain("use server");
+      expect(body).toContain("use client");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }, 12_000);
 });
