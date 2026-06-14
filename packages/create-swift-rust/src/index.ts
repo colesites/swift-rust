@@ -562,6 +562,13 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
       "swift-rust": swiftRustVersion,
       react: "^19.0.0",
       "react-dom": "^19.0.0",
+      // Tailwind lives in dependencies (not devDependencies): the swift-rust
+      // build compiles CSS by loading @tailwindcss/postcss at build time, so it
+      // must be installed in production. As a devDependency it gets pruned on
+      // some hosts → the deployed site ships unstyled.
+      ...(tailwind
+        ? { tailwindcss: "^4.0.0", "@tailwindcss/postcss": "^4.0.0", postcss: "^8.4.0" }
+        : {}),
       // Both kits need the cn() helper (clsx + tailwind-merge). shadcn also
       // pulls in class-variance-authority + tw-animate-css; swift-rust ui needs
       // neither (its components use plain class maps and v4-native animations).
@@ -575,9 +582,6 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
         ? { typescript: "^6.0.0", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0" }
         : {}),
       ...(linter === "biome" ? { "@biomejs/biome": "^2.4.16" } : { eslint: "^9.0.0" }),
-      ...(tailwind
-        ? { tailwindcss: "^4.0.0", "@tailwindcss/postcss": "^4.0.0", postcss: "^8.4.0" }
-        : {}),
       ...(ui === "shadcn" ? { shadcn: "^4.0.0" } : {}),
       ...(ui === "swift-rust-ui" ? { "@swift-rust/ui": "latest" } : {}),
     },

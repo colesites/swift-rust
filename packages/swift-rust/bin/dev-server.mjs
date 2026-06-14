@@ -763,14 +763,33 @@ function findAppGlobalsCss() {
   return null;
 }
 
+// A require() rooted at the user's project, so Node module resolution walks the
+// real node_modules tree (project → monorepo root → …) and finds packages
+// wherever the package manager hoisted them. Critical for production builds
+// (e.g. Vercel), where hard-coded ../../node_modules guesses miss the plugin
+// and Tailwind silently doesn't compile — shipping an unstyled site.
+let _projectRequire;
+function projectRequire() {
+  if (!_projectRequire) _projectRequire = createRequire(join(cwd, "package.json"));
+  return _projectRequire;
+}
+
 let postcssInstance = null;
 async function getPostcss() {
   if (postcssInstance !== null) return postcssInstance;
+  // 1) Resolve through the project's module graph.
+  try {
+    const entry = projectRequire().resolve("postcss");
+    const mod = await import(pathToFileURL(entry).href);
+    postcssInstance = { available: true, default: mod.default ?? mod, mod };
+    return postcssInstance;
+  } catch {}
+  // 2) Hard-coded fallbacks, then a bare import.
   try {
     const candidates = [
       join(cwd, "node_modules", "postcss"),
-      join(cwd, "node_modules", "postcss", "lib", "postcss.mjs"),
-      join(cwd, "node_modules", "postcss", "lib", "postcss.js"),
+      join(cwd, "..", "..", "node_modules", "postcss"),
+      join(cwd, "..", "..", "..", "node_modules", "postcss"),
     ];
     for (const candidate of candidates) {
       if (existsSync(candidate)) {
@@ -789,9 +808,19 @@ async function getPostcss() {
 }
 
 async function loadPostcssPluginByName(name) {
+  // 1) Node resolution from the project root — finds the plugin at any hoist level.
+  try {
+    const entryPath = projectRequire().resolve(name);
+    const mod = await import(pathToFileURL(entryPath).href);
+    const result = mod.default ?? mod;
+    logLine([` ${paint("dim", "css plugin loaded:")} ${paint("cyan", name)} ${paint("dim", "(resolved)")}`], 1);
+    return result;
+  } catch {}
+  // 2) Fallback: scan a few likely node_modules locations.
   const candidates = [
     join(cwd, "node_modules", name),
     join(cwd, "..", "..", "node_modules", name),
+    join(cwd, "..", "..", "..", "node_modules", name),
   ];
   for (const candidate of candidates) {
     const pkgJsonPath = join(candidate, "package.json");
@@ -814,7 +843,7 @@ async function loadPostcssPluginByName(name) {
       }
     }
   }
-  logLine([` ${paint("dim", "css plugin not found:")} ${paint("yellow", name)}`], 1);
+  logLine([` ${paint("dim", "css plugin not found:")} ${paint("yellow", name)} ${paint("dim", "— is it in dependencies?")}`], 1);
   return null;
 }
 
