@@ -1,0 +1,217 @@
+@import "tailwindcss";
+
+/* shadcn-style theming: :root is light, .dark is dark. The site defaults to
+   .dark (set on <html>). Component dark: variants key off the same .dark class,
+   and any subtree can be forced dark by adding the class locally. */
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  --font-display: var(--font-display), var(--font-sans), sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+}
+
+/* All color tokens resolve through raw vars so the .dark class toggles the
+   theme. Chrome (--sr-*) drives the site; ui (--ui-*) drives the components. */
+@theme inline {
+  --color-bg: var(--sr-bg);
+  --color-surface: var(--sr-surface);
+  --color-surface-2: var(--sr-surface-2);
+  --color-border: var(--sr-border);
+  --color-border-strong: var(--sr-border-strong);
+  --color-fg: var(--sr-fg);
+  --color-fg-muted: var(--sr-fg-muted);
+  --color-fg-subtle: var(--sr-fg-subtle);
+  --color-accent: var(--sr-accent);
+  --color-accent-hover: var(--sr-accent-hover);
+
+  --color-primary: var(--ui-primary);
+  --color-primary-foreground: var(--ui-primary-fg);
+  --color-secondary: var(--ui-secondary);
+  --color-secondary-foreground: var(--ui-secondary-fg);
+  --color-muted: var(--ui-muted);
+  --color-muted-foreground: var(--ui-muted-fg);
+  --color-card: var(--ui-card);
+  --color-card-foreground: var(--ui-card-fg);
+  --color-popover: var(--ui-popover);
+  --color-popover-foreground: var(--ui-popover-fg);
+  --color-destructive: var(--ui-destructive);
+  --color-destructive-foreground: var(--ui-destructive-fg);
+  --color-input: var(--ui-input);
+  --color-ring: var(--ui-ring);
+  --color-background: var(--ui-background);
+  --color-foreground: var(--ui-foreground);
+}
+
+/* ── Light (neutral zinc/white) ───────────────────────────────────────────── */
+:root {
+  --sr-bg: #ffffff;
+  --sr-surface: #ffffff;
+  --sr-surface-2: #f4f4f5;
+  --sr-border: #e4e4e7;
+  --sr-border-strong: #d4d4d8;
+  --sr-fg: #09090b;
+  --sr-fg-muted: #52525b;
+  --sr-fg-subtle: #a1a1aa;
+  --sr-accent: #ea580c;
+  --sr-accent-hover: #c2410c;
+
+  --ui-primary: #18181b;
+  --ui-primary-fg: #fafafa;
+  --ui-secondary: #f4f4f5;
+  --ui-secondary-fg: #18181b;
+  --ui-muted: #f4f4f5;
+  --ui-muted-fg: #71717a;
+  --ui-card: #ffffff;
+  --ui-card-fg: #09090b;
+  --ui-popover: #ffffff;
+  --ui-popover-fg: #09090b;
+  --ui-destructive: #ef4444;
+  --ui-destructive-fg: #fafafa;
+  --ui-input: #e4e4e7;
+  --ui-ring: #ea580c;
+  --ui-background: #ffffff;
+  --ui-foreground: #09090b;
+
+  color-scheme: light;
+}
+
+/* ── Dark (neutral black/zinc — shadcn) ───────────────────────────────────── */
+.dark {
+  --sr-bg: #09090b;
+  --sr-surface: #101012;
+  --sr-surface-2: #18181b;
+  --sr-border: #27272a;
+  --sr-border-strong: #3f3f46;
+  --sr-fg: #fafafa;
+  --sr-fg-muted: #a1a1aa;
+  --sr-fg-subtle: #71717a;
+  --sr-accent: #f97316;
+  --sr-accent-hover: #fb923c;
+
+  --ui-primary: #fafafa;
+  --ui-primary-fg: #18181b;
+  --ui-secondary: #27272a;
+  --ui-secondary-fg: #fafafa;
+  --ui-muted: #1c1c1f;
+  --ui-muted-fg: #a1a1aa;
+  --ui-card: #101012;
+  --ui-card-fg: #fafafa;
+  --ui-popover: #18181b;
+  --ui-popover-fg: #fafafa;
+  --ui-destructive: #f87171;
+  --ui-destructive-fg: #18181b;
+  --ui-input: #27272a;
+  --ui-ring: #f97316;
+  --ui-background: #09090b;
+  --ui-foreground: #fafafa;
+
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    border-color: var(--sr-border);
+  }
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--sr-bg);
+    color: var(--sr-fg);
+    font-family: var(--font-sans);
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--sr-accent) 85%, transparent);
+    color: #fff;
+  }
+  ::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--sr-border-strong);
+    border: 3px solid var(--sr-bg);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--sr-fg-subtle);
+  }
+}
+
+@utility container-page {
+  width: 100%;
+  max-width: 84rem;
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+
+/* Blueprint grid texture for hero / section backdrops. */
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, var(--sr-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--sr-border) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
+}
+
+/* Subtle warm glow behind the hero — orange only, no blue/purple. */
+@utility hero-glow {
+  background: radial-gradient(
+    44rem 26rem at 50% -6rem,
+    color-mix(in oklab, var(--sr-accent) 22%, transparent),
+    transparent 70%
+  );
+}
+
+/* A locally-forced dark surface (used by the showcase, which always sits on a
+   dark backdrop regardless of the site theme). */
+@utility force-dark {
+  --sr-bg: #09090b;
+  --sr-surface: #101012;
+  --sr-surface-2: #18181b;
+  --sr-border: #27272a;
+  --sr-border-strong: #3f3f46;
+  --sr-fg: #fafafa;
+  --sr-fg-muted: #a1a1aa;
+  --sr-fg-subtle: #71717a;
+  --ui-primary: #fafafa;
+  --ui-primary-fg: #18181b;
+  --ui-secondary: #27272a;
+  --ui-secondary-fg: #fafafa;
+  --ui-muted: #1c1c1f;
+  --ui-muted-fg: #a1a1aa;
+  --ui-card: #101012;
+  --ui-card-fg: #fafafa;
+  --ui-popover: #18181b;
+  --ui-popover-fg: #fafafa;
+  --ui-destructive: #f87171;
+  --ui-destructive-fg: #18181b;
+  --ui-input: #27272a;
+  --ui-ring: #f97316;
+  --ui-background: #09090b;
+  --ui-foreground: #fafafa;
+  color-scheme: dark;
+}
+
+@keyframes sr-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rise {
+  animation: sr-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}

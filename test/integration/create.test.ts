@@ -65,6 +65,46 @@ describe("create-swift-rust: minimal (JS + ESLint + no Tailwind + top-level app)
   });
 });
 
+describe("create-swift-rust: UI kit selection", () => {
+  test("swift-rust ui scaffolds the registry components + cn helper + design-aware home", () => {
+    const a = scaffold(["--minimal", "--swift-rust-ui"]);
+    const ui = join(a, "src", "components", "ui");
+    for (const name of ["accordion", "alert", "avatar", "button", "card", "input", "label"]) {
+      expect(existsSync(join(ui, `${name}.tsx`))).toBe(true);
+    }
+    // The button must carry the third (design) dimension.
+    const button = readFileSync(join(ui, "button.tsx"), "utf8");
+    expect(button).toContain("ButtonDesign");
+    expect(button).toContain('"glass"');
+    // cn helper lands at lib/utils.ts; the home page uses the design prop.
+    expect(existsSync(join(a, "src", "lib", "utils.ts"))).toBe(true);
+    const page = readFileSync(join(a, "src", "app", "page.tsx"), "utf8");
+    expect(page).toContain('design="3d"');
+    // A UI kit implies Tailwind even though --tailwind wasn't passed.
+    expect(existsSync(join(a, "src", "app", "globals.css"))).toBe(true);
+    // swift-rust ui doesn't need class-variance-authority.
+    const pkg = JSON.parse(readFileSync(join(a, "package.json"), "utf8"));
+    expect(pkg.dependencies?.clsx).toBeDefined();
+    expect(pkg.dependencies?.["class-variance-authority"]).toBeUndefined();
+    expect(pkg.devDependencies?.shadcn).toBeUndefined();
+  });
+
+  test("shadcn scaffolds components.json + the shadcn devDep", () => {
+    const a = scaffold(["--minimal", "--shadcn"]);
+    expect(existsSync(join(a, "components.json"))).toBe(true);
+    expect(existsSync(join(a, "src", "components", "ui", "button.tsx"))).toBe(true);
+    const pkg = JSON.parse(readFileSync(join(a, "package.json"), "utf8"));
+    expect(pkg.dependencies?.["class-variance-authority"]).toBeDefined();
+    expect(pkg.devDependencies?.shadcn).toBeDefined();
+  });
+
+  test("--no-ui leaves the project without a components/ui dir", () => {
+    const a = scaffold(["--minimal", "--no-ui", "--tailwind"]);
+    expect(existsSync(join(a, "src", "components", "ui"))).toBe(false);
+    expect(existsSync(join(a, "components.json"))).toBe(false);
+  });
+});
+
 describe("generated layout font imports are real exports", () => {
   // This is the regression guard for the `Geist_Mono` bug: every name the
   // scaffolded layout imports from swift-rust/font/google must actually exist.

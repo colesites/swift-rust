@@ -12,12 +12,31 @@ const pkgRoot = resolve(here, "..");
 const repoRoot = resolve(pkgRoot, "..", "..");
 const demo = join(repoRoot, "examples", "full-demo");
 const out = join(pkgRoot, "templates", "default");
+const uiRegistry = join(repoRoot, "packages", "ui", "registry");
+const uiOut = join(pkgRoot, "templates", "ui");
 
 const PLACEHOLDER = "__PROJECT_NAME__";
+
+// The default swift-rust ui component set the scaffolder ships (keep in sync
+// with SWIFT_RUST_UI_DEFAULTS in src/index.ts).
+const UI_COMPONENTS = ["accordion", "alert", "avatar", "button", "card", "input", "label"];
+
+// Flatten the @swift-rust/ui registry into templates/ui so the published
+// scaffolder can copy the canonical components without a workspace dependency.
+async function syncUi() {
+  await rm(uiOut, { recursive: true, force: true });
+  await mkdir(uiOut, { recursive: true });
+  for (const name of UI_COMPONENTS) {
+    await cp(join(uiRegistry, "components", `${name}.tsx`), join(uiOut, `${name}.tsx`));
+  }
+  await cp(join(uiRegistry, "lib", "utils.ts"), join(uiOut, "utils.ts"));
+  console.log(`✓ synced ${UI_COMPONENTS.length} swift-rust ui components → ${uiOut}`);
+}
 
 async function main() {
   await rm(out, { recursive: true, force: true });
   await mkdir(out, { recursive: true });
+  await syncUi();
 
   // 1. Source tree + public assets (recompressed, ~3 MB of JPGs).
   await cp(join(demo, "src"), join(out, "src"), { recursive: true });

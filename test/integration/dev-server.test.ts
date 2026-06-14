@@ -212,6 +212,11 @@ describe("dev server route pipeline", () => {
     expect(body).toContain("use node");
   });
 
+  // Earlier tests write fixture files; the watcher's debounced flush can land a
+  // few hundred ms later, rebuilding modules (which legitimately resets their
+  // module-level counters). Wait it out before asserting on counter state.
+  const settleWatcher = () => new Promise((r) => setTimeout(r, 500));
+
   // cache() memoizes loader data across requests; the on-demand revalidate
   // endpoint purges by tag so the next request recomputes.
   test("cache() + revalidateTag invalidates loader data on demand", async () => {
@@ -220,6 +225,7 @@ describe("dev server route pipeline", () => {
       const m = strip(await (await get("/cached")).text()).match(/data-cached[^>]*>n=(\d+)/);
       return m ? Number(m[1]) : NaN;
     };
+    await settleWatcher();
     const a = await read();
     const b = await read();
     expect(a).toBe(b); // cached → identical
@@ -250,6 +256,7 @@ describe("dev server route pipeline", () => {
       const m = strip(await (await get("/usecache")).text()).match(/data-uc[^>]*>n=(\d+)/);
       return m ? Number(m[1]) : NaN;
     };
+    await settleWatcher();
     const a = await read();
     expect(await read()).toBe(a); // memoized by the directive
     await fetch(`${BASE}/_swift-rust/revalidate`, {
@@ -259,4 +266,83 @@ describe("dev server route pipeline", () => {
     });
     expect(await read()).toBeGreaterThan(a); // file-path tag purged it
   });
+
+  // Regression guard for the save-shows-an-error-until-reload bug: SSR builds
+  // shared one global temp-file list, so concurrent renders (every open tab
+  // reloads at once on an HMR broadcast) deleted each other's island temp files
+  // mid-build → transient module-not-found 500s. Per-build temp lists + in-flight
+  // dedup must keep a burst of parallel requests clean right after an edit.
+  test("HMR: concurrent requests right after an edit all succeed", async () => {
+    const widget = join(FIX, "src", "components", "widget.tsx");
+    const original = readFileSync(widget, "utf8");
+    try {
+      for (let round = 0; round < 3; round++) {
+        writeFileSync(widget, original.replace("VERSION1", `BURST_${round}`));
+        await new Promise((r) => setTimeout(r, 120)); // land inside the rebuild window
+        const results = await Promise.all(
+          // /counter renders a 'use client' island (exercises the temp files);
+          // / imports the edited widget.
+          ["/", "/counter", "/", "/counter", "/", "/counter"].map((p) => get(p)),
+        );
+        for (const r of results) expect(r.status).toBe(200);
+      }
+    } finally {
+      writeFileSync(widget, original);
+      await new Promise((r) => setTimeout(r, 400));
+    }
+  }, 20_000);
+
+  // Regression guard for reload-into-a-dead-error-page: a syntax-broken save
+  // must broadcast {type:"error"} (overlay on the live page, no reload), and the
+  // next clean save must broadcast a reload again.
+  test("HMR: a syntax error broadcasts an error event, then recovers on fix", async () => {
+    const widget = join(FIX, "src", "components", "widget.tsx");
+    const original = readFileSync(widget, "utf8");
+    const res = await fetch(`${BASE}/_swift-rust/hmr`);
+    const reader = res.body!.getReader();
+    const dec = new TextDecoder();
+    const events: string[] = [];
+    // Background pump: a single continuous reader (racing fresh read() calls
+    // against timeouts drops chunks).
+    void (async () => {
+      let buf = "";
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          let i: number;
+          while ((i = buf.indexOf("\n\n")) !== -1) {
+            const frame = buf.slice(0, i);
+            buf = buf.slice(i + 2);
+            const dataLine = frame.split("\n").find((l) => l.startsWith("data:"));
+            if (!dataLine) continue;
+            const msg = JSON.parse(dataLine.slice(5).trim());
+            const data = msg && msg.event && msg.data ? msg.data : msg;
+            if (data.type) events.push(data.type);
+          }
+        }
+      } catch {}
+    })();
+    const waitFor = async (type: string, ms: number) => {
+      const by = Date.now() + ms;
+      while (Date.now() < by && !events.includes(type)) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      return events.includes(type);
+    };
+    try {
+      writeFileSync(widget, "export function Widget() { return <div>broken\n"); // unterminated
+      expect(await waitFor("error", 6000)).toBe(true);
+      expect(events).not.toContain("reload");
+
+      events.length = 0;
+      writeFileSync(widget, original);
+      expect(await waitFor("reload", 6000)).toBe(true);
+    } finally {
+      await reader.cancel().catch(() => {});
+      writeFileSync(widget, original);
+      await new Promise((r) => setTimeout(r, 400));
+    }
+  }, 20_000);
 });

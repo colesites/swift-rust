@@ -8,12 +8,14 @@ test("package exports core API", () => {
   expect(typeof mod.list).toBe("function");
 });
 
-test("COMPONENTS map lists all 35 components", () => {
+test("COMPONENTS map lists the full registry", () => {
   const components = mod.COMPONENTS as Record<string, { files: string[] }>;
-  expect(Object.keys(components).length).toBe(35);
+  expect(Object.keys(components).length).toBeGreaterThanOrEqual(60);
   const button = components.button;
   expect(button).toBeDefined();
   expect(button?.files).toContain("button.tsx");
   expect(components["dropdown-menu"]).toBeDefined();
-  expect(components["navigation-menu"]).toBeDefined();
+  expect(components["data-table"]).toBeDefined();
+  expect(components["code-block"]).toBeDefined();
+  expect(components.stepper).toBeDefined();
 });

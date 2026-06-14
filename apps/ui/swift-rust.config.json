@@ -1,0 +1,4 @@
+{
+  "rendering": "ssr",
+  "reactStrictMode": true
+}

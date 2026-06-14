@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as p from "@clack/prompts";
@@ -13,41 +13,70 @@ const REGISTRY_DIR = join(PACKAGE_ROOT, "registry");
 type ComponentMap = Record<string, { files: string[]; dependencies?: string[] }>;
 
 const COMPONENTS: ComponentMap = {
-  accordion: { files: ["accordion.tsx"] },
-  alert: { files: ["alert.tsx"] },
-  avatar: { files: ["avatar.tsx"] },
-  badge: { files: ["badge.tsx"] },
-  breadcrumb: { files: ["breadcrumb.tsx"] },
-  button: { files: ["button.tsx"] },
-  callout: { files: ["callout.tsx"] },
-  card: { files: ["card.tsx"] },
-  checkbox: { files: ["checkbox.tsx"] },
-  code: { files: ["code.tsx"] },
-  command: { files: ["command.tsx"] },
-  dialog: { files: ["dialog.tsx"] },
+  "accordion": { files: ["accordion.tsx"] },
+  "alert": { files: ["alert.tsx"] },
+  "alert-dialog": { files: ["alert-dialog.tsx"] },
+  "aspect-ratio": { files: ["aspect-ratio.tsx"] },
+  "avatar": { files: ["avatar.tsx"] },
+  "badge": { files: ["badge.tsx"] },
+  "breadcrumb": { files: ["breadcrumb.tsx"] },
+  "button": { files: ["button.tsx"] },
+  "button-group": { files: ["button-group.tsx"] },
+  "calendar": { files: ["calendar.tsx"] },
+  "callout": { files: ["callout.tsx"] },
+  "card": { files: ["card.tsx"] },
+  "carousel": { files: ["carousel.tsx"] },
+  "chart": { files: ["chart.tsx"] },
+  "checkbox": { files: ["checkbox.tsx"] },
+  "code": { files: ["code.tsx"] },
+  "code-block": { files: ["code-block.tsx"] },
+  "collapsible": { files: ["collapsible.tsx"] },
+  "combobox": { files: ["combobox.tsx"] },
+  "command": { files: ["command.tsx"] },
+  "context-menu": { files: ["context-menu.tsx"] },
+  "data-table": { files: ["data-table.tsx"] },
+  "date-picker": { files: ["date-picker.tsx"] },
+  "dialog": { files: ["dialog.tsx"] },
+  "direction": { files: ["direction.tsx"] },
+  "drawer": { files: ["drawer.tsx"] },
   "dropdown-menu": { files: ["dropdown-menu.tsx"] },
-  form: { files: ["form.tsx"] },
-  input: { files: ["input.tsx"] },
-  kbd: { files: ["kbd.tsx"] },
-  label: { files: ["label.tsx"] },
+  "empty": { files: ["empty.tsx"] },
+  "field": { files: ["field.tsx"] },
+  "file-upload": { files: ["file-upload.tsx"] },
+  "form": { files: ["form.tsx"] },
+  "hover-card": { files: ["hover-card.tsx"] },
+  "input": { files: ["input.tsx"] },
+  "input-group": { files: ["input-group.tsx"] },
+  "input-otp": { files: ["input-otp.tsx"] },
+  "item": { files: ["item.tsx"] },
+  "kbd": { files: ["kbd.tsx"] },
+  "label": { files: ["label.tsx"] },
+  "menubar": { files: ["menubar.tsx"] },
+  "native-select": { files: ["native-select.tsx"] },
   "navigation-menu": { files: ["navigation-menu.tsx"] },
-  pagination: { files: ["pagination.tsx"] },
-  popover: { files: ["popover.tsx"] },
-  progress: { files: ["progress.tsx"] },
+  "pagination": { files: ["pagination.tsx"] },
+  "popover": { files: ["popover.tsx"] },
+  "progress": { files: ["progress.tsx"] },
   "radio-group": { files: ["radio-group.tsx"] },
-  select: { files: ["select.tsx"] },
-  separator: { files: ["separator.tsx"] },
-  sheet: { files: ["sheet.tsx"] },
-  skeleton: { files: ["skeleton.tsx"] },
-  slider: { files: ["slider.tsx"] },
-  spinner: { files: ["spinner.tsx"] },
-  switch: { files: ["switch.tsx"] },
-  table: { files: ["table.tsx"] },
-  tabs: { files: ["tabs.tsx"] },
-  textarea: { files: ["textarea.tsx"] },
-  toast: { files: ["toast.tsx"] },
-  toggle: { files: ["toggle.tsx"] },
-  tooltip: { files: ["tooltip.tsx"] },
+  "resizable": { files: ["resizable.tsx"] },
+  "scroll-area": { files: ["scroll-area.tsx"] },
+  "select": { files: ["select.tsx"] },
+  "separator": { files: ["separator.tsx"] },
+  "sheet": { files: ["sheet.tsx"] },
+  "sidebar": { files: ["sidebar.tsx"] },
+  "skeleton": { files: ["skeleton.tsx"] },
+  "slider": { files: ["slider.tsx"] },
+  "sonner": { files: ["sonner.tsx"] },
+  "spinner": { files: ["spinner.tsx"] },
+  "stepper": { files: ["stepper.tsx"] },
+  "switch": { files: ["switch.tsx"] },
+  "table": { files: ["table.tsx"] },
+  "tabs": { files: ["tabs.tsx"] },
+  "textarea": { files: ["textarea.tsx"] },
+  "toast": { files: ["toast.tsx"] },
+  "toggle": { files: ["toggle.tsx"] },
+  "toggle-group": { files: ["toggle-group.tsx"] },
+  "tooltip": { files: ["tooltip.tsx"] },
 };
 
 const UTILS_FILE = join(REGISTRY_DIR, "lib", "utils.ts");
@@ -152,6 +181,26 @@ async function ensureDependencies(
   await writePackageJson(projectRoot, pkg);
   return { added: toAdd, alreadyPresent: deps.filter((d) => existing.has(d)) };
 }
+
+async function dirExists(path: string): Promise<boolean> {
+  try {
+    return (await stat(path)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+// Projects scaffolded with a src/ directory keep app code under src/. Detect it
+// so `init`/`add` default to src/lib and src/components/ui (like shadcn), instead
+// of writing top-level lib/ and components/ next to src/. (pathExists uses
+// readFile, which throws on a directory — so this needs a stat-based check.)
+async function detectSrcDir(projectRoot: string): Promise<boolean> {
+  return (
+    (await dirExists(join(projectRoot, "src", "app"))) || (await dirExists(join(projectRoot, "src")))
+  );
+}
+const defaultLibDir = (srcDir: boolean): string => (srcDir ? "src/lib" : "lib");
+const defaultUiDir = (srcDir: boolean): string => (srcDir ? "src/components/ui" : "components/ui");
 
 async function detectImportAlias(projectRoot: string): Promise<string> {
   const tsconfigPath = join(projectRoot, "tsconfig.json");
@@ -278,9 +327,9 @@ async function runInit(
   const projectRoot = await findProjectRoot(cwd);
   p.log.info(`Project root: ${pc.cyan(projectRoot)}`);
 
-  const targetDir = options.dir ?? "lib";
   const alias = await detectImportAlias(projectRoot);
-  const srcDir = alias.includes("src");
+  const srcDir = (await detectSrcDir(projectRoot)) || alias.includes("src");
+  const targetDir = options.dir ?? defaultLibDir(srcDir);
 
   const utilsDest = join(targetDir, "utils.ts");
   const overwrite = options.overwrite === true;
@@ -288,7 +337,7 @@ async function runInit(
 
   if (!yes) {
     const proceed = await p.confirm({
-      message: `Install ${pc.cyan("lib/utils.ts")} to ${pc.cyan(join(projectRoot, utilsDest))}?`,
+      message: `Install ${pc.cyan(utilsDest)} to ${pc.cyan(join(projectRoot, utilsDest))}?`,
       initialValue: true,
     });
     if (p.isCancel(proceed) || !proceed) {
@@ -319,7 +368,9 @@ async function runAddInternal(
   const projectRoot = await findProjectRoot(cwd);
   p.log.info(`Project root: ${pc.cyan(projectRoot)}`);
 
-  const targetDir = options.dir ?? "components/ui";
+  const srcDir = await detectSrcDir(projectRoot);
+  const targetDir = options.dir ?? defaultUiDir(srcDir);
+  const libDir = defaultLibDir(srcDir);
   const overwrite = options.overwrite === true;
   const yes = options.yes === true;
 
@@ -366,17 +417,17 @@ async function runAddInternal(
     }
   }
 
-  const hasUtils = await pathExists(join(projectRoot, "lib", "utils.ts"));
+  const hasUtils = await pathExists(join(projectRoot, libDir, "utils.ts"));
   if (!hasUtils && !yes) {
     const runInitPrompt = await p.confirm({
-      message: `${pc.yellow("lib/utils.ts")} is missing. Run ${pc.cyan("swift-rust init")} first?`,
+      message: `${pc.yellow(`${libDir}/utils.ts`)} is missing. Run ${pc.cyan("swift-rust init")} first?`,
       initialValue: true,
     });
     if (!p.isCancel(runInitPrompt) && runInitPrompt) {
-      await runInit(cwd, { dir: "lib", yes: true });
+      await runInit(cwd, { dir: libDir, yes: true });
     }
   } else if (!hasUtils) {
-    await runInit(cwd, { dir: "lib", yes: true });
+    await runInit(cwd, { dir: libDir, yes: true });
   }
 
   const spinner = p.spinner();

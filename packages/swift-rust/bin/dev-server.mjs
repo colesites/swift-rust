@@ -414,21 +414,21 @@ function detectIslandExports(src) {
   return { hasDefault, named: [...named] };
 }
 
-// Temp sibling files holding verbatim copies of client components, so the
+// Build the source of an island wrapper module for a given client component
+// file. Temp sibling files hold verbatim copies of client components, so the
 // wrapper can import the *real* module under a distinct on-disk path (Bun
 // dedupes modules by resolved path, so a query-string alias would collapse the
-// real module into the wrapper). Cleaned up after each SSR build.
-const islandRawTemps = [];
-
-// Build the source of an island wrapper module for a given client component file.
-function islandWrapperSource(abs) {
+// real module into the wrapper). `temps` is per-build: a shared global list
+// let concurrent builds delete each other's temp files mid-build, which
+// surfaced as transient module-not-found errors on save.
+function islandWrapperSource(abs, temps) {
   const src = readFileSync(abs, "utf8");
   const { hasDefault, named } = detectIslandExports(src);
   // Write the real component to a unique sibling so imports resolve identically.
   const rawName = `.__sr_raw_${process.pid}_${Math.random().toString(36).slice(2)}__${basename(abs)}`;
   const rawPath = join(dirname(abs), rawName);
   writeFileSync(rawPath, src);
-  islandRawTemps.push(rawPath);
+  temps.push(rawPath);
   const rawSpec = JSON.stringify(rawPath);
   let out = `import { createElement as __h } from "react";
 import * as __real from ${rawSpec};
@@ -498,13 +498,13 @@ function detectAsyncExports(src) {
 }
 
 // Source of a wrapper module that memoizes a 'use cache' module's async exports.
-function cacheWrapperSource(abs) {
+function cacheWrapperSource(abs, temps) {
   const src = readFileSync(abs, "utf8");
   const { asyncNamed, allNamed, defaultAsync, hasDefault } = detectAsyncExports(src);
   const rawName = `.__sr_raw_${process.pid}_${Math.random().toString(36).slice(2)}__${basename(abs)}`;
   const rawPath = join(dirname(abs), rawName);
   writeFileSync(rawPath, src);
-  islandRawTemps.push(rawPath);
+  temps.push(rawPath);
   const tag = relative(cwd, abs);
   let out = `import { cache as __cache } from "swift-rust/cache";
 import * as __real from ${JSON.stringify(rawPath)};
@@ -524,65 +524,95 @@ const __opts = { tags: ${JSON.stringify([tag])} };
 }
 
 // Bun plugin: auto-memoize modules that declare a leading 'use cache' directive.
-const useCachePlugin = {
-  name: "sr-use-cache",
-  setup(build) {
-    build.onResolve({ filter: /.*/ }, (args) => {
-      const p = args.path;
-      if (!(p.startsWith(".") || p.startsWith("/") || p.startsWith("@/"))) return undefined;
-      // Our own raw temp copy: resolve it explicitly into the file namespace.
-      // (Deferring to Bun's default resolver fails from a virtual namespace.)
-      if (/\.__sr_raw_/.test(p)) return { path: p, namespace: "file" };
-      if (args.importer && hasUseDirective(args.importer, "cache")) return undefined;
-      const abs = resolveIslandSpecifier(p, args.importer);
-      if (!abs || !hasUseDirective(abs, "cache")) return undefined;
-      return { path: abs, namespace: "sr-cache" };
-    });
-    build.onLoad({ filter: /.*/, namespace: "sr-cache" }, (args) => ({
-      contents: cacheWrapperSource(args.path),
-      loader: "js",
-      resolveDir: dirname(args.path),
-    }));
-  },
-};
+// Built per-build so each build owns its temp-file list (see islandWrapperSource).
+function makeUseCachePlugin(temps) {
+  return {
+    name: "sr-use-cache",
+    setup(build) {
+      build.onResolve({ filter: /.*/ }, (args) => {
+        const p = args.path;
+        if (!(p.startsWith(".") || p.startsWith("/") || p.startsWith("@/"))) return undefined;
+        // Our own raw temp copy: resolve it explicitly into the file namespace.
+        // (Deferring to Bun's default resolver fails from a virtual namespace.)
+        if (/\.__sr_raw_/.test(p)) return { path: p, namespace: "file" };
+        if (args.importer && hasUseDirective(args.importer, "cache")) return undefined;
+        const abs = resolveIslandSpecifier(p, args.importer);
+        if (!abs || !hasUseDirective(abs, "cache")) return undefined;
+        return { path: abs, namespace: "sr-cache" };
+      });
+      build.onLoad({ filter: /.*/, namespace: "sr-cache" }, (args) => ({
+        contents: cacheWrapperSource(args.path, temps),
+        loader: "js",
+        resolveDir: dirname(args.path),
+      }));
+    },
+  };
+}
 
 // Bun plugin: wrap client components imported by *server* modules as islands.
-const clientIslandPlugin = {
-  name: "sr-client-islands",
-  setup(build) {
-    build.onResolve({ filter: /.*/ }, (args) => {
-      const p = args.path;
-      if (!(p.startsWith(".") || p.startsWith("/") || p.startsWith("@/"))) return undefined;
-      // Never wrap our own temp raw copies, and don't wrap when the importer is
-      // itself a client module — nested client components belong to that
-      // island's bundle, not a new boundary.
-      if (/\.__sr_raw_/.test(p)) return { path: p, namespace: "file" };
-      if (args.importer && hasUseDirective(args.importer, "client")) return undefined;
-      const abs = resolveIslandSpecifier(p, args.importer);
-      if (!abs || !hasUseDirective(abs, "client")) return undefined;
-      return { path: abs, namespace: "sr-island" };
-    });
-    build.onLoad({ filter: /.*/, namespace: "sr-island" }, (args) => ({
-      contents: islandWrapperSource(args.path),
-      loader: "js",
-      resolveDir: dirname(args.path),
-    }));
-  },
-};
+function makeClientIslandPlugin(temps) {
+  return {
+    name: "sr-client-islands",
+    setup(build) {
+      build.onResolve({ filter: /.*/ }, (args) => {
+        const p = args.path;
+        if (!(p.startsWith(".") || p.startsWith("/") || p.startsWith("@/"))) return undefined;
+        // Never wrap our own temp raw copies, and don't wrap when the importer is
+        // itself a client module — nested client components belong to that
+        // island's bundle, not a new boundary.
+        if (/\.__sr_raw_/.test(p)) return { path: p, namespace: "file" };
+        if (args.importer && hasUseDirective(args.importer, "client")) return undefined;
+        const abs = resolveIslandSpecifier(p, args.importer);
+        if (!abs || !hasUseDirective(abs, "client")) return undefined;
+        return { path: abs, namespace: "sr-island" };
+      });
+      build.onLoad({ filter: /.*/, namespace: "sr-island" }, (args) => ({
+        contents: islandWrapperSource(args.path, temps),
+        loader: "js",
+        resolveDir: dirname(args.path),
+      }));
+    },
+  };
+}
+
+// In-flight build dedup: concurrent requests for the same entry (every open tab
+// reloads at once on an HMR broadcast) await one build instead of racing.
+function withInflight(map, key, gen, factory) {
+  const cur = map.get(key);
+  if (cur && cur.gen === gen) return cur.promise;
+  const entry = { gen, promise: null };
+  entry.promise = (async () => {
+    try {
+      return await factory();
+    } finally {
+      if (map.get(key) === entry) map.delete(key);
+    }
+  })();
+  map.set(key, entry);
+  return entry.promise;
+}
 
 // Cache for per-component browser island bundles (src -> { gen, code }).
 // Each bundle is self-mounting: it imports the client component, finds every
 // marker on the page for this source, and hydrates it. React is bundled in, so a
 // single <script type="module"> per source needs no import map or shared runtime.
 const componentIslandCache = new Map();
+const componentIslandInflight = new Map();
 async function buildComponentIslandBundle(srcFile) {
   if (typeof Bun === "undefined" || typeof Bun.build !== "function") {
     throw new Error("client islands require the Bun runtime");
   }
   const cached = componentIslandCache.get(srcFile);
   if (cached && cached.gen === buildGeneration) return cached.code;
-
-  const entryPath = join(dirname(srcFile), `.__sr_cisland_${process.pid}_${Date.now()}.js`);
+  return withInflight(componentIslandInflight, srcFile, buildGeneration, () =>
+    buildComponentIslandBundleNow(srcFile),
+  );
+}
+async function buildComponentIslandBundleNow(srcFile) {
+  const entryPath = join(
+    dirname(srcFile),
+    `.__sr_cisland_${process.pid}_${Date.now()}_${Math.random().toString(36).slice(2)}.js`,
+  );
   const entry = `import { hydrateRoot, createRoot } from "react-dom/client";
 import { createElement } from "react";
 import * as __mod from ${JSON.stringify(srcFile)};
@@ -630,6 +660,7 @@ function collectIslandSources(html) {
 }
 
 const ssrBundleCache = new Map(); // file -> { gen, mod }
+const ssrInflight = new Map(); // file -> { gen, promise }
 
 async function loadModuleFresh(filePath) {
   if (typeof Bun === "undefined" || typeof Bun.build !== "function") {
@@ -637,28 +668,32 @@ async function loadModuleFresh(filePath) {
   }
   const cached = ssrBundleCache.get(filePath);
   if (cached && cached.gen === buildGeneration) return cached.mod;
+  return withInflight(ssrInflight, filePath, buildGeneration, () =>
+    buildSsrModule(filePath, buildGeneration),
+  );
+}
 
-  islandRawTemps.length = 0;
+async function buildSsrModule(filePath, gen) {
+  const temps = [];
   let result;
   try {
     result = await Bun.build({
       entrypoints: [filePath],
       target: "bun",
-      plugins: [useCachePlugin, clientIslandPlugin, externalizeDepsPlugin],
+      plugins: [makeUseCachePlugin(temps), makeClientIslandPlugin(temps), externalizeDepsPlugin],
     });
   } finally {
-    for (const t of islandRawTemps) { try { unlinkSync(t); } catch {} }
-    islandRawTemps.length = 0;
+    for (const t of temps) { try { unlinkSync(t); } catch {} }
   }
   if (!result.success) {
     throw new Error(result.logs.map((l) => l.message).join("\n"));
   }
   const code = await result.outputs[0].text();
-  const tmp = join(dirname(filePath), `.__sr_ssr_${buildGeneration}_${Math.random().toString(36).slice(2)}.mjs`);
+  const tmp = join(dirname(filePath), `.__sr_ssr_${gen}_${Math.random().toString(36).slice(2)}.mjs`);
   writeFileSync(tmp, code);
   try {
     const mod = await import(pathToFileURL(tmp).href);
-    ssrBundleCache.set(filePath, { gen: buildGeneration, mod });
+    ssrBundleCache.set(filePath, { gen, mod });
     return mod;
   } finally {
     try { unlinkSync(tmp); } catch {}
@@ -696,11 +731,15 @@ async function compileRoute(urlPath) {
   }
 
   try {
-    await loadModule(route.file, { bust: true });
-    for (const layout of layouts) await loadModule(layout.file, { bust: true });
-    if (notFoundFile) await loadModule(notFoundFile, { bust: true });
-    if (errorFile) await loadModule(errorFile, { bust: true });
-    if (loadingFile) await loadModule(loadingFile, { bust: true });
+    // Generation-keyed bundles: a save bumps the generation (fresh build), an
+    // unchanged file is a cache hit. The old `?t=` bust-imports created new
+    // module instances on every request — they leaked (ESM registry entries
+    // are permanent) and, under Bun, didn't even pick up child-module edits.
+    await loadModuleFresh(route.file);
+    for (const layout of layouts) await loadModuleFresh(layout.file);
+    if (notFoundFile) await loadModuleFresh(notFoundFile);
+    if (errorFile) await loadModuleFresh(errorFile);
+    if (loadingFile) await loadModuleFresh(loadingFile);
   } catch (err) {
     compileTimings.set(urlPath, performance.now() - start);
     return { ok: false, reason: "compile_error", error: err, pageFile: route.file, layoutFile: layouts[0]?.file, params: route.params, segments };
@@ -969,13 +1008,13 @@ async function resolveMetadata(layoutFiles, pageFile, params, segments) {
   const metas = [];
   for (const layoutFile of layoutFiles || []) {
     try {
-      const mod = await loadModule(layoutFile, { bust: true });
+      const mod = await loadModuleFresh(layoutFile);
       if (mod.metadata) metas.push(mod.metadata);
     } catch {}
   }
   if (pageFile) {
     try {
-      const mod = await loadModule(pageFile, { bust: true });
+      const mod = await loadModuleFresh(pageFile);
       if (mod.generateMetadata) {
         const m = await mod.generateMetadata({ params: params || {}, searchParams: {} });
         if (m) metas.push(m);
@@ -1151,6 +1190,7 @@ export function hasUseDirective(file, name) {
   return false;
 }
 
+const islandBundleInflight = new Map();
 async function buildIslandBundle(pageFile) {
   if (typeof Bun === "undefined" || typeof Bun.build !== "function") {
     throw new Error("client islands require the Bun runtime");
@@ -1158,9 +1198,16 @@ async function buildIslandBundle(pageFile) {
   assertNoServerComponentInClientPage(pageFile);
   const cached = islandBundleCache.get(pageFile);
   if (cached && cached.gen === buildGeneration) return cached.code;
-
+  return withInflight(islandBundleInflight, pageFile, buildGeneration, () =>
+    buildIslandBundleNow(pageFile),
+  );
+}
+async function buildIslandBundleNow(pageFile) {
   // Temp hydration entry, written next to the page so module resolution works.
-  const entryPath = join(dirname(pageFile), `.__sr_island_${process.pid}_${Date.now()}.js`);
+  const entryPath = join(
+    dirname(pageFile),
+    `.__sr_island_${process.pid}_${Date.now()}_${Math.random().toString(36).slice(2)}.js`,
+  );
   const entry = `import { createRoot } from "react-dom/client";
 import { createElement } from "react";
 import Page from ${JSON.stringify(pageFile)};
@@ -1875,7 +1922,7 @@ async function renderRoute(urlPath, req) {
     if (errorFile) {
       try {
         const React = await import("react");
-        const errorMod = await loadModule(errorFile, { bust: true });
+        const errorMod = await loadModuleFresh(errorFile);
         const ErrorBoundary = errorMod.default ?? errorMod.ErrorBoundary ?? errorMod.error;
         if (ErrorBoundary) {
           const html = await renderToStringCompat(React.createElement(ErrorBoundary, { error: err }));
@@ -1888,7 +1935,7 @@ async function renderRoute(urlPath, req) {
     if (recoveryFile) {
       try {
         const React = await import("react");
-        const mod = await loadModule(recoveryFile, { bust: true });
+        const mod = await loadModuleFresh(recoveryFile);
         const Recovery = mod.default ?? mod.ErrorRecovery;
         if (Recovery) {
           const html = await renderToStringCompat(
@@ -1905,7 +1952,7 @@ async function renderRoute(urlPath, req) {
     if (globalErrorFile) {
       try {
         const React = await import("react");
-        const mod = await loadModule(globalErrorFile, { bust: true });
+        const mod = await loadModuleFresh(globalErrorFile);
         const GlobalError = mod.default ?? mod.GlobalError;
         if (GlobalError) {
           const inner = await renderToStringCompat(
@@ -1993,14 +2040,14 @@ async function renderNotFound(segments) {
   try {
     const React = await import("react");
     const layouts = findLayoutsFor(segments || []);
-    const mod = await loadModule(notFoundFile, { bust: true });
+    const mod = await loadModuleFresh(notFoundFile);
     const NotFound = mod.default ?? mod.NotFound ?? mod.notFound;
     if (!NotFound) {
       return { status: 404, html: null, error: null, segments };
     }
     let tree = React.createElement(NotFound);
     for (let i = layouts.length - 1; i >= 0; i--) {
-      const layoutMod = await loadModule(layouts[i].file, { bust: true });
+      const layoutMod = await loadModuleFresh(layouts[i].file);
       const Layout = layoutMod.default ?? layoutMod.Layout ?? layoutMod.layout;
       if (Layout) tree = React.createElement(Layout, null, tree);
     }
@@ -2098,83 +2145,219 @@ function readNavigatorClient() {
   }
 }
 
-function shouldIgnoreFile(filename) {
-  if (!filename) return true;
-  const base = filename.split(sep).pop();
-  if (!base) return true;
-  if (base.startsWith(".")) return true;
+const WATCH_IGNORE_DIRS = new Set([
+  "node_modules",
+  "dist",
+  "build",
+  "out",
+  "coverage",
+  "target",
+]);
+
+// Ignore anything inside a dep/build dir, any dot-prefixed path segment (which
+// also covers our own .__sr_* build temps and dirs like .git/.turbo/.next),
+// and editor scratch suffixes.
+function isIgnoredWatchPath(full) {
+  const rel = relative(cwd, full);
+  if (!rel || rel.startsWith("..")) return true;
+  const parts = rel.split(sep);
+  for (const p of parts) {
+    if (!p || p.startsWith(".")) return true;
+    if (WATCH_IGNORE_DIRS.has(p)) return true;
+  }
+  const base = parts[parts.length - 1];
   if (base.endsWith(".bak") || base.endsWith(".tmp") || base.endsWith("~")) return true;
-  if (base === "node_modules") return true;
   return false;
+}
+
+const SYNTAX_CHECK_LOADERS = { ".ts": "ts", ".tsx": "tsx", ".js": "js", ".jsx": "jsx", ".mjs": "js" };
+
+// Quick transpile of the changed sources before telling the browser to reload.
+// Editors save in stages (truncate+write, format-on-save), so the first FS
+// event often fires mid-write; compiling that state used to navigate every tab
+// into a dead 500 page. A failed check retries once after a beat (to skate
+// over partial writes); a persistent failure is a real syntax error.
+async function findSyntaxError(files) {
+  if (typeof Bun === "undefined" || typeof Bun.Transpiler !== "function") return null;
+  for (const file of files) {
+    const loader = SYNTAX_CHECK_LOADERS[extname(file)];
+    if (!loader) continue;
+    for (let attempt = 0; ; attempt++) {
+      let src;
+      try {
+        src = readFileSync(file, "utf8");
+      } catch {
+        break; // deleted — nothing to check
+      }
+      try {
+        new Bun.Transpiler({ loader }).transformSync(src);
+        break;
+      } catch (err) {
+        if (attempt >= 1) {
+          const msg = err?.message || String(err);
+          return `${relative(cwd, file)}: ${msg}`;
+        }
+        await new Promise((r) => setTimeout(r, 150));
+      }
+    }
+  }
+  return null;
+}
+
+function broadcastHmr(data) {
+  const payload = JSON.stringify({ event: "change", data });
+  for (const send of hmrClients) {
+    try {
+      send(payload);
+    } catch {}
+  }
 }
 
 function setupWatcher() {
   if (!existsSync(APP_DIR)) return;
   const watchers = new Map();
+  let recursiveMode = false;
 
-  const IGNORE_DIRS = new Set([
-    "node_modules",
-    "dist",
-    "build",
-    "out",
-    "coverage",
-    "target",
-    ".git",
-    ".vercel",
-    ".turbo",
-    ".swift-rust",
-    ".next",
-  ]);
+  // ── Debounced batch flush ──────────────────────────────────────────────────
+  // All events funnel into one pending set; a flush invalidates caches once,
+  // syntax-checks the batch, and broadcasts a single reload (or error).
+  const pendingFiles = new Set();
+  let pendingWildcard = false; // event with no usable filename → invalidate broadly
+  let flushTimer = null;
+  let flushing = false;
+  let lastFlushErrored = false;
+
+  function scheduleFlush() {
+    if (flushTimer) clearTimeout(flushTimer);
+    flushTimer = setTimeout(() => {
+      flushTimer = null;
+      void flush();
+    }, 80);
+  }
+
+  function noteChange(full) {
+    pendingFiles.add(full);
+    scheduleFlush();
+  }
+
+  function noteWildcard() {
+    pendingWildcard = true;
+    scheduleFlush();
+  }
+
+  async function flush() {
+    if (flushing) {
+      scheduleFlush();
+      return;
+    }
+    flushing = true;
+    try {
+      const files = [...pendingFiles];
+      pendingFiles.clear();
+      const wildcard = pendingWildcard;
+      pendingWildcard = false;
+      if (!files.length && !wildcard) return;
+
+      buildGeneration++;
+      for (const full of files) {
+        logEvent("change", full);
+        bustCache(full);
+        if (full.endsWith(`${sep}layout.tsx`) || full.endsWith(`${sep}layout.ts`)) {
+          fontsScannedFromLayout = false;
+          GOOGLE_FONT_FAMILIES.clear();
+        }
+      }
+      // Any source edit can introduce new utility classes (Tailwind scans the
+      // source tree), so re-run the CSS pipeline on every flush — not only when
+      // globals.css itself changes. mtime caching keeps subsequent requests hot.
+      globalsCssCache = { file: null, mtime: 0, css: "" };
+      if (wildcard) {
+        fontsScannedFromLayout = false;
+        GOOGLE_FONT_FAMILIES.clear();
+      }
+
+      const syntaxError = await findSyntaxError(files);
+      if (syntaxError) {
+        // Overlay on the live page instead of reloading into a dead 500 —
+        // page state survives, and the next clean save reloads normally.
+        lastFlushErrored = true;
+        logLine([` ${paint("red", "✗")} ${paint("red", syntaxError.split("\n")[0])}`]);
+        broadcastHmr({ type: "error", message: syntaxError });
+        return;
+      }
+      if (lastFlushErrored) {
+        lastFlushErrored = false;
+        broadcastHmr({ type: "ok" });
+      }
+      broadcastHmr({ type: "reload", file: relative(cwd, files[0] ?? cwd), at: Date.now() });
+      logHmr(files[0] ?? cwd);
+    } finally {
+      flushing = false;
+      if (pendingFiles.size || pendingWildcard) scheduleFlush();
+    }
+  }
+
+  function handleEvent(full) {
+    try {
+      if (statSync(full).isDirectory()) {
+        // New directory: in fallback mode start watching it. Files may have
+        // been created inside it before the watcher attached, so invalidate
+        // broadly instead of silently dropping the event (the old behavior —
+        // one dropped event meant stale renders until the server restarted).
+        if (!recursiveMode) walk(full);
+        noteWildcard();
+        return;
+      }
+    } catch {}
+    noteChange(full);
+  }
+
+  function onWatchEvent(baseDir) {
+    return (event, filename) => {
+      if (!filename) {
+        // macOS/FSEvents can coalesce events and drop the filename. Treat it
+        // as "something changed" rather than ignoring it.
+        noteWildcard();
+        return;
+      }
+      const full = join(baseDir, filename.toString());
+      if (isIgnoredWatchPath(full)) return;
+      handleEvent(full);
+    };
+  }
+
+  // Fallback: one watcher per directory (non-recursive platforms).
   function walk(dir) {
     if (watchers.has(dir)) return;
+    // A probe child path tells us whether the directory itself is ignored
+    // (cwd resolves to rel "x", which passes).
+    if (isIgnoredWatchPath(join(dir, "x"))) return;
     try {
       const entries = readdirSync(dir, { withFileTypes: true });
       for (const e of entries) {
-        if (e.isDirectory() && !e.name.startsWith(".") && !IGNORE_DIRS.has(e.name)) {
+        if (e.isDirectory() && !e.name.startsWith(".") && !WATCH_IGNORE_DIRS.has(e.name)) {
           walk(join(dir, e.name));
         }
       }
-      let debounce;
-      const w = fsWatch(dir, (event, filename) => {
-        if (shouldIgnoreFile(filename)) return;
-        const full = join(dir, filename.toString());
-        if (debounce) clearTimeout(debounce);
-        debounce = setTimeout(() => {
-          try {
-            const s = statSync(full);
-            if (s.isDirectory()) {
-              walk(full);
-              return;
-            }
-          } catch {}
-          logEvent("change", full);
-          buildGeneration++;
-          bustCache(full);
-          if (full.includes(`${sep}globals.${"css"}`)) {
-            globalsCssCache = { file: null, mtime: 0, css: "" };
-          }
-          if (full.endsWith(`${sep}layout.tsx`) || full.endsWith(`${sep}layout.ts`)) {
-            fontsScannedFromLayout = false;
-            GOOGLE_FONT_FAMILIES.clear();
-          }
-          const payload = { type: "reload", file: relative(cwd, full), at: Date.now() };
-          for (const send of hmrClients) {
-            try {
-              send(JSON.stringify({ event: "change", data: payload }));
-            } catch {}
-          }
-          logHmr(full);
-        }, 30);
-      });
+      const w = fsWatch(dir, onWatchEvent(dir));
       watchers.set(dir, w);
     } catch (err) {
       logLine([` ${paint("dim", "watch error:")} ${paint("red", err.message)}`], 1);
     }
   }
+
   // Watch the WHOLE project (minus dep/build dirs) so a change to *any* source
   // file — pages, components, lib, hooks, content, config, wherever — triggers
-  // a recompile + reload. No more "edit this folder and nothing happens".
-  walk(cwd);
+  // a recompile + reload. Prefer a single recursive watcher (macOS, Windows,
+  // Linux on Node 20+/Bun): hundreds of per-directory FSEvents watchers could
+  // hit OS limits and die silently, leaving saves unnoticed until a restart.
+  try {
+    const w = fsWatch(cwd, { recursive: true }, onWatchEvent(cwd));
+    watchers.set(cwd, w);
+    recursiveMode = true;
+  } catch {
+    walk(cwd);
+  }
 }
 
 const networkUrls = [];
@@ -2857,7 +3040,7 @@ async function handleApiRoute(req, segments, method, reqStart) {
   }
   const handlerName = method.toUpperCase();
   try {
-    const mod = await loadModule(route.file, { bust: true });
+    const mod = await loadModuleFresh(route.file);
     const handler = mod[handlerName] || mod[method.toLowerCase()];
     if (typeof handler !== "function") {
       const total = performance.now() - reqStart;

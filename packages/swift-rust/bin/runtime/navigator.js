@@ -54,10 +54,22 @@
   nav.prefetch = (url) => fetchDoc(new URL(url, location.href).href).catch(() => {});
 
   // Scripts inserted via DOM cloning don't execute; clone them into fresh nodes.
+  // Classic scripts re-run on re-insertion, but ES module scripts are keyed by
+  // URL in the module map and won't re-evaluate if the same src is inserted
+  // again — which would leave the swapped-in island markup un-hydrated (stale
+  // active states, dead event handlers) until a full reload. So we cache-bust
+  // module src scripts with a per-navigation token to force re-execution.
+  let swapToken = 0;
   function runScripts(root) {
+    swapToken++;
     for (const old of root.querySelectorAll("script")) {
       const s = document.createElement("script");
       for (const att of old.attributes) s.setAttribute(att.name, att.value);
+      if (s.type === "module" && s.src) {
+        const u = new URL(s.src, location.href);
+        u.searchParams.set("__srnav", String(swapToken));
+        s.src = u.href;
+      }
       s.textContent = old.textContent;
       old.replaceWith(s);
     }

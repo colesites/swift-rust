@@ -4,6 +4,7 @@ import { Logo } from "./logo";
 
 const NAV = [
   { href: "/", label: "Home" },
+  { href: "/ui", label: "UI" },
   { href: "/blog", label: "Blog" },
   { href: "/fonts", label: "Fonts" },
   { href: "/images", label: "Images" },

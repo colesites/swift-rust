@@ -10,6 +10,10 @@ type Language = "ts" | "js";
 type Linter = "biome" | "eslint";
 type Renderer = "ssr" | "ssr-wasm" | "ssr-htmx" | "wasm";
 type Template = "full" | "minimal";
+// Which component kit to scaffold. "swift-rust-ui" is our own shadcn-style
+// registry with an extra style dimension (variant × size × design); "shadcn" is
+// canonical shadcn/ui; "none" skips UI scaffolding entirely.
+type UiKit = "none" | "shadcn" | "swift-rust-ui";
 type AskAnswer<T> = T | string | symbol;
 
 interface Answers {
@@ -21,7 +25,7 @@ interface Answers {
   tailwind: boolean;
   srcDir: boolean;
   importAlias: string;
-  useShadcn: boolean;
+  ui: UiKit;
   install: boolean;
 }
 
@@ -127,8 +131,9 @@ ${pc.bold("Options")}
   ${pc.yellow("--js, --javascript")}      Use JavaScript
   ${pc.yellow("--tailwind")}              Install Tailwind CSS
   ${pc.yellow("--no-tailwind")}           Skip Tailwind CSS
-  ${pc.yellow("--shadcn")}                Install shadcn-style UI components (default)
-  ${pc.yellow("--no-shadcn")}             Skip shadcn UI components
+  ${pc.yellow("--swift-rust-ui")}         Install swift-rust ui components (default)
+  ${pc.yellow("--shadcn")}                Install canonical shadcn/ui components
+  ${pc.yellow("--no-ui")}                 Skip UI components
   ${pc.yellow("--src-dir")}               Use a src/ directory (src/app) (default)
   ${pc.yellow("--no-src-dir")}            Use top-level app/
   ${pc.yellow("--biome")}                 Use Biome for linting (default)
@@ -161,8 +166,9 @@ function parseFlags(args: string[]): Record<string, string | boolean | undefined
     else if (a === "--template") flags.template = args[++i];
     else if (a === "--tailwind") flags.tailwind = true;
     else if (a === "--no-tailwind") flags.tailwind = false;
-    else if (a === "--shadcn") flags.useShadcn = true;
-    else if (a === "--no-shadcn") flags.useShadcn = false;
+    else if (a === "--swift-rust-ui" || a === "--sr-ui") flags.ui = "swift-rust-ui";
+    else if (a === "--shadcn") flags.ui = "shadcn";
+    else if (a === "--no-ui" || a === "--no-shadcn") flags.ui = "none";
     else if (a === "--src-dir") flags.srcDir = true;
     else if (a === "--no-src-dir") flags.srcDir = false;
     else if (a === "--biome") flags.linter = "biome";
@@ -284,7 +290,7 @@ async function askQuestions(
       tailwind: true,
       srcDir: true,
       importAlias: "@/*",
-      useShadcn: false,
+      ui: "none",
       install,
     };
   }
@@ -368,22 +374,35 @@ async function askQuestions(
 
   const tailwind: boolean = tailwindAnswer === true;
 
-  const useShadcnAnswer: boolean | symbol =
-    typeof flags.useShadcn === "boolean"
-      ? flags.useShadcn
-      : yesMode
-        ? true
-        : ((await p.confirm({
-            message: "Would you like to use shadcn-style UI components?",
-            initialValue: true,
-          })) ?? false);
-
-  if (p.isCancel(useShadcnAnswer)) {
-    p.cancel("Aborted.");
-    return null;
+  // UI kit: swift-rust ui (our registry, default) · shadcn/ui · none.
+  // Only meaningful with Tailwind; without it, skip straight to "none".
+  let ui: UiKit;
+  if (typeof flags.ui === "string") {
+    ui = flags.ui as UiKit;
+  } else if (!tailwind) {
+    ui = "none";
+  } else if (yesMode) {
+    ui = "swift-rust-ui";
+  } else {
+    const uiAnswer = (await p.select({
+      message: "Which component library would you like to set up?",
+      options: [
+        {
+          value: "swift-rust-ui",
+          label: "swift-rust ui",
+          hint: "our shadcn-style registry — variant × size × design (3d, glass, neo…), Tailwind v4",
+        },
+        { value: "shadcn", label: "shadcn/ui", hint: "the canonical shadcn registry" },
+        { value: "none", label: "None", hint: "no components — add them later" },
+      ],
+      initialValue: "swift-rust-ui" as UiKit,
+    })) as unknown as UiKit | symbol;
+    if (p.isCancel(uiAnswer)) {
+      p.cancel("Aborted.");
+      return null;
+    }
+    ui = uiAnswer as UiKit;
   }
-
-  const useShadcn: boolean = useShadcnAnswer === true;
 
   const srcDirAnswer: boolean | symbol =
     typeof flags.srcDir === "boolean"
@@ -458,10 +477,12 @@ async function askQuestions(
     language,
     renderer,
     linter,
-    tailwind,
+    // A UI kit (chosen via flag) requires Tailwind, so it implies --tailwind even
+    // if Tailwind wasn't requested. The prompt path already gates ui on tailwind.
+    tailwind: tailwind || ui !== "none",
     srcDir,
     importAlias,
-    useShadcn,
+    ui,
     install,
   };
 }
@@ -499,8 +520,9 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
     tailwind,
     srcDir,
     importAlias,
-    useShadcn,
+    ui,
   } = answers;
+  const useUi = ui !== "none";
   // When scaffolding into the current directory ("."), name the package after
   // the directory itself (like create-next-app), since "." is not a valid name.
   const projectName = rawName === "." ? basename(resolve(target)) : rawName;
@@ -514,7 +536,7 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
   await mkdir(componentsDir, { recursive: true });
   await mkdir(libDir, { recursive: true });
   await mkdir(join(target, "public"), { recursive: true });
-  if (useShadcn) {
+  if (useUi) {
     await mkdir(uiDir, { recursive: true });
   }
 
@@ -540,14 +562,12 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
       "swift-rust": swiftRustVersion,
       react: "^19.0.0",
       "react-dom": "^19.0.0",
-      ...(useShadcn
-        ? {
-            clsx: "^2.1.1",
-            "tailwind-merge": "^2.5.5",
-            "class-variance-authority": "^0.7.1",
-            "lucide-react": "^0.460.0",
-            "tw-animate-css": "^1.0.0",
-          }
+      // Both kits need the cn() helper (clsx + tailwind-merge). shadcn also
+      // pulls in class-variance-authority + tw-animate-css; swift-rust ui needs
+      // neither (its components use plain class maps and v4-native animations).
+      ...(useUi ? { clsx: "^2.1.1", "tailwind-merge": "^3.6.0", "lucide-react": "^0.460.0" } : {}),
+      ...(ui === "shadcn"
+        ? { "class-variance-authority": "^0.7.1", "tw-animate-css": "^1.0.0" }
         : {}),
     },
     devDependencies: {
@@ -558,7 +578,8 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
       ...(tailwind
         ? { tailwindcss: "^4.0.0", "@tailwindcss/postcss": "^4.0.0", postcss: "^8.4.0" }
         : {}),
-      ...(useShadcn ? { shadcn: "^4.0.0" } : {}),
+      ...(ui === "shadcn" ? { shadcn: "^4.0.0" } : {}),
+      ...(ui === "swift-rust-ui" ? { "@swift-rust/ui": "latest" } : {}),
     },
   };
   await writeFile(join(target, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
@@ -643,10 +664,13 @@ export default config;
 `;
     await writeFile(join(target, "postcss.config.mjs"), postcss);
 
-    const shadcnVars = useShadcn
+    const uiTokens = useUi
       ? `
 
-/* shadcn design tokens (https://ui.shadcn.com/docs/theming) */
+/* UI design tokens — shared by swift-rust ui and shadcn/ui.
+   Components reference these via the @theme inline mapping below
+   (bg-primary, text-muted-foreground, border-border, …).
+   Retheme by editing the --ui-* values (light + .dark). */
 :root {
   --ui-bg: #ffffff;
   --ui-fg: #09090b;
@@ -742,12 +766,12 @@ export default config;
       : "";
 
     const css = `@import "tailwindcss";
-${useShadcn ? '@import "tw-animate-css";' : ""}
+${ui === "shadcn" ? '@import "tw-animate-css";' : ""}
 
 @theme {
   --color-bg: #ffffff;
   --color-fg: #09090b;
-  --color-accent: ${useShadcn ? "#f97316" : "#0070f3"};
+  --color-accent: ${useUi ? "#f97316" : "#0070f3"};
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
@@ -766,7 +790,7 @@ body {
   color: var(--color-fg);
   font-family: var(--font-sans);
 }
-${shadcnVars}`;
+${uiTokens}`;
     await writeFile(
       join(appDir, `globals.${fileExt(language)}`),
       language === "ts" ? `import "./globals.css";\n` : `import "./globals.css";\n`,
@@ -805,9 +829,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 `;
   await writeFile(join(appDir, `layout.${componentExt(language)}`), layoutImports);
 
-  const homePage = tailwind
-    ? useShadcn
-      ? `import { buttonVariants } from "@/components/ui/button";
+  const shadcnHome = `import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -840,8 +862,61 @@ export default function Home() {
     </main>
   );
 }
-`
-      : `export default function Home() {
+`;
+
+  // The swift-rust ui home page shows off the third dimension — the same Button
+  // rendered across several "design" styles — so the headline feature is
+  // visible the moment the project boots.
+  const swiftRustUiHome = `import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+export default function Home() {
+  return (
+    <main className="min-h-screen flex items-center justify-center px-6 py-12">
+      <Card className="max-w-xl w-full" design="glass">
+        <CardHeader>
+          <CardTitle className="text-3xl sm:text-5xl">${projectName}</CardTitle>
+          <CardDescription>
+            Built with swift-rust ui. Edit <code>${srcDir ? "src/app/" : "app/"}page.${componentExt(language)}</code> to get started.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-6">
+          <Alert variant="info">
+            <AlertTitle>One button, every style</AlertTitle>
+            <AlertDescription>
+              Mix <code>variant</code>, <code>size</code> and <code>design</code> freely.
+            </AlertDescription>
+          </Alert>
+          <div className="flex flex-wrap gap-3">
+            <Button design="flat">Flat</Button>
+            <Button design="3d">3D</Button>
+            <Button design="glass" variant="outline">Glass</Button>
+            <Button design="neo">Neo</Button>
+            <Button design="brutal" variant="secondary">Brutal</Button>
+            <Button design="gradient">Gradient</Button>
+          </div>
+          <div className="flex gap-2">
+            <Button asChild>
+              <a href="https://swift-rust.dev/docs">Read the docs →</a>
+            </Button>
+            <Button asChild variant="outline">
+              <a href="https://github.com/swift-rust/swift-rust">GitHub</a>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </main>
+  );
+}
+`;
+
+  const homePage = tailwind
+    ? ui === "shadcn"
+      ? shadcnHome
+      : ui === "swift-rust-ui"
+        ? swiftRustUiHome
+        : `export default function Home() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
       <div className="max-w-2xl text-center">
@@ -1002,8 +1077,10 @@ For custom domains and ISR / serverless functions, see the [deploy guide](https:
     "AAABAAEAICAAAAEAIAAZBQAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAgAAAAIAgGAAAAc3p69AAAAAZiS0dEAP8A/wD/oL2nkwAABM5JREFUWIXFl19sU2UYxn/f6cbsoTsFoqywPw5BMzodpGNxhUIINMREgssEg5ELI7tUs/HnYiExRI1wwRKWXRBiMGEmphqykKl3JYOOBLMy3U7nthDI6LqRzii6ullit75eYJtNtnWWoU/yJc15z/s8z/f2y/ueTzEDNpttdTKZfB94FXgeWM7SYBK4BXyraVrLxMTET6mASv2wWq0HgAtKqfwlEp0TIvI78E48Hr+UNmC1Wg8opb6caegJQ0TkjXg8fknZbLbV09PTt7PZeU1NDQCXL1/OxkRM07QNStf1j4ET2TCMjIwAUFRUlE06wEc5wN5ss3Nzc7NNTWGvBqx/XJZsISIbNMA2V1DTNPr6+vD7/RiGMSdBR0cHHR0dc8YMw8Dv99PX14emaXO+o5TKnzsCJJNJotEobreb9vb2WSaUUpSXl9Pa2srFixdxOp2PiLe3t+N2u4lGoySTyflkQNd1mW85HA7p6uoSEZGWlhax2+1y7NgxiUQiMhPJ+2EJh8Ny5MgRsdvt0tLSIiIiXV1d4nA45uXXdV2Urusyv72Hu2lsbOTKlSscP34cj8dDMpmku7ubUCjEyulfeHlljDWvf4hSis7OTs6cOcPu3bs5deoUsVhsIfqFK5BadrtdOjs7RUSkp6dHqqurRdd1KXo6X26frJL3dj0rbrdbTNMUEZFAICCGYWTk1XVd5j0DM1FXV4fH46G3t5c9e/Zgmia5FsXnh9bz7Ko8+qNxent78Xq9hEIhtm/fzuHDhxdDTca/QCnFwMAAhYWFbNu2DdM0AWh6rZg69zMAlJzsZfzBNACbN2/m+vXrRCIRnE4nIgvSk7ECGzdupLi4mJs3b6bF33StSouP/PZnWhygp6eH7u5uSkpKKCsry0Q/20BNTQ2RSITR0VFGR0fx+XyUlpYCpMWrSpbTXFuSzilasYzx0y7GT7u4deIl1hq56XdLS0vx+Xxpvkgkkp4fi65AqoSaplGQn0vroefIy3k0LTEtvP3FEPdiiXTjyVR+WMQZcDqdBINBgsEgO3funBXrb3yRQvsyABouD/PZdz8DEAgEqKyspLKyksHBwQUNZKzAwMAAw8PDbNmyhU2bNqWfG09ZWGs8FPf9cD8t7nK5cLlchMPhjOKLMiAiNDc3o5Ti/Pnz2GwPR0e5w4pSYN77g/q2YQBsNhvnzp1DKcXZs2czigOLb0SBQEBEREzTlK1bt8q7u0rk3ifV8sLaFaLrung8HgmFQiIicvXq1UU3on/Vio8ePcqOHTsQEcbaPuD7X62MWdZQUVGBy+VCKcW1a9doamrC6/U+fiv+5zAyDEMaGhokHA5Lcmxw1kC6e/eu1NfXi2EYSzeM/H4/brebYDDIvn37Zu2mrKyMdevWATA0NDTrwKXGcVVVFTdu3MDr9c5bgHkNaJqGaZpEo1Fqa2vnLKXP5wPg4MGDj8QMw6CtrQ2Hw0FFRcW83wTKarXGsr0LjI2NAVBQUJBNOkBMU0rdyTZ7CXBHA77JNjuRSJBIJB7HwNf/58Vk3GKxbEhdzfYrpb7iv72a7Y/H420WgKmpqf6cnJwflVKvAHlPWHxcRN6Kx+NtAJbU06mpqf68vLwLIvIAyP97LVsi0QmgD/jUYrEcmpyc7E4F/gIrAoFO2P2bCQAAAABJRU5ErkJggg==";
   await writeFile(join(appDir, "favicon.ico"), Buffer.from(faviconIco, "base64"));
 
-  if (useShadcn) {
+  if (ui === "shadcn") {
     await scaffoldShadcn({ target, uiDir, libDir, componentExt: componentExt(language), srcDir });
+  } else if (ui === "swift-rust-ui") {
+    await scaffoldSwiftRustUi({ uiDir, libDir, componentExt: componentExt(language) });
   }
 
   await writeVscodeConfig(target);
@@ -1244,6 +1321,62 @@ export { badgeVariants };
   await writeFile(join(target, "components.json"), `${componentsJson}\n`);
 }
 
+// The default component set for swift-rust ui — the components the user asked us
+// to ship first, all carrying the variant × size × design dimensions.
+const SWIFT_RUST_UI_DEFAULTS = [
+  "accordion",
+  "alert",
+  "avatar",
+  "button",
+  "card",
+  "input",
+  "label",
+] as const;
+
+/** Locate the @swift-rust/ui registry: the synced copy bundled into this
+ *  package (templates/ui), or the monorepo source when running from a checkout. */
+function swiftRustUiRegistry(): { componentsDir: string; utilsFile: string } | null {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const candidates: Array<{ componentsDir: string; utilsFile: string }> = [
+    // Published: scripts/sync-template.mjs flattens the registry into templates/ui.
+    { componentsDir: resolve(here, "..", "templates", "ui"), utilsFile: resolve(here, "..", "templates", "ui", "utils.ts") },
+    { componentsDir: resolve(here, "templates", "ui"), utilsFile: resolve(here, "templates", "ui", "utils.ts") },
+    // Monorepo source: packages/create-swift-rust/dist → packages/ui/registry.
+    {
+      componentsDir: resolve(here, "..", "..", "ui", "registry", "components"),
+      utilsFile: resolve(here, "..", "..", "ui", "registry", "lib", "utils.ts"),
+    },
+  ];
+  for (const c of candidates) {
+    if (existsSync(c.componentsDir) && existsSync(c.utilsFile)) return c;
+  }
+  return null;
+}
+
+// Offline/pre-install fallback: copy the bundled registry components straight
+// in, so the project isn't empty if `@swift-rust/ui add` (the real, CLI-driven
+// path, run after install) can't be fetched. Mirrors how the shadcn path writes
+// bundled components before trying `shadcn add`.
+async function scaffoldSwiftRustUi(options: {
+  uiDir: string;
+  libDir: string;
+  componentExt: string;
+}): Promise<void> {
+  const { uiDir, libDir, componentExt } = options;
+  const registry = swiftRustUiRegistry();
+  if (!registry) {
+    throw new Error(
+      "swift-rust ui registry not found. Run `node scripts/sync-template.mjs` before packaging.",
+    );
+  }
+  // The cn() helper the components import from "@/lib/utils".
+  await writeFile(join(libDir, "utils.ts"), await readFile(registry.utilsFile, "utf8"));
+  for (const name of SWIFT_RUST_UI_DEFAULTS) {
+    const src = await readFile(join(registry.componentsDir, `${name}.tsx`), "utf8");
+    await writeFile(join(uiDir, `${name}.${componentExt}`), src);
+  }
+}
+
 async function runInstall(target: string): Promise<void> {
   const { spawn } = await import("node:child_process");
   return new Promise((resolve, reject) => {
@@ -1276,6 +1409,19 @@ async function runShadcnAdd(target: string, components: readonly string[]): Prom
     proc.on("exit", (code) => {
       resolve(code === 0);
     });
+    proc.on("error", () => resolve(false));
+  });
+}
+
+// Drive the @swift-rust/ui CLI (the same one users run as `bunx @swift-rust/ui
+// add <component>`) to install the starter components. The CLI auto-detects the
+// src/ layout, runs init (cn helper + deps), and writes into components/ui.
+async function runSwiftRustUiAdd(target: string, components: readonly string[]): Promise<boolean> {
+  const { spawn } = await import("node:child_process");
+  return new Promise((resolve) => {
+    const args = ["@swift-rust/ui@latest", "add", ...components, "--yes", "--overwrite"];
+    const proc = spawn("bunx", args, { cwd: target, stdio: "pipe" });
+    proc.on("exit", (code) => resolve(code === 0));
     proc.on("error", () => resolve(false));
   });
 }
@@ -1348,7 +1494,7 @@ async function main(): Promise<void> {
           `${pc.cyan("•")} Renderer:    ${answers.renderer}`,
           `${pc.cyan("•")} Linter:      ${linter === "biome" ? "Biome" : "ESLint"}`,
           `${pc.cyan("•")} Tailwind:    ${tailwind ? "Yes" : "No"}`,
-          `${pc.cyan("•")} shadcn UI:   ${answers.useShadcn ? "Yes" : "No"}`,
+          `${pc.cyan("•")} Components:  ${answers.ui === "swift-rust-ui" ? "swift-rust ui" : answers.ui === "shadcn" ? "shadcn/ui" : "None"}`,
           `${pc.cyan("•")} src/ dir:    ${srcDir ? "Yes (src/app/)" : "No"}`,
           `${pc.cyan("•")} Import as:   ${answers.importAlias}`,
           `${pc.cyan("•")} Install:     ${install ? "Yes" : "No"}`,
@@ -1391,7 +1537,7 @@ async function main(): Promise<void> {
       }
     }
 
-    if (answers.useShadcn && installSucceeded) {
+    if (answers.ui === "shadcn" && installSucceeded) {
       console.log("Fetching canonical shadcn components…");
       const ok = await runShadcnAdd(target, SHADCN_DEFAULT_COMPONENTS);
       if (ok) {
@@ -1404,6 +1550,23 @@ async function main(): Promise<void> {
           `${pc.yellow("!")} Could not fetch shadcn components from the registry. Using bundled shadcn-style components as a fallback. You can retry later with: ${pc.cyan(`bunx --bun shadcn@latest add ${SHADCN_DEFAULT_COMPONENTS.join(" ")} --cwd ${cwdArg}`)}`,
         );
       }
+    } else if (answers.ui === "swift-rust-ui" && installSucceeded) {
+      console.log("Adding swift-rust ui components via the CLI…");
+      const ok = await runSwiftRustUiAdd(target, SWIFT_RUST_UI_DEFAULTS);
+      if (ok) {
+        console.log(
+          `✓ Added ${SWIFT_RUST_UI_DEFAULTS.length} swift-rust ui components via ${pc.cyan("@swift-rust/ui")}`,
+        );
+      } else {
+        console.log(
+          `${pc.yellow("!")} Could not run the ${pc.cyan("@swift-rust/ui")} CLI. Using the bundled components as a fallback. Add more later with: ${pc.cyan("bunx @swift-rust/ui add <component>")}`,
+        );
+      }
+    } else if (answers.ui === "swift-rust-ui") {
+      // install was skipped → the bundled components are already in place.
+      console.log(
+        `✓ Added ${SWIFT_RUST_UI_DEFAULTS.length} swift-rust ui components (${SWIFT_RUST_UI_DEFAULTS.join(", ")}). Add more with ${pc.cyan("bunx @swift-rust/ui add <component>")}.`,
+      );
     }
 
     const next = projectName === "." ? "bun run dev" : `cd ${projectName}\nbun run dev`;
