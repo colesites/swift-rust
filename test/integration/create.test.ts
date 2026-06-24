@@ -1,8 +1,8 @@
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 const ROOT = join(import.meta.dir, "..", "..");
 const GEN_PKG = join(ROOT, "packages", "create-swift-rust");
@@ -14,7 +14,8 @@ function scaffold(args: string[]): string {
   const dir = mkdtempSync(join(tmpdir(), "sr-create-"));
   tmps.push(dir);
   const r = spawnSync("node", [GEN, "app", ...args, "--yes"], { cwd: dir, encoding: "utf8" });
-  if (r.status !== 0) throw new Error(`scaffold failed (${args.join(" ")}):\n${r.stdout}\n${r.stderr}`);
+  if (r.status !== 0)
+    throw new Error(`scaffold failed (${args.join(" ")}):\n${r.stdout}\n${r.stderr}`);
   return join(dir, "app");
 }
 
@@ -113,7 +114,10 @@ describe("generated layout font imports are real exports", () => {
     const layout = readFileSync(join(a, "src", "app", "layout.tsx"), "utf8");
     const match = layout.match(/import\s*\{([^}]+)\}\s*from\s*["']swift-rust\/font\/google["']/);
     expect(match).not.toBeNull();
-    const names = (match?.[1] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+    const names = (match?.[1] ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     expect(names.length).toBeGreaterThan(0);
     const mod = (await import(FONT_GOOGLE)) as Record<string, unknown>;
     for (const name of names) {

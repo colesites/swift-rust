@@ -2,7 +2,13 @@ use clap::{Parser, Subcommand};
 use swift_rust_errors::Result;
 
 #[derive(Parser, Debug)]
-#[command(name = "swift-rust", version, about, long_about = None)]
+#[command(
+    name = "swift-rust",
+    version,
+    about,
+    long_about = None,
+    after_help = "UI components: add shadcn-style components with the separate `swift-rust-ui` CLI from @swift-rust/ui (e.g. `bunx @swift-rust/ui add button`)."
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,

@@ -1,5 +1,5 @@
-import { createElement } from "react";
 import type { CSSProperties, ImgHTMLAttributes } from "react";
+import { createElement } from "react";
 
 export type ImageFormat = "image/webp" | "image/avif" | "image/jpeg" | "image/png";
 
@@ -37,7 +37,11 @@ const DEFAULT_LOADER = ({
   src,
   width,
   quality,
-}: { src: string; width: number; quality?: number }): string => {
+}: {
+  src: string;
+  width: number;
+  quality?: number;
+}): string => {
   const params = new URLSearchParams();
   params.set("url", src);
   params.set("w", width.toString());

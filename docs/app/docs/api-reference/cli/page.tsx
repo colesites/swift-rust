@@ -6,8 +6,9 @@ export default function CliRefPage() {
     <DocArticle>
       <h1>CLI</h1>
       <p>
-        The Swift Rust CLI is a single <code>swift-rust</code> binary that does everything: dev
-        server, build, scaffold, and add components.
+        The framework ships the <code>swift-rust</code> binary for the dev server, builds, and
+        scaffolding. UI components are added with a separate <code>swift-rust-ui</code> binary from
+        the <code>@swift-rust/ui</code> package, so the two never collide when installed together.
       </p>
 
       <h2>
@@ -53,7 +54,7 @@ bunx swift-rust build --target aarch64-unknown-linux-musl`}</code>
       </div>
 
       <h2>
-        <code>swift-rust add</code>
+        <code>swift-rust-ui add</code>
       </h2>
       <p>Add shadcn-style UI components to your project.</p>
       <div className="code-block">
@@ -61,14 +62,14 @@ bunx swift-rust build --target aarch64-unknown-linux-musl`}</code>
           <span>terminal</span>
         </div>
         <pre>
-          <code>{`bunx swift-rust add button card input
-bunx swift-rust add --all
-bunx swift-rust add dialog --dir src/components/ui --overwrite`}</code>
+          <code>{`bunx @swift-rust/ui add button card input
+bunx @swift-rust/ui add --all
+bunx @swift-rust/ui add dialog --dir src/components/ui --overwrite`}</code>
         </pre>
       </div>
 
       <h2>
-        <code>swift-rust init</code>
+        <code>swift-rust-ui init</code>
       </h2>
       <p>Initialize the UI registry in an existing project.</p>
       <div className="code-block">
@@ -76,13 +77,13 @@ bunx swift-rust add dialog --dir src/components/ui --overwrite`}</code>
           <span>terminal</span>
         </div>
         <pre>
-          <code>{`bunx swift-rust init
-bunx swift-rust init --dir src/lib`}</code>
+          <code>{`bunx @swift-rust/ui init
+bunx @swift-rust/ui init --dir src/lib`}</code>
         </pre>
       </div>
 
       <h2>
-        <code>swift-rust list</code>
+        <code>swift-rust-ui list</code>
       </h2>
       <p>List all 35 available UI components.</p>
     </DocArticle>

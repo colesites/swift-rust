@@ -948,17 +948,42 @@ async function scanFontsFromLayouts() {
 }
 
 function buildGoogleFontsLinkTag() {
-  // Layout-scanned families + families any factory registered during this
-  // render (globalThis.__SR_GOOGLE_FONTS__), so page-only fonts get a <link>.
   const registered = globalThis.__SR_GOOGLE_FONTS__ instanceof Set ? globalThis.__SR_GOOGLE_FONTS__ : null;
   const all = registered ? new Set([...GOOGLE_FONT_FAMILIES, ...registered]) : GOOGLE_FONT_FAMILIES;
   if (all.size === 0) return "";
   const families = Array.from(all)
-    .map((f) => `family=${encodeURIComponent(f).replace(/%20/g, "+")}:wght@300..900`)
+    .map((f) => `family=${encodeGoogleFontFamily(f)}:wght@300..900`)
     .join("&");
   return `<link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${families}&display=swap" />`;
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${families}&display=swap" />
+<style data-swift-rust-google-fonts>${escapeForStyleTag(googleFontClassRules(all))}</style>`;
+}
+
+function encodeGoogleFontFamily(family) {
+  return encodeURIComponent(family).replace(/%20/g, "+");
+}
+
+function normalizeGoogleFontClass(family) {
+  return `__swift_rust_font_${family.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")}`;
+}
+
+function googleFontVariable(family) {
+  return `--font-${family.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
+}
+
+function googleFontFamilyValue(family) {
+  return `'${String(family).replace(/'/g, "\\'")}', system-ui, sans-serif`;
+}
+
+function googleFontClassRules(families) {
+  return Array.from(families)
+    .map((family) => {
+      const cls = normalizeGoogleFontClass(family);
+      const value = googleFontFamilyValue(family);
+      return `.${cls}{font-family:${value}}.${cls}_variable{${googleFontVariable(family)}:${value}}`;
+    })
+    .join("\n");
 }
 
 function mergeMetadata(...metas) {

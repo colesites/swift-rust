@@ -1,1 +1,3 @@
-export default async function loader(){ return { user: "ada" }; }
+export default async function loader() {
+  return { user: "ada" };
+}

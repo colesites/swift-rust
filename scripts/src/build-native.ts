@@ -1,6 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync } from "node:fs";
 
 const TARGETS = [
   { triple: "x86_64-unknown-linux-gnu", os: "linux", arch: "x64" },

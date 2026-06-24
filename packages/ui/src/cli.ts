@@ -13,81 +13,81 @@ const REGISTRY_DIR = join(PACKAGE_ROOT, "registry");
 type ComponentMap = Record<string, { files: string[]; dependencies?: string[] }>;
 
 const COMPONENTS: ComponentMap = {
-  "accordion": { files: ["accordion.tsx"] },
-  "alert": { files: ["alert.tsx"] },
+  accordion: { files: ["accordion.tsx"] },
+  alert: { files: ["alert.tsx"] },
   "alert-dialog": { files: ["alert-dialog.tsx"] },
   "aspect-ratio": { files: ["aspect-ratio.tsx"] },
-  "avatar": { files: ["avatar.tsx"] },
-  "badge": { files: ["badge.tsx"] },
-  "breadcrumb": { files: ["breadcrumb.tsx"] },
-  "button": { files: ["button.tsx"] },
+  avatar: { files: ["avatar.tsx"] },
+  badge: { files: ["badge.tsx"] },
+  breadcrumb: { files: ["breadcrumb.tsx"] },
+  button: { files: ["button.tsx"] },
   "button-group": { files: ["button-group.tsx"] },
-  "calendar": { files: ["calendar.tsx"] },
-  "callout": { files: ["callout.tsx"] },
-  "card": { files: ["card.tsx"] },
-  "carousel": { files: ["carousel.tsx"] },
-  "chart": { files: ["chart.tsx"] },
-  "checkbox": { files: ["checkbox.tsx"] },
-  "code": { files: ["code.tsx"] },
+  calendar: { files: ["calendar.tsx"] },
+  callout: { files: ["callout.tsx"] },
+  card: { files: ["card.tsx"] },
+  carousel: { files: ["carousel.tsx"] },
+  chart: { files: ["chart.tsx"] },
+  checkbox: { files: ["checkbox.tsx"] },
+  code: { files: ["code.tsx"] },
   "code-block": { files: ["code-block.tsx"] },
-  "collapsible": { files: ["collapsible.tsx"] },
-  "combobox": { files: ["combobox.tsx"] },
-  "command": { files: ["command.tsx"] },
+  collapsible: { files: ["collapsible.tsx"] },
+  combobox: { files: ["combobox.tsx"] },
+  command: { files: ["command.tsx"] },
   "context-menu": { files: ["context-menu.tsx"] },
   "data-table": { files: ["data-table.tsx"] },
   "date-picker": { files: ["date-picker.tsx"] },
-  "dialog": { files: ["dialog.tsx"] },
-  "direction": { files: ["direction.tsx"] },
-  "drawer": { files: ["drawer.tsx"] },
+  dialog: { files: ["dialog.tsx"] },
+  direction: { files: ["direction.tsx"] },
+  drawer: { files: ["drawer.tsx"] },
   "dropdown-menu": { files: ["dropdown-menu.tsx"] },
-  "empty": { files: ["empty.tsx"] },
-  "field": { files: ["field.tsx"] },
+  empty: { files: ["empty.tsx"] },
+  field: { files: ["field.tsx"] },
   "file-upload": { files: ["file-upload.tsx"] },
-  "form": { files: ["form.tsx"] },
+  form: { files: ["form.tsx"] },
   "hover-card": { files: ["hover-card.tsx"] },
-  "input": { files: ["input.tsx"] },
+  input: { files: ["input.tsx"] },
   "input-group": { files: ["input-group.tsx"] },
   "input-otp": { files: ["input-otp.tsx"] },
-  "item": { files: ["item.tsx"] },
-  "kbd": { files: ["kbd.tsx"] },
-  "label": { files: ["label.tsx"] },
-  "menubar": { files: ["menubar.tsx"] },
+  item: { files: ["item.tsx"] },
+  kbd: { files: ["kbd.tsx"] },
+  label: { files: ["label.tsx"] },
+  menubar: { files: ["menubar.tsx"] },
   "native-select": { files: ["native-select.tsx"] },
   "navigation-menu": { files: ["navigation-menu.tsx"] },
-  "pagination": { files: ["pagination.tsx"] },
-  "popover": { files: ["popover.tsx"] },
-  "progress": { files: ["progress.tsx"] },
+  pagination: { files: ["pagination.tsx"] },
+  popover: { files: ["popover.tsx"] },
+  progress: { files: ["progress.tsx"] },
   "radio-group": { files: ["radio-group.tsx"] },
-  "resizable": { files: ["resizable.tsx"] },
+  resizable: { files: ["resizable.tsx"] },
   "scroll-area": { files: ["scroll-area.tsx"] },
-  "select": { files: ["select.tsx"] },
-  "separator": { files: ["separator.tsx"] },
-  "sheet": { files: ["sheet.tsx"] },
-  "sidebar": { files: ["sidebar.tsx"] },
-  "skeleton": { files: ["skeleton.tsx"] },
-  "slider": { files: ["slider.tsx"] },
-  "sonner": { files: ["sonner.tsx"] },
-  "spinner": { files: ["spinner.tsx"] },
-  "stepper": { files: ["stepper.tsx"] },
-  "switch": { files: ["switch.tsx"] },
-  "table": { files: ["table.tsx"] },
-  "tabs": { files: ["tabs.tsx"] },
-  "textarea": { files: ["textarea.tsx"] },
-  "toast": { files: ["toast.tsx"] },
-  "toggle": { files: ["toggle.tsx"] },
+  select: { files: ["select.tsx"] },
+  separator: { files: ["separator.tsx"] },
+  sheet: { files: ["sheet.tsx"] },
+  sidebar: { files: ["sidebar.tsx"] },
+  skeleton: { files: ["skeleton.tsx"] },
+  slider: { files: ["slider.tsx"] },
+  sonner: { files: ["sonner.tsx"] },
+  spinner: { files: ["spinner.tsx"] },
+  stepper: { files: ["stepper.tsx"] },
+  switch: { files: ["switch.tsx"] },
+  table: { files: ["table.tsx"] },
+  tabs: { files: ["tabs.tsx"] },
+  textarea: { files: ["textarea.tsx"] },
+  toast: { files: ["toast.tsx"] },
+  toggle: { files: ["toggle.tsx"] },
   "toggle-group": { files: ["toggle-group.tsx"] },
-  "tooltip": { files: ["tooltip.tsx"] },
+  tooltip: { files: ["tooltip.tsx"] },
 };
 
 const UTILS_FILE = join(REGISTRY_DIR, "lib", "utils.ts");
 
 const HELP = `
-${pc.bold("swift-rust")} ${pc.dim("— add UI components to your project")}
+${pc.bold("swift-rust-ui")} ${pc.dim("— add UI components to your project")}
 
 ${pc.bold("Usage")}
-  ${pc.cyan("swift-rust add [components...] [options]")}
-  ${pc.cyan("swift-rust init [options]")}
-  ${pc.cyan("swift-rust list")}
+  ${pc.cyan("swift-rust-ui add [components...] [options]")}
+  ${pc.cyan("swift-rust-ui init [options]")}
+  ${pc.cyan("swift-rust-ui list")}
 
 ${pc.bold("Commands")}
   ${pc.yellow("add")}       Add one or more components to your project
@@ -106,10 +106,10 @@ ${pc.bold("Options for init")}
   ${pc.yellow("--yes, -y")}               Skip confirmation prompts
 
 ${pc.bold("Examples")}
-  ${pc.cyan("swift-rust init")}
-  ${pc.cyan("swift-rust add button card input")}
-  ${pc.cyan("swift-rust add --all")}
-  ${pc.cyan("swift-rust add dialog --dir src/components/ui")}
+  ${pc.cyan("swift-rust-ui init")}
+  ${pc.cyan("swift-rust-ui add button card input")}
+  ${pc.cyan("swift-rust-ui add --all")}
+  ${pc.cyan("swift-rust-ui add dialog --dir src/components/ui")}
 `;
 
 async function pathExists(path: string): Promise<boolean> {
@@ -196,7 +196,8 @@ async function dirExists(path: string): Promise<boolean> {
 // readFile, which throws on a directory — so this needs a stat-based check.)
 async function detectSrcDir(projectRoot: string): Promise<boolean> {
   return (
-    (await dirExists(join(projectRoot, "src", "app"))) || (await dirExists(join(projectRoot, "src")))
+    (await dirExists(join(projectRoot, "src", "app"))) ||
+    (await dirExists(join(projectRoot, "src")))
   );
 }
 const defaultLibDir = (srcDir: boolean): string => (srcDir ? "src/lib" : "lib");
@@ -356,7 +357,7 @@ async function runInit(
   p.log.success(result);
   p.log.info(pc.dim("Dependencies added: clsx, tailwind-merge"));
   p.outro(
-    `${pc.green("Done!")} Now run ${pc.cyan("swift-rust add <component>")} to add components.`,
+    `${pc.green("Done!")} Now run ${pc.cyan("swift-rust-ui add <component>")} to add components.`,
   );
 }
 
@@ -402,7 +403,7 @@ async function runAddInternal(
   const invalid = namesToAdd.filter((n) => !COMPONENTS[n]);
   if (invalid.length > 0) {
     p.log.error(`Unknown component${invalid.length > 1 ? "s" : ""}: ${invalid.join(", ")}`);
-    p.log.info(`Run ${pc.cyan("swift-rust list")} to see all available components.`);
+    p.log.info(`Run ${pc.cyan("swift-rust-ui list")} to see all available components.`);
     process.exit(1);
   }
 
@@ -420,7 +421,7 @@ async function runAddInternal(
   const hasUtils = await pathExists(join(projectRoot, libDir, "utils.ts"));
   if (!hasUtils && !yes) {
     const runInitPrompt = await p.confirm({
-      message: `${pc.yellow(`${libDir}/utils.ts`)} is missing. Run ${pc.cyan("swift-rust init")} first?`,
+      message: `${pc.yellow(`${libDir}/utils.ts`)} is missing. Run ${pc.cyan("swift-rust-ui init")} first?`,
       initialValue: true,
     });
     if (!p.isCancel(runInitPrompt) && runInitPrompt) {

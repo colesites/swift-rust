@@ -5,7 +5,7 @@
   "description": "Integration and end-to-end tests for the swift-rust framework.",
   "type": "module",
   "scripts": {
-    "lint": "biome check /Users/admin/Documents/programming/projects/k-bench/swift-rust/test",
+    "lint": "biome check .",
     "typecheck": "tsc --noEmit",
     "test": "bun test integration",
     "test:integration": "bun test integration",

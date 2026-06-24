@@ -64,7 +64,7 @@ export default function DocsIndexPage() {
         </li>
         <li>
           <strong>35 shadcn-style components</strong> added with one CLI command:{" "}
-          <code>swift-rust add button card input</code>.
+          <code>swift-rust-ui add button card input</code>.
         </li>
         <li>
           <strong>Single binary deploy</strong>: <code>swift-rust build</code> produces one

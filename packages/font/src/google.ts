@@ -1,29 +1,82 @@
 import type { FontOptions, LoadedFont } from "./index";
 import { buildCssVariable, normalizeClassName } from "./index";
 
-const _GOOGLE_FONTS_BASE = "https://fonts.googleapis.com/css2";
+const GOOGLE_FONTS_BASE = "https://fonts.googleapis.com/css2";
+const DEFAULT_FALLBACK = ["system-ui", "sans-serif"];
 
 type FontFactory = (options?: FontOptions) => LoadedFont;
 void (null as unknown as FontFactory);
 
+type BrowserElement = {
+  href?: string;
+  rel?: string;
+  textContent?: string;
+  setAttribute(name: string, value: string): void;
+};
+
+type BrowserDocument = {
+  head?: { appendChild(node: BrowserElement): void };
+  createElement(tagName: string): BrowserElement;
+  querySelector(selector: string): BrowserElement | null;
+};
+
+function encodeFamily(family: string): string {
+  return encodeURIComponent(family).replace(/%20/g, "+");
+}
+
+function variableClassName(family: string): string {
+  return `${normalizeClassName(family)}_variable`;
+}
+
+function fontFamilyValue(family: string, fallback = DEFAULT_FALLBACK): string {
+  return `'${family.replace(/'/g, "\\'")}', ${fallback.join(", ")}`;
+}
+
+export function googleFontsUrl(families: Iterable<string>): string {
+  const params = Array.from(new Set(families))
+    .map((family) => `family=${encodeFamily(family)}:wght@300..900`)
+    .join("&");
+  return params ? `${GOOGLE_FONTS_BASE}?${params}&display=swap` : "";
+}
+
+function googleFontCss(family: string, fallback?: string[]): string {
+  const value = fontFamilyValue(family, fallback);
+  return `.${normalizeClassName(family)}{font-family:${value}}.${variableClassName(family)}{${buildCssVariable(family)}:${value}}`;
+}
+
+function ensureBrowserGoogleFont(family: string, fallback?: string[]): void {
+  const doc = (globalThis as unknown as { document?: BrowserDocument }).document;
+  if (!doc?.head) return;
+  const key = normalizeClassName(family);
+  if (!doc.querySelector(`link[data-swift-rust-google-font="${key}"]`)) {
+    const link = doc.createElement("link");
+    link.rel = "stylesheet";
+    link.href = googleFontsUrl([family]);
+    link.setAttribute("data-swift-rust-google-font", key);
+    doc.head.appendChild(link);
+  }
+  if (!doc.querySelector(`style[data-swift-rust-google-font="${key}"]`)) {
+    const style = doc.createElement("style");
+    style.textContent = googleFontCss(family, fallback);
+    style.setAttribute("data-swift-rust-google-font", key);
+    doc.head.appendChild(style);
+  }
+}
+
 function buildGoogleFont(family: string, options: FontOptions): LoadedFont {
-  // Register the family so the framework injects its <link> for ANY page that
-  // uses it (not just layouts). Read by the dev server / build after render.
   try {
     const g = globalThis as unknown as { __SR_GOOGLE_FONTS__?: Set<string> };
-    (g.__SR_GOOGLE_FONTS__ ??= new Set<string>()).add(family);
-  } catch {
-    /* no-op */
-  }
-  const className = options.variable
-    ? `${normalizeClassName(family)} ${buildCssVariable(family)}`
-    : normalizeClassName(family);
+    if (!g.__SR_GOOGLE_FONTS__) g.__SR_GOOGLE_FONTS__ = new Set<string>();
+    g.__SR_GOOGLE_FONTS__.add(family);
+  } catch {}
+  const fallback = options.fallback ?? DEFAULT_FALLBACK;
+  ensureBrowserGoogleFont(family, fallback);
   return {
-    className,
+    className: normalizeClassName(family),
     style: {
-      fontFamily: `'${family}', ${(options.fallback ?? ["system-ui", "sans-serif"]).join(", ")}`,
+      fontFamily: fontFamilyValue(family, fallback),
     },
-    variable: options.variable ? buildCssVariable(family) : undefined,
+    variable: options.variable ? variableClassName(family) : undefined,
   };
 }
 

@@ -33,11 +33,17 @@ export interface LoadedFont {
 }
 
 export function normalizeClassName(family: string): string {
-  return `__swift_rust_font_${family.toLowerCase().replace(/\s+/g, "_")}`;
+  return `__swift_rust_font_${family
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")}`;
 }
 
 export function buildCssVariable(name: string): string {
-  return `--font-${name.toLowerCase().replace(/\s+/g, "-")}`;
+  return `--font-${name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")}`;
 }
 
 export * from "./google.js";

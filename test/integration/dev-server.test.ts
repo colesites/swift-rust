@@ -1,7 +1,7 @@
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { type ChildProcess, spawn } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 const ROOT = join(import.meta.dir, "..", "..");
 const FIX = join(import.meta.dir, "..", "fixtures", "app");
@@ -110,7 +110,8 @@ describe("dev server route pipeline", () => {
     const widget = join(FIX, "src", "components", "widget.tsx");
     const original = readFileSync(widget, "utf8");
     const res = await fetch(`${BASE}/_swift-rust/hmr`);
-    const reader = res.body!.getReader();
+    if (!res.body) throw new Error("HMR response did not include a body");
+    const reader = res.body.getReader();
     const dec = new TextDecoder();
     let buf = "";
     let reloadSeen = false;
@@ -121,15 +122,16 @@ describe("dev server route pipeline", () => {
         const { value, done } = await reader.read();
         if (done) break;
         buf += dec.decode(value, { stream: true });
-        let i: number;
-        while ((i = buf.indexOf("\n\n")) !== -1) {
+        let i = buf.indexOf("\n\n");
+        while (i !== -1) {
           const frame = buf.slice(0, i);
           buf = buf.slice(i + 2);
           const dataLine = frame.split("\n").find((l) => l.startsWith("data:"));
           if (!dataLine) continue;
           const msg = JSON.parse(dataLine.slice(5).trim());
-          const data = msg && msg.event && msg.data ? msg.data : msg;
+          const data = msg?.event && msg.data ? msg.data : msg;
           if (data.type === "reload") reloadSeen = true;
+          i = buf.indexOf("\n\n");
         }
       }
     } finally {
@@ -184,9 +186,9 @@ describe("dev server route pipeline", () => {
     expect(html).toContain("&quot;label&quot;:&quot;hits&quot;");
     // A per-component island script is injected.
     const m = html.match(/\/_swift-rust\/island-comp\.js\?p=([^"]+)/);
-    expect(m).not.toBeNull();
+    if (!m) throw new Error("component island script was not injected");
     // The bundle is self-mounting and contains the real component logic.
-    const bundle = await (await get(`/_swift-rust/island-comp.js?p=${m![1]}`)).text();
+    const bundle = await (await get(`/_swift-rust/island-comp.js?p=${m[1]}`)).text();
     expect(bundle).toContain("hydrateRoot");
     expect(bundle).toContain("useState");
     expect(bundle).toContain("data-sr-island-src");
@@ -299,7 +301,8 @@ describe("dev server route pipeline", () => {
     const widget = join(FIX, "src", "components", "widget.tsx");
     const original = readFileSync(widget, "utf8");
     const res = await fetch(`${BASE}/_swift-rust/hmr`);
-    const reader = res.body!.getReader();
+    if (!res.body) throw new Error("HMR response did not include a body");
+    const reader = res.body.getReader();
     const dec = new TextDecoder();
     const events: string[] = [];
     // Background pump: a single continuous reader (racing fresh read() calls
@@ -311,15 +314,16 @@ describe("dev server route pipeline", () => {
           const { value, done } = await reader.read();
           if (done) break;
           buf += dec.decode(value, { stream: true });
-          let i: number;
-          while ((i = buf.indexOf("\n\n")) !== -1) {
+          let i = buf.indexOf("\n\n");
+          while (i !== -1) {
             const frame = buf.slice(0, i);
             buf = buf.slice(i + 2);
             const dataLine = frame.split("\n").find((l) => l.startsWith("data:"));
             if (!dataLine) continue;
             const msg = JSON.parse(dataLine.slice(5).trim());
-            const data = msg && msg.event && msg.data ? msg.data : msg;
+            const data = msg?.event && msg.data ? msg.data : msg;
             if (data.type) events.push(data.type);
+            i = buf.indexOf("\n\n");
           }
         }
       } catch {}

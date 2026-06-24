@@ -68,10 +68,10 @@ body {
         </div>
         <pre>
           <code>{`# Add a few components
-bunx swift-rust add button card input
+bunx @swift-rust/ui add button card input
 
 # Or add them all at once
-bunx swift-rust add --all`}</code>
+bunx @swift-rust/ui add --all`}</code>
         </pre>
       </div>
 

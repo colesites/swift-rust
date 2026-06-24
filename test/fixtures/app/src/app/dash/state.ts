@@ -1,1 +1,3 @@
-export default function state(){ return { ready: true }; }
+export default function state() {
+  return { ready: true };
+}

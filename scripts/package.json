@@ -5,7 +5,7 @@
   "description": "Internal build and release scripts for the Swift Rust monorepo.",
   "type": "module",
   "scripts": {
-    "lint": "biome check /Users/admin/Documents/programming/projects/k-bench/swift-rust/scripts/src",
+    "lint": "biome check --no-errors-on-unmatched $(pwd)/src",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "clean": "rm -rf dist .turbo"
