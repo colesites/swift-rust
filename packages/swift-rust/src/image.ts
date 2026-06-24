@@ -1,2 +1,2 @@
-export { Image, default } from "@swift-rust/image";
-export type { ImageProps, ImageFormat } from "@swift-rust/image";
+export type { ImageFormat, ImageProps } from "@swift-rust/image";
+export { default, Image } from "@swift-rust/image";

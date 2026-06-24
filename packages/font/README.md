@@ -21,8 +21,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 ### Local
 
 ```tsx
-import localFont from "swift-rust/font/local";
-const myFont = localFont({ src: "./fonts/MyFont.woff2" });
+import { localFont } from "swift-rust/font/local";
+export const myFont = localFont({ src: "./fonts/MyFont.woff2" });
+// then import it by name: import { myFont } from "./fonts";
+```
+
+The package also ships named local faces you can import directly, like Google fonts:
+
+```tsx
+import { Lausanne, VarentGrotesk } from "swift-rust/font/local";
 ```
 
 ## Available Google families

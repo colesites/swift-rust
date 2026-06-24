@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { VideoError, describeMediaError } from "./index";
+import { describeMediaError, VideoError } from "./index";
 
 test("VideoError has SR0154 code by default", () => {
   const err = new VideoError("media", "boom");

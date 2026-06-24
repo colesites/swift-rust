@@ -1,5 +1,5 @@
-import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent, ReactNode } from "react";
+import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type PdfErrorKind = "load" | "render" | "invalid" | "network" | "cancelled";
 
@@ -127,8 +127,10 @@ function clampScale(scale: number, min: number, max: number): number {
 function useIsomorphicLayoutEffect(fn: () => undefined | (() => void), deps: unknown[]): void {
   const isBrowser = typeof window !== "undefined";
   if (isBrowser) {
+    // biome-ignore lint: isBrowser is environment-constant, so exactly one branch runs for the app's lifetime; deps are forwarded from the caller by design.
     useEffect(fn, deps);
   } else {
+    // biome-ignore lint: isBrowser is environment-constant, so exactly one branch runs for the app's lifetime; deps are forwarded from the caller by design.
     useMemo(fn, deps);
   }
 }

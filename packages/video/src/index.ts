@@ -1,14 +1,12 @@
-import { createElement, useCallback, useEffect, useRef, useState } from "react";
 import type {
   CSSProperties,
-  ChangeEvent,
-  FormEvent,
   MouseEvent,
   KeyboardEvent as ReactKeyboardEvent,
   ReactNode,
   SyntheticEvent,
   VideoHTMLAttributes,
 } from "react";
+import { createElement, useCallback, useEffect, useRef, useState } from "react";
 
 export type VideoProvider = "html5" | "youtube" | "vimeo";
 export type VideoErrorCode = "SR0154" | "SR0155" | "SR0156";

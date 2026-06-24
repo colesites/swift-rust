@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { Pdf, PdfError } from "./viewer";
-export { Pdf, PdfError };
+
 export type {
   PdfErrorKind,
   PdfLoadInfo,
@@ -9,6 +9,7 @@ export type {
   PdfScale,
   PdfSource,
 } from "./viewer";
+export { Pdf, PdfError };
 
 export type PageSize = "A4" | "A3" | "Letter" | "Legal" | "Tabloid";
 export type Orientation = "portrait" | "landscape";

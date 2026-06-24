@@ -1,7 +1,7 @@
+import { afterAll, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, expect, test } from "bun:test";
 import { add } from "./cli";
 
 const tmps: string[] = [];

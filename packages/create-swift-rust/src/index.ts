@@ -1343,8 +1343,14 @@ function swiftRustUiRegistry(): { componentsDir: string; utilsFile: string } | n
   const here = dirname(fileURLToPath(import.meta.url));
   const candidates: Array<{ componentsDir: string; utilsFile: string }> = [
     // Published: scripts/sync-template.mjs flattens the registry into templates/ui.
-    { componentsDir: resolve(here, "..", "templates", "ui"), utilsFile: resolve(here, "..", "templates", "ui", "utils.ts") },
-    { componentsDir: resolve(here, "templates", "ui"), utilsFile: resolve(here, "templates", "ui", "utils.ts") },
+    {
+      componentsDir: resolve(here, "..", "templates", "ui"),
+      utilsFile: resolve(here, "..", "templates", "ui", "utils.ts"),
+    },
+    {
+      componentsDir: resolve(here, "templates", "ui"),
+      utilsFile: resolve(here, "templates", "ui", "utils.ts"),
+    },
     // Monorepo source: packages/create-swift-rust/dist → packages/ui/registry.
     {
       componentsDir: resolve(here, "..", "..", "ui", "registry", "components"),

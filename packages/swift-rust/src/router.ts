@@ -113,6 +113,7 @@ export interface CookieJar {
 }
 
 /** App augments this via declaration merging for typed `locals`. */
+// biome-ignore lint/suspicious/noEmptyInterface: intentionally empty — apps augment it via declaration merging.
 export interface RouteLocalsMap {}
 export interface RouteLocals {
   get<K extends keyof RouteLocalsMap>(key: K): RouteLocalsMap[K] | undefined;
@@ -142,14 +143,23 @@ export type RouteControl =
   | { kind: "notFound" }
   | { kind: "error"; error: unknown; status?: number };
 
-export type GuardContext<P extends Record<string, string> = Record<string, string>, Q extends Record<string, unknown> = Record<string, unknown>> = RouteRequest<P, Q>;
-export type GuardResult = RouteControl | void;
+export type GuardContext<
+  P extends Record<string, string> = Record<string, string>,
+  Q extends Record<string, unknown> = Record<string, unknown>,
+> = RouteRequest<P, Q>;
+export type GuardResult = RouteControl | undefined;
 
-export interface LoaderContext<P extends Record<string, string> = Record<string, string>, Q extends Record<string, unknown> = Record<string, unknown>> extends RouteRequest<P, Q> {
+export interface LoaderContext<
+  P extends Record<string, string> = Record<string, string>,
+  Q extends Record<string, unknown> = Record<string, unknown>,
+> extends RouteRequest<P, Q> {
   parent: <T = unknown>() => T | undefined;
 }
 
-export interface ActionContext<P extends Record<string, string> = Record<string, string>, Q extends Record<string, unknown> = Record<string, unknown>> extends RouteRequest<P, Q> {
+export interface ActionContext<
+  P extends Record<string, string> = Record<string, string>,
+  Q extends Record<string, unknown> = Record<string, unknown>,
+> extends RouteRequest<P, Q> {
   formData: () => Promise<FormData>;
   json: <T = unknown>() => Promise<T>;
 }
@@ -201,10 +211,10 @@ export function __setRouteContext(ctx: RouteRenderContext | null): void {
 }
 
 export function useLoaderData<L = unknown>(): LoaderData<L> {
-  return (ctxBox().current?.loaderData) as LoaderData<L>;
+  return ctxBox().current?.loaderData as LoaderData<L>;
 }
 export function useActionData<A = unknown>(): ActionData<A> | undefined {
-  return (ctxBox().current?.actionData) as ActionData<A> | undefined;
+  return ctxBox().current?.actionData as ActionData<A> | undefined;
 }
 export function useRouteRequest(): RouteRequest | undefined {
   return ctxBox().current?.request;

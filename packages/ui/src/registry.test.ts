@@ -1,6 +1,6 @@
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const REGISTRY = join(import.meta.dir, "..", "registry", "components");
 
@@ -20,7 +20,9 @@ const STATEFUL = ["accordion"] as const;
 describe("registry components", () => {
   const files = readdirSync(REGISTRY).filter((f) => f.endsWith(".tsx"));
   const firstLine = (slug: string) =>
-    readFileSync(join(REGISTRY, `${slug}.tsx`), "utf8").split("\n")[0]?.trim();
+    readFileSync(join(REGISTRY, `${slug}.tsx`), "utf8")
+      .split("\n")[0]
+      ?.trim();
 
   test("presentational components are server-renderable (no 'use client')", () => {
     for (const slug of PRESENTATIONAL) {

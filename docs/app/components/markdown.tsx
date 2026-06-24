@@ -121,15 +121,19 @@ export function renderMarkdown(src: string): ReactNode[] {
     // paragraph (gather consecutive plain lines)
     const para: string[] = [line];
     i++;
-    while (
-      i < lines.length &&
-      lines[i].trim() !== "" &&
-      !/^(#{1,6})\s/.test(lines[i]) &&
-      !lines[i].trim().startsWith("```") &&
-      !/^\s*[-*]\s+/.test(lines[i]) &&
-      !lines[i].trim().startsWith("|")
-    ) {
-      para.push(lines[i]);
+    while (i < lines.length) {
+      const next = lines[i];
+      if (
+        next === undefined ||
+        next.trim() === "" ||
+        /^(#{1,6})\s/.test(next) ||
+        next.trim().startsWith("```") ||
+        /^\s*[-*]\s+/.test(next) ||
+        next.trim().startsWith("|")
+      ) {
+        break;
+      }
+      para.push(next);
       i++;
     }
     out.push(<p key={k()}>{inline(para.join(" "))}</p>);

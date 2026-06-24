@@ -1,15 +1,15 @@
-export { Document, Page, Text, View, Pdf, PdfError } from "@swift-rust/pdf";
 export type {
   DocumentProps,
-  PageProps,
-  TextProps,
-  ViewProps,
-  PageSize,
   Orientation,
-  PdfNode,
-  PdfProps,
-  PdfSource,
-  PdfScale,
+  PageProps,
+  PageSize,
   PdfErrorKind,
   PdfLoadInfo,
+  PdfNode,
+  PdfProps,
+  PdfScale,
+  PdfSource,
+  TextProps,
+  ViewProps,
 } from "@swift-rust/pdf";
+export { Document, Page, Pdf, PdfError, Text, View } from "@swift-rust/pdf";

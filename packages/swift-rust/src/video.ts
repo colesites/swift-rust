@@ -1,20 +1,24 @@
-export { Video, BackgroundVideo, VideoLightbox, VideoError, default } from "@swift-rust/video";
-export {
-  isYouTubeUrl,
-  isVimeoUrl,
-  getYouTubeId,
-  getVimeoId,
-  detectProvider,
-  getYouTubeEmbedUrl,
-  getVimeoEmbedUrl,
-} from "@swift-rust/video";
 export type {
-  VideoProps,
-  VideoSource,
-  VideoCaption,
-  VideoPreload,
-  VideoProvider,
-  VideoErrorCode,
   BackgroundVideoProps,
+  VideoCaption,
+  VideoErrorCode,
   VideoLightboxProps,
+  VideoPreload,
+  VideoProps,
+  VideoProvider,
+  VideoSource,
+} from "@swift-rust/video";
+export {
+  BackgroundVideo,
+  default,
+  detectProvider,
+  getVimeoEmbedUrl,
+  getVimeoId,
+  getYouTubeEmbedUrl,
+  getYouTubeId,
+  isVimeoUrl,
+  isYouTubeUrl,
+  Video,
+  VideoError,
+  VideoLightbox,
 } from "@swift-rust/video";

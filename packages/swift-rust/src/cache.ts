@@ -25,7 +25,8 @@ interface CacheGlobal {
 }
 
 const g = globalThis as unknown as { __SR_CACHE__?: CacheGlobal };
-const cacheState: CacheGlobal = (g.__SR_CACHE__ ??= { store: new Map(), purged: new Set() });
+g.__SR_CACHE__ ??= { store: new Map(), purged: new Set() };
+const cacheState: CacheGlobal = g.__SR_CACHE__;
 
 export interface CacheOptions {
   /** Tags for targeted invalidation via revalidateTag(). */

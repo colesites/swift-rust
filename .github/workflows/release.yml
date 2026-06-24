@@ -35,12 +35,11 @@ jobs:
         run: cargo build --workspace
       - name: Build JS workspace
         run: bun run build
-      - name: Lint
-        run: bun run lint
-      - name: Typecheck
-        run: bun run typecheck
-      - name: Test
-        run: bun run test
+      # Gate the publish on the quality of what actually ships. Private apps
+      # (web, docs, ui-site) are checked in ci.yml, not here, so they can't
+      # block a release.
+      - name: Lint, typecheck & test (publishable packages)
+        run: bunx turbo run lint typecheck test --filter='./packages/*'
       - name: Create or publish changesets
         uses: changesets/action@v1
         with:

@@ -24,7 +24,7 @@ export default function FontRefPage() {
           <span>local</span>
         </div>
         <pre>
-          <code>{`import localFont from "swift-rust/font/local";`}</code>
+          <code>{`import { localFont } from "swift-rust/font/local";`}</code>
         </pre>
       </div>
 

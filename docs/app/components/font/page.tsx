@@ -21,8 +21,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </pre>
       <h2>Local fonts</h2>
       <pre>
-        <code>{`import localFont from "@swift-rust/font/local";
-const myFont = localFont({ src: "./fonts/MyFont.woff2" });`}</code>
+        <code>{`import { localFont } from "@swift-rust/font/local";
+export const myFont = localFont({ src: "./fonts/MyFont.woff2" });
+// then: import { myFont } from "./fonts";`}</code>
       </pre>
     </article>
   );

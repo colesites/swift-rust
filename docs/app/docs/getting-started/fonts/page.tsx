@@ -43,21 +43,47 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
       <h2>Local fonts</h2>
       <p>
-        Use <code>localFont</code> for self-hosted fonts. The framework will serve them at{" "}
-        <code>/_swift-rust/fonts/&lt;path&gt;</code> in dev.
+        Self-hosted fonts use <code>localFont</code>. Your font file lives in your project, so you
+        define it once in a shared module and then import it by name anywhere — just like a Google
+        font. The framework serves it at <code>/_swift-rust/fonts/&lt;path&gt;</code> in dev.
       </p>
       <div className="code-block">
         <div className="code-block-header">
           <span>app/fonts.ts</span>
         </div>
         <pre>
-          <code>{`import localFont from "swift-rust/font/local";
+          <code>{`import { localFont } from "swift-rust/font/local";
 
-const myFont = localFont({
+export const myFont = localFont({
   src: "./fonts/MyFont.woff2",
   weight: "400 700",
   display: "swap",
 });`}</code>
+        </pre>
+      </div>
+      <p>Then import it by name wherever you need it:</p>
+      <div className="code-block">
+        <div className="code-block-header">
+          <span>app/layout.tsx</span>
+        </div>
+        <pre>
+          <code>{`import { myFont } from "./fonts";
+
+<body className={myFont.className}>{children}</body>`}</code>
+        </pre>
+      </div>
+      <p>
+        Prefer a ready-made face? The package also ships named local fonts you can import directly,
+        exactly like Google fonts:
+      </p>
+      <div className="code-block">
+        <div className="code-block-header">
+          <span>app/layout.tsx</span>
+        </div>
+        <pre>
+          <code>{`import { Lausanne, VarentGrotesk } from "swift-rust/font/local";
+
+const display = VarentGrotesk({ display: "swap" });`}</code>
         </pre>
       </div>
 
