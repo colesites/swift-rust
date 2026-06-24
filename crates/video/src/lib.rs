@@ -36,7 +36,9 @@ fn host(u: &url::Url) -> &str {
 
 /// A valid YouTube video id: exactly 11 chars of `[A-Za-z0-9_-]`.
 fn is_youtube_id(s: &str) -> bool {
-    s.len() == 11 && s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+    s.len() == 11
+        && s.bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
 }
 
 /// A valid Vimeo video id: 6 or more ASCII digits.
@@ -169,7 +171,10 @@ pub fn youtube_embed_url(id: &str, opts: &YouTubeEmbedOptions) -> String {
     if let Some(e) = opts.end {
         params.push(("end".into(), e.to_string()));
     }
-    format!("https://www.youtube-nocookie.com/embed/{id}?{}", query(&params))
+    format!(
+        "https://www.youtube-nocookie.com/embed/{id}?{}",
+        query(&params)
+    )
 }
 
 /// Options for a Vimeo embed. `muted` defaults to true.
@@ -282,7 +287,12 @@ pub fn render_html(props: &VideoProps) -> String {
     let style = props
         .aspect_ratio
         .as_deref()
-        .map(|a| format!(" style=\"aspect-ratio:{};width:100%;border:0\"", html_escape(a)))
+        .map(|a| {
+            format!(
+                " style=\"aspect-ratio:{};width:100%;border:0\"",
+                html_escape(a)
+            )
+        })
         .unwrap_or_else(|| " style=\"width:100%;border:0\"".to_string());
 
     match detect_provider(&props.src) {
@@ -313,7 +323,11 @@ pub fn render_html(props: &VideoProps) -> String {
         }
         VideoProvider::Html5 => {
             let mime = infer_mime_type(&props.src);
-            let autoplay = if props.auto_play { " autoplay muted" } else { "" };
+            let autoplay = if props.auto_play {
+                " autoplay muted"
+            } else {
+                ""
+            };
             format!(
                 "<video controls{}{}{}><source src=\"{}\" type=\"{}\" />Your browser does not support the video tag.</video>",
                 autoplay, class_attr, style, html_escape(&props.src), mime
@@ -329,15 +343,22 @@ mod tests {
     #[test]
     fn detects_youtube_hosts_and_short_urls() {
         assert!(is_youtube_url("https://youtu.be/rTJzsHwpZko"));
-        assert!(is_youtube_url("https://www.youtube.com/watch?v=rTJzsHwpZko"));
-        assert!(is_youtube_url("https://www.youtube-nocookie.com/embed/rTJzsHwpZko"));
+        assert!(is_youtube_url(
+            "https://www.youtube.com/watch?v=rTJzsHwpZko"
+        ));
+        assert!(is_youtube_url(
+            "https://www.youtube-nocookie.com/embed/rTJzsHwpZko"
+        ));
         assert!(!is_youtube_url("https://example.com/clip.mp4"));
         assert!(!is_youtube_url("not-a-url"));
     }
 
     #[test]
     fn extracts_youtube_id_from_every_form() {
-        assert_eq!(get_youtube_id("rTJzsHwpZko").as_deref(), Some("rTJzsHwpZko"));
+        assert_eq!(
+            get_youtube_id("rTJzsHwpZko").as_deref(),
+            Some("rTJzsHwpZko")
+        );
         assert_eq!(
             get_youtube_id("https://youtu.be/rTJzsHwpZko?si=x").as_deref(),
             Some("rTJzsHwpZko")
@@ -360,16 +381,28 @@ mod tests {
     #[test]
     fn extracts_vimeo_id() {
         assert!(is_vimeo_url("https://vimeo.com/76979871"));
-        assert_eq!(get_vimeo_id("https://vimeo.com/76979871").as_deref(), Some("76979871"));
+        assert_eq!(
+            get_vimeo_id("https://vimeo.com/76979871").as_deref(),
+            Some("76979871")
+        );
         assert_eq!(get_vimeo_id("76979871").as_deref(), Some("76979871"));
         assert_eq!(get_vimeo_id("https://youtu.be/rTJzsHwpZko"), None);
     }
 
     #[test]
     fn detect_provider_classifies() {
-        assert_eq!(detect_provider("https://youtu.be/rTJzsHwpZko"), VideoProvider::YouTube);
-        assert_eq!(detect_provider("https://vimeo.com/76979871"), VideoProvider::Vimeo);
-        assert_eq!(detect_provider("https://example.com/clip.mp4"), VideoProvider::Html5);
+        assert_eq!(
+            detect_provider("https://youtu.be/rTJzsHwpZko"),
+            VideoProvider::YouTube
+        );
+        assert_eq!(
+            detect_provider("https://vimeo.com/76979871"),
+            VideoProvider::Vimeo
+        );
+        assert_eq!(
+            detect_provider("https://example.com/clip.mp4"),
+            VideoProvider::Html5
+        );
     }
 
     #[test]
@@ -382,7 +415,11 @@ mod tests {
 
         let auto = youtube_embed_url(
             "rTJzsHwpZko",
-            &YouTubeEmbedOptions { auto_play: true, mute: true, ..Default::default() },
+            &YouTubeEmbedOptions {
+                auto_play: true,
+                mute: true,
+                ..Default::default()
+            },
         );
         assert!(auto.contains("autoplay=1"));
         assert!(auto.contains("mute=1"));
