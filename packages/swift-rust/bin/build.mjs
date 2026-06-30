@@ -11,7 +11,7 @@ import {
   openSync,
   unlinkSync,
 } from "node:fs";
-import { join, resolve, dirname, sep } from "node:path";
+import { delimiter, join, resolve, dirname, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
@@ -375,16 +375,22 @@ function routesFromParams(base, paramName, params) {
 function findBun() {
   if (process.env.SWIFT_RUST_RUNTIME) return process.env.SWIFT_RUST_RUNTIME;
   if (process.versions?.bun) return process.execPath;
+  const exe = process.platform === "win32" ? "bun.exe" : "bun";
   const candidates = [
-    process.env.BUN_INSTALL ? join(process.env.BUN_INSTALL, "bin", "bun") : null,
-    join(process.env.HOME || "", ".bun", "bin", "bun"),
+    process.env.BUN_INSTALL ? join(process.env.BUN_INSTALL, "bin", exe) : null,
+    join(process.env.USERPROFILE || "", ".bun", "bin", exe),
+    join(process.env.HOME || "", ".bun", "bin", exe),
+    ...String(process.env.PATH || "")
+      .split(delimiter)
+      .filter(Boolean)
+      .map((dir) => join(dir, exe)),
     "/usr/local/bin/bun",
     "/opt/homebrew/bin/bun",
   ].filter(Boolean);
   for (const p of candidates) {
     if (existsSync(p)) return p;
   }
-  return process.execPath;
+  return null;
 }
 
 async function findFreePort(start) {
@@ -404,6 +410,9 @@ async function findFreePort(start) {
 function startDevServer(port, logFile) {
   const devServer = resolve(fileURLToPath(import.meta.url), "..", "dev-server.mjs");
   const runtime = findBun();
+  if (!runtime) {
+    throw new Error("swift-rust build requires Bun to prerender TS/TSX routes. Install Bun and make sure `bun` is on PATH.");
+  }
   const stdio = logFile
     ? ["ignore", openSync(logFile, "w"), "inherit"]
     : ["ignore", "inherit", "inherit"];

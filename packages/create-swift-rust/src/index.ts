@@ -490,10 +490,10 @@ async function askQuestions(
 // Fallback pin used when the npm registry can't be reached at scaffold time.
 // Kept in sync with the current swift-rust release so a generated project never
 // advertises an ancient version. `^` still lets it float forward within the major.
-const SWIFT_RUST_FALLBACK = "^1.5.1";
+const SWIFT_RUST_FALLBACK = "^1.10.4";
 
 // Resolve the newest published swift-rust version so the scaffolded package.json
-// reflects reality (e.g. ^1.5.1) instead of a stale literal like ^1.0.0. A caret
+// reflects reality (e.g. ^1.10.4) instead of a stale literal like ^1.0.0. A caret
 // range already installs the latest matching release, but showing the real number
 // avoids the "it installed an old version" confusion. Falls back offline.
 async function resolveSwiftRustVersion(): Promise<string> {
@@ -542,6 +542,7 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
 
   const fileExt = (lang: Language) => (lang === "ts" ? "ts" : "js");
   const componentExt = (lang: Language) => (lang === "ts" ? "tsx" : "jsx");
+  const jsxExt = componentExt(language);
   const swiftRustVersion = await resolveSwiftRustVersion();
 
   const pkg: Record<string, unknown> = {
@@ -802,8 +803,7 @@ ${uiTokens}`;
     await writeFile(join(appDir, "globals.css"), css);
   }
 
-  const layoutImports = `import type { ReactNode } from "react";
-import { Geist, GeistMono } from "swift-rust/font/google";
+  const layoutImports = `${language === "ts" ? 'import type { ReactNode } from "react";\n' : ""}import { Geist, GeistMono } from "swift-rust/font/google";
 ${tailwind ? `import "./globals.css";\n` : ""}
 const geistSans = Geist({ subsets: ["latin"], display: "swap", variable: true });
 const geistMono = GeistMono({ subsets: ["latin"], display: "swap", variable: true });
@@ -816,7 +816,7 @@ export const metadata = {
   description: "Built with swift-rust — the React framework powered with Rust + Bun. 10x faster than Next.js.",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout(${language === "ts" ? "{ children }: { children: ReactNode }" : "{ children }"}) {
   return (
     <html
       lang="en"
@@ -831,7 +831,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   );
 }
 `;
-  await writeFile(join(appDir, `layout.${componentExt(language)}`), layoutImports);
+  await writeFile(join(appDir, `layout.${jsxExt}`), layoutImports);
 
   const shadcnHome = `import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -845,7 +845,7 @@ export default function Home() {
           <Badge variant="secondary" className="w-fit mb-2">Welcome</Badge>
           <CardTitle className="text-3xl sm:text-5xl">${projectName}</CardTitle>
           <CardDescription>
-            Get started by editing <code>${srcDir ? "src/app/" : "app/"}page.${componentExt(language)}</code>.
+            Get started by editing <code>${srcDir ? "src/app/" : "app/"}page.${jsxExt}</code>.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex gap-2">
@@ -868,48 +868,66 @@ export default function Home() {
 }
 `;
 
-  // The swift-rust ui home page shows off the third dimension — the same Button
-  // rendered across several "design" styles — so the headline feature is
-  // visible the moment the project boots.
   const swiftRustUiHome = `import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex items-center justify-center px-6 py-12">
-      <Card className="max-w-xl w-full" design="glass">
-        <CardHeader>
-          <CardTitle className="text-3xl sm:text-5xl">${projectName}</CardTitle>
-          <CardDescription>
-            Built with swift-rust ui. Edit <code>${srcDir ? "src/app/" : "app/"}page.${componentExt(language)}</code> to get started.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-6">
-          <Alert variant="info">
-            <AlertTitle>One button, every style</AlertTitle>
-            <AlertDescription>
-              Mix <code>variant</code>, <code>size</code> and <code>design</code> freely.
-            </AlertDescription>
-          </Alert>
-          <div className="flex flex-wrap gap-3">
-            <Button design="flat">Flat</Button>
-            <Button design="3d">3D</Button>
-            <Button design="glass" variant="outline">Glass</Button>
-            <Button design="neo">Neo</Button>
-            <Button design="brutal" variant="secondary">Brutal</Button>
-            <Button design="gradient">Gradient</Button>
+    <main className="min-h-screen bg-bg text-fg">
+      <section className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-8">
+        <header className="flex items-center justify-between border-b border-border/70 pb-5">
+          <div>
+            <p className="text-sm font-medium text-fg/55">Swift Rust starter</p>
+            <h1 className="mt-1 text-xl font-semibold tracking-tight">${projectName}</h1>
           </div>
-          <div className="flex gap-2">
-            <Button asChild>
-              <a href="https://swift-rust.dev/docs">Read the docs →</a>
-            </Button>
-            <Button asChild variant="outline">
-              <a href="https://github.com/swift-rust/swift-rust">GitHub</a>
-            </Button>
+          <Button asChild size="sm" variant="outline">
+            <a href="https://swift-rust.dev/docs">Docs</a>
+          </Button>
+        </header>
+
+        <div className="grid flex-1 items-center gap-10 py-16 lg:grid-cols-[1.05fr_0.95fr]">
+          <div>
+            <div className="mb-6 inline-flex rounded-full border border-border bg-bg px-3 py-1 text-sm text-fg/65">
+              Production-ready React on Rust + Bun
+            </div>
+            <h2 className="max-w-3xl text-5xl font-semibold leading-[0.98] tracking-tight sm:text-6xl">
+              Build a fast app with a quiet, professional baseline.
+            </h2>
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-fg/65">
+              Routing, rendering, styling, and deployment defaults are already wired so you can focus on the product surface.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button asChild>
+                <a href="https://swift-rust.dev/docs">Read the docs</a>
+              </Button>
+              <Button asChild variant="outline">
+                <a href="https://github.com/swift-rust/swift-rust">GitHub</a>
+              </Button>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+
+          <div className="rounded-lg border border-border bg-bg p-5 shadow-sm">
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <p className="text-sm font-medium">Project health</p>
+              <span className="rounded-full bg-accent/10 px-2.5 py-1 text-xs font-medium text-accent">
+                Ready
+              </span>
+            </div>
+            <dl className="mt-5 grid gap-4">
+              {[
+                ["Framework", "swift-rust"],
+                ["Renderer", "${renderer}"],
+                ["Styling", "Tailwind CSS"],
+                ["Components", "swift-rust ui"],
+              ].map(([label, value]) => (
+                <div key={label} className="flex items-center justify-between rounded-md border border-border/70 px-4 py-3">
+                  <dt className="text-sm text-fg/55">{label}</dt>
+                  <dd className="text-sm font-medium">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
@@ -931,7 +949,7 @@ export default function Home() {
           ${projectName}
         </h1>
         <p className="text-lg text-fg-secondary mb-8">
-          Get started by editing <code>${srcDir ? "src/app/" : "app/"}page.${componentExt(language)}</code>.
+          Get started by editing <code>${srcDir ? "src/app/" : "app/"}page.${jsxExt}</code>.
         </p>
         <a
           href="https://swift-rust.dev/docs"
@@ -949,14 +967,14 @@ export default function Home() {
     <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
       <div style={{ maxWidth: "32rem", textAlign: "center" }}>
         <h1>${projectName}</h1>
-        <p>Get started by editing <code>${srcDir ? "src/app/" : "app/"}page.${componentExt(language)}</code>.</p>
+        <p>Get started by editing <code>${srcDir ? "src/app/" : "app/"}page.${jsxExt}</code>.</p>
         <a href="https://swift-rust.dev/docs">Read the docs →</a>
       </div>
     </main>
   );
 }
 `;
-  await writeFile(join(appDir, `page.${componentExt(language)}`), homePage);
+  await writeFile(join(appDir, `page.${jsxExt}`), homePage);
 
   const notFoundPage = tailwind
     ? `export const metadata = { title: "Not found" };
@@ -983,7 +1001,7 @@ export default function NotFound() {
   );
 }
 `;
-  await writeFile(join(appDir, `not-found.${componentExt(language)}`), notFoundPage);
+  await writeFile(join(appDir, `not-found.${jsxExt}`), notFoundPage);
 
   if (linter === "biome") {
     const biome = {
@@ -1032,8 +1050,8 @@ Built with [swift-rust](https://swift-rust.dev) — the React framework powered 
 
  ${
    srcDir
-     ? `\`\`\`\nsrc/\n  app/\n    layout.${componentExt(language)}\n    page.${componentExt(language)}\n    not-found.${componentExt(language)}\n  components/\n  lib/\n\`\`\``
-     : `\`\`\`\napp/\n  layout.${componentExt(language)}\n  page.${componentExt(language)}\n  not-found.${componentExt(language)}\ncomponents/\nlib/\n\`\`\``
+     ? `\`\`\`\nsrc/\n  app/\n    layout.${jsxExt}\n    page.${jsxExt}\n    not-found.${jsxExt}\n  components/\n  lib/\n\`\`\``
+     : `\`\`\`\napp/\n  layout.${jsxExt}\n  page.${jsxExt}\n  not-found.${jsxExt}\ncomponents/\nlib/\n\`\`\``
 }
 
 ## Learn more
@@ -1082,9 +1100,9 @@ For custom domains and ISR / serverless functions, see the [deploy guide](https:
   await writeFile(join(appDir, "favicon.ico"), Buffer.from(faviconIco, "base64"));
 
   if (ui === "shadcn") {
-    await scaffoldShadcn({ target, uiDir, libDir, componentExt: componentExt(language), srcDir });
+    await scaffoldShadcn({ target, uiDir, libDir, componentExt: jsxExt, srcDir, language });
   } else if (ui === "swift-rust-ui") {
-    await scaffoldSwiftRustUi({ uiDir, libDir, componentExt: componentExt(language) });
+    await scaffoldSwiftRustUi({ uiDir, libDir, componentExt: jsxExt, language });
   }
 
   await writeVscodeConfig(target);
@@ -1096,8 +1114,9 @@ async function scaffoldShadcn(options: {
   libDir: string;
   componentExt: string;
   srcDir: boolean;
+  language: Language;
 }): Promise<void> {
-  const { target, uiDir, libDir, componentExt, srcDir } = options;
+  const { target, uiDir, libDir, componentExt, srcDir, language } = options;
 
   const utilsContent = `import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -1316,13 +1335,42 @@ export { badgeVariants };
 }
 `;
 
-  await writeFile(join(libDir, "utils.ts"), utilsContent);
-  await writeFile(join(uiDir, `button.${componentExt}`), buttonContent);
-  await writeFile(join(uiDir, `card.${componentExt}`), cardContent);
-  await writeFile(join(uiDir, `input.${componentExt}`), inputContent);
-  await writeFile(join(uiDir, `label.${componentExt}`), labelContent);
-  await writeFile(join(uiDir, `badge.${componentExt}`), badgeContent);
+  const source = (content: string) =>
+    language === "js" ? stripTypeScriptForJavaScript(content) : content;
+  await writeFile(join(libDir, `utils.${language === "js" ? "js" : "ts"}`), source(utilsContent));
+  await writeFile(join(uiDir, `button.${componentExt}`), source(buttonContent));
+  await writeFile(join(uiDir, `card.${componentExt}`), source(cardContent));
+  await writeFile(join(uiDir, `input.${componentExt}`), source(inputContent));
+  await writeFile(join(uiDir, `label.${componentExt}`), source(labelContent));
+  await writeFile(join(uiDir, `badge.${componentExt}`), source(badgeContent));
   await writeFile(join(target, "components.json"), `${componentsJson}\n`);
+}
+
+function stripTypeScriptForJavaScript(source: string): string {
+  return source
+    .replace(/import\s+type\s+[^;]+;\n/g, "")
+    .replace(/,\s*type\s+\w+/g, "")
+    .replace(/type\s+\w+\s*,\s*/g, "")
+    .replace(/export\s+type\s+\w+\s*=\s*[\s\S]*?;\n/g, "")
+    .replace(/export\s+interface\s+\w+[\s\S]*?\n}\n/g, "")
+    .replace(/interface\s+\w+[\s\S]*?\n}\n/g, "")
+    .replace(/React\.forwardRef<[\s\S]*?>\(/g, "React.forwardRef(")
+    .replace(/React\.createContext<[^>]+>\(/g, "React.createContext(")
+    .replace(/React\.useState<[^)]*>\(/g, "React.useState(")
+    .replace(/const\s+(\w+):\s*Record<[^=]+>\s*=/g, "const $1 =")
+    .replace(/}\s*:\s*[A-Za-z0-9_<>, |&?{}:[\]]+\s*=\s*{}\)/g, "} = {})")
+    .replace(/}\s*:\s*{[\s\S]*?}\)/g, "})")
+    .replace(/function\s+(\w+)\(([^)]*)\):\s*[\w.<>[\] |&]+/g, "function $1($2)")
+    .replace(/\(([^)]*)\):\s*[\w.<>[\] |&]+\s*=>/g, "($1) =>")
+    .replace(/(\.\.\.\w+):\s*[^,)]+/g, "$1")
+    .replace(/(\w+):\s*(string|number|boolean)\b/g, "$1")
+    .replace(/:\s*React\.[A-Za-z0-9_.<>[\], |&]+/g, "")
+    .replace(/:\s*[A-Z][A-Za-z0-9_<>, |&?]+(?=\s*[=,)])/g, "")
+    .replace(/:\s*[A-Z][A-Za-z0-9_<>, |&?{}:[\]]+(?=\s*=\s*{})/g, "")
+    .replace(/\s+as\s+React\.[A-Za-z0-9_.<>[\], |&?{}:]+/g, "")
+    .replace(/\s+as\s+Set<[^>]+>/g, "")
+    .replace(/\s+as\s+const/g, "")
+    .replace(/\s+as\s+string/g, "");
 }
 
 // The default component set for swift-rust ui — the components the user asked us
@@ -1371,8 +1419,9 @@ async function scaffoldSwiftRustUi(options: {
   uiDir: string;
   libDir: string;
   componentExt: string;
+  language: Language;
 }): Promise<void> {
-  const { uiDir, libDir, componentExt } = options;
+  const { uiDir, libDir, componentExt, language } = options;
   const registry = swiftRustUiRegistry();
   if (!registry) {
     throw new Error(
@@ -1380,10 +1429,15 @@ async function scaffoldSwiftRustUi(options: {
     );
   }
   // The cn() helper the components import from "@/lib/utils".
-  await writeFile(join(libDir, "utils.ts"), await readFile(registry.utilsFile, "utf8"));
+  const source = (content: string) =>
+    language === "js" ? stripTypeScriptForJavaScript(content) : content;
+  await writeFile(
+    join(libDir, `utils.${language === "js" ? "js" : "ts"}`),
+    source(await readFile(registry.utilsFile, "utf8")),
+  );
   for (const name of SWIFT_RUST_UI_DEFAULTS) {
     const src = await readFile(join(registry.componentsDir, `${name}.tsx`), "utf8");
-    await writeFile(join(uiDir, `${name}.${componentExt}`), src);
+    await writeFile(join(uiDir, `${name}.${componentExt}`), source(src));
   }
 }
 

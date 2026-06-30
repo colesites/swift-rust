@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -67,7 +67,7 @@ describe("create-swift-rust: minimal (JS + ESLint + no Tailwind + top-level app)
 });
 
 describe("create-swift-rust: UI kit selection", () => {
-  test("swift-rust ui scaffolds the registry components + cn helper + design-aware home", () => {
+  test("swift-rust ui scaffolds the registry components + cn helper + professional home", () => {
     const a = scaffold(["--minimal", "--swift-rust-ui"]);
     const ui = join(a, "src", "components", "ui");
     for (const name of ["accordion", "alert", "avatar", "button", "card", "input", "label"]) {
@@ -77,10 +77,12 @@ describe("create-swift-rust: UI kit selection", () => {
     const button = readFileSync(join(ui, "button.tsx"), "utf8");
     expect(button).toContain("ButtonDesign");
     expect(button).toContain('"glass"');
-    // cn helper lands at lib/utils.ts; the home page uses the design prop.
+    // cn helper lands at lib/utils.ts; the home page is a professional starter, not a style sampler.
     expect(existsSync(join(a, "src", "lib", "utils.ts"))).toBe(true);
     const page = readFileSync(join(a, "src", "app", "page.tsx"), "utf8");
-    expect(page).toContain('design="3d"');
+    expect(page).toContain("quiet, professional baseline");
+    expect(page).toContain("Project health");
+    expect(page).not.toContain("One button, every style");
     // A UI kit implies Tailwind even though --tailwind wasn't passed.
     expect(existsSync(join(a, "src", "app", "globals.css"))).toBe(true);
     // swift-rust ui doesn't need class-variance-authority.
@@ -88,6 +90,25 @@ describe("create-swift-rust: UI kit selection", () => {
     expect(pkg.dependencies?.clsx).toBeDefined();
     expect(pkg.dependencies?.["class-variance-authority"]).toBeUndefined();
     expect(pkg.devDependencies?.shadcn).toBeUndefined();
+  });
+
+  test("swift-rust ui JavaScript scaffold contains valid JS/JSX", () => {
+    const a = scaffold(["--minimal", "--js", "--swift-rust-ui"]);
+    const files: string[] = [];
+    const collect = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const p = join(dir, entry.name);
+        if (entry.isDirectory()) collect(p);
+        else if (/\.(jsx?|mjs)$/.test(entry.name)) files.push(p);
+      }
+    };
+    collect(join(a, "src"));
+    for (const file of files) {
+      const loader = file.endsWith(".jsx") ? "jsx" : "js";
+      expect(() =>
+        new Bun.Transpiler({ loader }).transformSync(readFileSync(file, "utf8")),
+      ).not.toThrow();
+    }
   });
 
   test("shadcn scaffolds components.json + the shadcn devDep", () => {

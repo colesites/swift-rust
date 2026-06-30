@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, join, resolve } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
 import { spawn } from "node:child_process";
 
 const here = dirname(realpathSync(fileURLToPath(import.meta.url)));
@@ -15,21 +15,33 @@ function findBun() {
   if (process.versions && process.versions.bun) {
     return process.execPath;
   }
+  const exe = process.platform === "win32" ? "bun.exe" : "bun";
   const candidates = [
-    process.env.BUN_INSTALL ? join(process.env.BUN_INSTALL, "bin", "bun") : null,
-    join(process.env.HOME || "", ".bun", "bin", "bun"),
+    process.env.BUN_INSTALL ? join(process.env.BUN_INSTALL, "bin", exe) : null,
+    join(process.env.USERPROFILE || "", ".bun", "bin", exe),
+    join(process.env.HOME || "", ".bun", "bin", exe),
+    ...String(process.env.PATH || "")
+      .split(delimiter)
+      .filter(Boolean)
+      .map((dir) => join(dir, exe)),
     "/usr/local/bin/bun",
     "/opt/homebrew/bin/bun",
   ].filter(Boolean);
   for (const p of candidates) {
     if (existsSync(p)) return p;
   }
-  return process.execPath;
+  return null;
 }
 
 if (cmd === "dev") {
   const devScript = join(here, "dev-server.mjs");
   const runtime = findBun();
+  if (!runtime) {
+    process.stderr.write(
+      "swift-rust dev requires Bun to compile TS/TSX. Install Bun from https://bun.sh and make sure `bun` is on PATH.\n",
+    );
+    process.exit(1);
+  }
   const child = spawn(runtime, [devScript, ...process.argv.slice(3)], {
     stdio: "inherit",
     env: process.env,
@@ -44,6 +56,12 @@ if (cmd === "dev") {
 if (cmd === "build") {
   const buildScript = join(here, "build.mjs");
   const runtime = findBun();
+  if (!runtime) {
+    process.stderr.write(
+      "swift-rust build requires Bun to compile TS/TSX. Install Bun from https://bun.sh and make sure `bun` is on PATH.\n",
+    );
+    process.exit(1);
+  }
   const child = spawn(runtime, [buildScript, ...process.argv.slice(3)], {
     stdio: "inherit",
     env: process.env,
