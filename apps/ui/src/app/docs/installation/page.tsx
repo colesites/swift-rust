@@ -1,6 +1,6 @@
 import type { Metadata } from "swift-rust";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Code, DocH2, DocHeader, DocP, DocPager, InlineCode } from "@/components/site/doc";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export const metadata: Metadata = {
   title: "Installation",
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function InstallationPage() {
   return (
-    <article className="max-w-3xl">
+    <article className="mx-auto max-w-3xl">
       <DocHeader
         eyebrow="Docs"
         title="Installation"

@@ -30,58 +30,82 @@ const CHANNELS = [
 
 export default function ContactPage() {
   return (
-    <div className="container-page py-16 sm:py-20">
-      <div className="grid gap-16 lg:grid-cols-[1fr_1fr]">
-        <div>
-          <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-fg-subtle">
+    <div className="container-page py-12 sm:py-16">
+      <div className="mx-auto max-w-5xl">
+        <header className="mx-auto max-w-2xl border-b border-border pb-10 text-center">
+          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-accent">
             Contact
           </p>
-          <h1 className="mt-2 text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
+          <h1 className="mt-3 text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
             Let&apos;s talk.
           </h1>
-          <p className="mt-5 text-pretty text-lg leading-relaxed text-fg-muted">
-            Bug reports, feature requests, partnership ideas, or just to say hi. Pick a channel or use
-            the form.
+          <p className="mx-auto mt-4 max-w-xl text-pretty text-base leading-relaxed text-fg-muted sm:text-lg">
+            Bug reports, feature requests, partnership ideas, or just to say hello. Choose the
+            channel that fits, or send us a message.
           </p>
+        </header>
 
-          <ul className="mt-10 space-y-6">
-            {CHANNELS.map((c) => (
-              <li key={c.name} className="group">
-                <Link
-                  href={c.href}
-                  className="flex items-start justify-between gap-6 border-b border-border pb-6 transition-colors last:border-0"
-                >
-                  <div>
-                    <p className="text-[0.75rem] font-semibold uppercase tracking-wider text-fg-subtle">
-                      {c.name}
-                    </p>
-                    <p className="mt-1 font-mono text-[0.9375rem] text-fg group-hover:text-accent">
-                      {c.handle}
-                    </p>
-                    <p className="mt-1 text-[0.875rem] text-fg-muted">{c.description}</p>
-                  </div>
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="mt-1 h-4 w-4 shrink-0 text-fg-subtle transition-all group-hover:translate-x-0.5 group-hover:text-fg"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
+        <div className="mt-10 grid gap-6 lg:grid-cols-2 lg:items-start">
+          <section className="overflow-hidden rounded-2xl border border-border bg-surface">
+            <div className="border-b border-border bg-surface-2/70 p-6">
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-accent">
+                Direct channels
+              </p>
+              <h2 className="mt-2 text-xl font-semibold tracking-tight">Find us where you work</h2>
+              <p className="mt-2 text-sm leading-relaxed text-fg-muted">
+                Public questions are best on GitHub or Discord. Use email for anything private.
+              </p>
+            </div>
+
+            <ul>
+              {CHANNELS.map((channel) => (
+                <li key={channel.name} className="group border-b border-border last:border-b-0">
+                  <Link
+                    href={channel.href}
+                    className="flex items-center justify-between gap-5 p-6 transition-colors hover:bg-surface-2"
                   >
-                    <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
+                    <div>
+                      <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-fg-subtle">
+                        {channel.name}
+                      </p>
+                      <p className="mt-1.5 font-mono text-[0.9rem] text-fg transition-colors group-hover:text-accent">
+                        {channel.handle}
+                      </p>
+                      <p className="mt-1 text-sm text-fg-muted">{channel.description}</p>
+                    </div>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-fg-subtle transition-[border-color,color,transform] group-hover:translate-x-0.5 group-hover:border-border-strong group-hover:text-fg">
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        aria-hidden
+                      >
+                        <path
+                          d="M5 12h14M13 6l6 6-6 6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
 
-        <div>
-          <form className="card p-6 sm:p-8">
-            <h2 className="text-[0.95rem] font-semibold">Send a message</h2>
-            <p className="mt-1 text-[0.8125rem] text-fg-muted">
-              We&apos;ll get back to you within a business day.
+          <form className="rounded-2xl border border-border bg-surface p-6 shadow-sm sm:p-8">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-accent">
+              Send a message
             </p>
-            <div className="mt-6 space-y-5">
+            <h2 className="mt-2 text-xl font-semibold tracking-tight">
+              Tell us what&apos;s on your mind
+            </h2>
+            <p className="mt-2 text-sm text-fg-muted">
+              We&apos;ll get back to you within one business day.
+            </p>
+            <div className="mt-7 grid gap-5 sm:grid-cols-2">
               <div>
                 <label htmlFor="contact-name" className="block text-[0.8125rem] font-medium">
                   Name
@@ -94,7 +118,7 @@ export default function ContactPage() {
                 </label>
                 <input id="contact-email" name="email" type="email" className="input mt-1.5" />
               </div>
-              <div>
+              <div className="sm:col-span-2">
                 <label htmlFor="contact-subject" className="block text-[0.8125rem] font-medium">
                   Subject
                 </label>
@@ -105,7 +129,7 @@ export default function ContactPage() {
                   <option>Other</option>
                 </select>
               </div>
-              <div>
+              <div className="sm:col-span-2">
                 <label htmlFor="contact-message" className="block text-[0.8125rem] font-medium">
                   Message
                 </label>
@@ -117,7 +141,7 @@ export default function ContactPage() {
                   placeholder="What's on your mind?"
                 />
               </div>
-              <button type="submit" className="btn btn-primary w-full">
+              <button type="submit" className="btn btn-primary sm:col-span-2">
                 Send message
               </button>
             </div>

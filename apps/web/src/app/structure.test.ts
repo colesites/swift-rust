@@ -2,28 +2,27 @@ import { describe, expect, it } from "bun:test";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-const APP = join(import.meta.dir, "..", "..", "app");
-const SRC = join(APP, "src");
+const SRC = import.meta.dir;
 
 describe("web structure", () => {
   it("has app directory", () => {
-    expect(existsSync(APP)).toBe(true);
-  });
-
-  it("has app/src directory", () => {
     expect(existsSync(SRC)).toBe(true);
   });
 
-  it("has root layout in app/src", () => {
+  it("has root layout", () => {
     expect(existsSync(join(SRC, "layout.tsx"))).toBe(true);
   });
 
-  it("has home page in app/src", () => {
+  it("has home page", () => {
     expect(existsSync(join(SRC, "page.tsx"))).toBe(true);
   });
 
   it("does not include a dashboard", () => {
     expect(existsSync(join(SRC, "dashboard"))).toBe(false);
+  });
+
+  it("does not include the UI showcase", () => {
+    expect(existsSync(join(SRC, "ui", "page.tsx"))).toBe(false);
   });
 
   it("has blog with dynamic [slug] route", () => {

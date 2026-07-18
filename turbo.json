@@ -8,7 +8,9 @@
   "globalEnv": [
     "NODE_ENV",
     "RUST_LOG",
+    "SWIFT_RUST_UI_URL",
     "SWIFT_RUST_VERSION",
+    "VERCEL",
     "CARGO_TERM_COLOR"
   ],
   "tasks": {

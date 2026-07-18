@@ -16,7 +16,7 @@ export function Header() {
           <a href="/components/image">Components</a>
           <a href="/fonts">Fonts</a>
           <a href="/videos">Videos</a>
-          <a href="https://github.com/swift-rust/swift-rust">GitHub</a>
+          <a href="https://github.com/colesites/swift-rust">GitHub</a>
         </nav>
       </div>
     </header>);

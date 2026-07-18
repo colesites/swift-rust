@@ -34,7 +34,7 @@ function fontFamilyValue(family: string, fallback = DEFAULT_FALLBACK): string {
 
 export function googleFontsUrl(families: Iterable<string>): string {
   const params = Array.from(new Set(families))
-    .map((family) => `family=${encodeFamily(family)}:wght@300..900`)
+    .map((family) => `family=${encodeFamily(family)}`)
     .join("&");
   return params ? `${GOOGLE_FONTS_BASE}?${params}&display=swap` : "";
 }

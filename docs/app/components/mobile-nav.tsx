@@ -1,4 +1,4 @@
-import { NAV } from "./sidebar";
+import { NAV } from "../navigation";
 
 /**
  * Mobile/tablet navigation drawer. Pure CSS (a hidden checkbox toggled by the
@@ -10,12 +10,15 @@ export function MobileNav() {
   return (
     <div className="docs-mobile-nav">
       <input type="checkbox" id="docs-nav-toggle" className="docs-mobile-nav-checkbox" aria-label="Toggle navigation menu" />
-      <label htmlFor="docs-nav-toggle" className="docs-mobile-nav-toggle" aria-hidden="true">
+      <label htmlFor="docs-nav-toggle" className="docs-mobile-nav-toggle">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
         </svg>
+        <span className="sr-only">Toggle navigation menu</span>
       </label>
-      <label htmlFor="docs-nav-toggle" className="docs-mobile-nav-backdrop" aria-hidden="true" />
+      <label htmlFor="docs-nav-toggle" className="docs-mobile-nav-backdrop">
+        <span className="sr-only">Close navigation menu</span>
+      </label>
       <nav className="docs-mobile-nav-drawer">
         {NAV.map((section) => (
           <div key={section.title} className="docs-sidebar-section">

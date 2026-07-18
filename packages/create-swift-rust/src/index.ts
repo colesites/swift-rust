@@ -1,7 +1,7 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import { existsSync } from "node:fs";
 import { cp, mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
@@ -15,6 +15,7 @@ type Template = "full" | "minimal";
 // canonical shadcn/ui; "none" skips UI scaffolding entirely.
 type UiKit = "none" | "shadcn" | "swift-rust-ui";
 type AskAnswer<T> = T | string | symbol;
+const MINIMUM_BUN_VERSION = "1.3.0";
 
 interface Answers {
   projectName: string;
@@ -80,11 +81,18 @@ async function copyTemplate(target: string, projectName: string): Promise<void> 
     if (existsSync(fromPath)) await rename(fromPath, join(target, to));
   }
   const displayName = projectName === "." ? basename(resolve(target)) : projectName;
-  for (const file of ["package.json", "README.md"]) {
-    const path = join(target, file);
-    if (!existsSync(path)) continue;
-    const contents = await readFile(path, "utf8");
-    await writeFile(path, contents.split("__PROJECT_NAME__").join(displayName));
+  const packagePath = join(target, "package.json");
+  if (existsSync(packagePath)) {
+    const packageJson = JSON.parse(await readFile(packagePath, "utf8"));
+    packageJson.name = displayName;
+    packageJson.dependencies["swift-rust"] = await resolveSwiftRustVersion();
+    packageJson.engines = { ...packageJson.engines, bun: `>=${MINIMUM_BUN_VERSION}` };
+    await writeFile(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
+  }
+  const readmePath = join(target, "README.md");
+  if (existsSync(readmePath)) {
+    const contents = await readFile(readmePath, "utf8");
+    await writeFile(readmePath, contents.split("__PROJECT_NAME__").join(displayName));
   }
   await writeVscodeConfig(target);
 }
@@ -490,10 +498,10 @@ async function askQuestions(
 // Fallback pin used when the npm registry can't be reached at scaffold time.
 // Kept in sync with the current swift-rust release so a generated project never
 // advertises an ancient version. `^` still lets it float forward within the major.
-const SWIFT_RUST_FALLBACK = "^1.10.4";
+const SWIFT_RUST_FALLBACK = "^1.10.8";
 
 // Resolve the newest published swift-rust version so the scaffolded package.json
-// reflects reality (e.g. ^1.10.4) instead of a stale literal like ^1.0.0. A caret
+// reflects reality (e.g. ^1.10.5) instead of a stale literal like ^1.0.0. A caret
 // range already installs the latest matching release, but showing the real number
 // avoids the "it installed an old version" confusion. Falls back offline.
 async function resolveSwiftRustVersion(): Promise<string> {
@@ -585,6 +593,9 @@ async function writeProjectFiles(target: string, answers: Answers): Promise<void
       ...(linter === "biome" ? { "@biomejs/biome": "^2.4.16" } : { eslint: "^9.0.0" }),
       ...(ui === "shadcn" ? { shadcn: "^4.0.0" } : {}),
       ...(ui === "swift-rust-ui" ? { "@swift-rust/ui": "latest" } : {}),
+    },
+    engines: {
+      bun: `>=${MINIMUM_BUN_VERSION}`,
     },
   };
   await writeFile(join(target, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
@@ -850,13 +861,13 @@ export default function Home() {
         </CardHeader>
         <CardContent className="flex gap-2">
           <a
-            href="https://swift-rust.dev/docs"
+            href="https://docs-swift-rust.vercel.app/"
             className={buttonVariants({ variant: "default" })}
           >
             Read the docs →
           </a>
           <a
-            href="https://github.com/swift-rust/swift-rust"
+            href="https://github.com/colesites/swift-rust"
             className={buttonVariants({ variant: "outline" })}
           >
             GitHub
@@ -880,7 +891,7 @@ export default function Home() {
             <h1 className="mt-1 text-xl font-semibold tracking-tight">${projectName}</h1>
           </div>
           <Button asChild size="sm" variant="outline">
-            <a href="https://swift-rust.dev/docs">Docs</a>
+            <a href="https://docs-swift-rust.vercel.app/">Docs</a>
           </Button>
         </header>
 
@@ -897,10 +908,10 @@ export default function Home() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild>
-                <a href="https://swift-rust.dev/docs">Read the docs</a>
+                <a href="https://docs-swift-rust.vercel.app/">Read the docs</a>
               </Button>
               <Button asChild variant="outline">
-                <a href="https://github.com/swift-rust/swift-rust">GitHub</a>
+                <a href="https://github.com/colesites/swift-rust">GitHub</a>
               </Button>
             </div>
           </div>
@@ -952,7 +963,7 @@ export default function Home() {
           Get started by editing <code>${srcDir ? "src/app/" : "app/"}page.${jsxExt}</code>.
         </p>
         <a
-          href="https://swift-rust.dev/docs"
+          href="https://docs-swift-rust.vercel.app/"
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-fg text-bg font-medium text-sm hover:opacity-90 transition-opacity"
         >
           Read the docs →
@@ -968,7 +979,7 @@ export default function Home() {
       <div style={{ maxWidth: "32rem", textAlign: "center" }}>
         <h1>${projectName}</h1>
         <p>Get started by editing <code>${srcDir ? "src/app/" : "app/"}page.${jsxExt}</code>.</p>
-        <a href="https://swift-rust.dev/docs">Read the docs →</a>
+        <a href="https://docs-swift-rust.vercel.app/">Read the docs →</a>
       </div>
     </main>
   );
@@ -1056,8 +1067,8 @@ Built with [swift-rust](https://swift-rust.dev) — the React framework powered 
 
 ## Learn more
 
-- [Documentation](https://swift-rust.dev/docs)
-- [Examples](https://github.com/swift-rust/swift-rust/tree/main/examples)
+- [Documentation](https://docs-swift-rust.vercel.app/)
+- [Examples](https://github.com/colesites/swift-rust/tree/main/examples)
 - [Discord](https://discord.gg/swift-rust)
 
 ## Deploy to Vercel
@@ -1072,7 +1083,7 @@ git push -u origin main
 
 Then on [vercel.com/new](https://vercel.com/new), import the repo. No configuration needed — \`vercel.json\` is included. Your site will be live at \`https://${projectName}.vercel.app\`.
 
-For custom domains and ISR / serverless functions, see the [deploy guide](https://swift-rust.dev/docs/guides/deploying).
+For custom domains and ISR / serverless functions, see the [deploy guide](https://docs-swift-rust.vercel.app/docs/getting-started/deploying).
 `;
   await writeFile(join(target, "README.md"), readme);
 
@@ -1443,8 +1454,14 @@ async function scaffoldSwiftRustUi(options: {
 
 async function runInstall(target: string): Promise<void> {
   const { spawn } = await import("node:child_process");
+  const runtime = findBun();
+  if (!runtime) {
+    throw new Error(
+      `Bun ${MINIMUM_BUN_VERSION} or newer is required. Install Bun from https://bun.sh.`,
+    );
+  }
   return new Promise((resolve, reject) => {
-    const proc = spawn("bun", ["install"], { cwd: target, stdio: "inherit" });
+    const proc = spawn(runtime, ["install"], { cwd: target, stdio: "inherit" });
     proc.on("exit", (code) => {
       if (code === 0) resolve();
       else reject(new Error(`bun install exited with code ${code}`));
@@ -1453,12 +1470,56 @@ async function runInstall(target: string): Promise<void> {
   });
 }
 
+function findBun(): string | null {
+  if (process.versions.bun) return process.execPath;
+  const executable = process.platform === "win32" ? "bun.exe" : "bun";
+  const candidates = [
+    process.env.BUN_INSTALL ? join(process.env.BUN_INSTALL, "bin", executable) : null,
+    process.env.USERPROFILE ? join(process.env.USERPROFILE, ".bun", "bin", executable) : null,
+    process.env.HOME ? join(process.env.HOME, ".bun", "bin", executable) : null,
+    ...String(process.env.PATH ?? "")
+      .split(delimiter)
+      .filter(Boolean)
+      .map((directory) => join(directory, executable)),
+  ].filter((candidate): candidate is string => Boolean(candidate));
+  return candidates.find((candidate) => existsSync(candidate)) ?? null;
+}
+
+async function validateBunVersion(): Promise<void> {
+  const runtime = findBun();
+  if (!runtime) {
+    throw new Error(
+      `Bun ${MINIMUM_BUN_VERSION} or newer is required. Install Bun from https://bun.sh.`,
+    );
+  }
+  const version =
+    runtime === process.execPath && process.versions.bun
+      ? process.versions.bun
+      : (await import("node:child_process"))
+          .spawnSync(runtime, ["--version"], { encoding: "utf8" })
+          .stdout?.trim();
+  const [major = -1, minor = -1, patch = -1] = (String(version ?? "").split("-", 1)[0] ?? "")
+    .split(".")
+    .map((part) => Number.parseInt(part, 10));
+  const supported =
+    ![major, minor, patch].some((part) => Number.isNaN(part)) &&
+    (major > 1 || (major === 1 && (minor > 3 || (minor === 3 && patch >= 0))));
+  if (!supported) {
+    throw new Error(
+      `Bun ${MINIMUM_BUN_VERSION} or newer is required. Found ${version || "an unknown version"}. Run \`bun upgrade\` and try again.`,
+    );
+  }
+}
+
 const SHADCN_DEFAULT_COMPONENTS = ["button", "card", "input", "label", "badge"] as const;
 
 async function runShadcnAdd(target: string, components: readonly string[]): Promise<boolean> {
   const { spawn } = await import("node:child_process");
+  const runtime = findBun();
+  if (!runtime) return false;
   return new Promise((resolve) => {
     const args = [
+      "x",
       "--bun",
       "shadcn@latest",
       "add",
@@ -1469,7 +1530,7 @@ async function runShadcnAdd(target: string, components: readonly string[]): Prom
       target,
       "--silent",
     ];
-    const proc = spawn("bunx", args, { cwd: target, stdio: "pipe" });
+    const proc = spawn(runtime, args, { cwd: target, stdio: "pipe" });
     proc.on("exit", (code) => {
       resolve(code === 0);
     });
@@ -1482,9 +1543,11 @@ async function runShadcnAdd(target: string, components: readonly string[]): Prom
 // src/ layout, runs init (cn helper + deps), and writes into components/ui.
 async function runSwiftRustUiAdd(target: string, components: readonly string[]): Promise<boolean> {
   const { spawn } = await import("node:child_process");
+  const runtime = findBun();
+  if (!runtime) return false;
   return new Promise((resolve) => {
-    const args = ["@swift-rust/ui@latest", "add", ...components, "--yes", "--overwrite"];
-    const proc = spawn("bunx", args, { cwd: target, stdio: "pipe" });
+    const args = ["x", "@swift-rust/ui@latest", "add", ...components, "--yes", "--overwrite"];
+    const proc = spawn(runtime, args, { cwd: target, stdio: "pipe" });
     proc.on("exit", (code) => resolve(code === 0));
     proc.on("error", () => resolve(false));
   });
@@ -1496,6 +1559,7 @@ async function main(): Promise<void> {
     console.log(HELP);
     process.exit(0);
   }
+  await validateBunVersion();
 
   const isTTY = process.stdout.isTTY === true;
   if (!isTTY && !args.includes("--yes") && !args.includes("-y")) {

@@ -105,7 +105,56 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="border-t border-border bg-surface py-24">
+      <section className="border-y border-border bg-accent-soft/50 py-16">
+        <div className="container-page">
+          <div className="mx-auto grid max-w-5xl gap-8 rounded-3xl border border-orange-200 bg-surface p-8 shadow-sm sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div>
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-accent">
+                Swift Rust UI
+              </p>
+              <h2 className="mt-3 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
+                Components with a third dimension.
+              </h2>
+              <p className="mt-4 max-w-2xl text-pretty leading-relaxed text-fg-muted">
+                A shadcn-style component library with variants, sizes, and expressive design modes.
+                Open code, Tailwind v4, and a CLI that installs only what you need.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {["flat", "3d", "glass", "neo", "brutal", "gradient"].map((design) => (
+                  <span key={design} className="badge bg-bg font-mono">
+                    {design}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-col items-start gap-3 lg:items-end">
+              <Link
+                href={siteConfig.uiUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-accent btn-lg"
+              >
+                Explore Swift Rust UI
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  aria-hidden
+                >
+                  <path d="M7 17 17 7M8 7h9v9" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+              <code className="font-mono text-xs text-fg-subtle">
+                bunx @swift-rust/ui add button
+              </code>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-surface py-24">
         <div className="container-page">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">

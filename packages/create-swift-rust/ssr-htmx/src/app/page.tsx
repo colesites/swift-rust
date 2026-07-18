@@ -10,7 +10,7 @@ export default function Home() {
           Get started by editing <code>src/app/page.tsx</code>.
         </p>
         <a
-          href="https://swift-rust.dev/docs"
+          href="https://docs-swift-rust.vercel.app/"
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-fg text-bg font-medium text-sm hover:opacity-90 transition-opacity"
         >
           Read the docs →

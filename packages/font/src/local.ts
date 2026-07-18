@@ -14,6 +14,17 @@ export interface LocalFontOptions extends FontOptions {
   family?: string;
 }
 
+type BrowserStyleElement = {
+  textContent?: string | null;
+  setAttribute(name: string, value: string): void;
+};
+
+type BrowserDocument = {
+  head?: { appendChild(node: BrowserStyleElement): void };
+  createElement(tagName: string): BrowserStyleElement;
+  querySelector(selector: string): BrowserStyleElement | null;
+};
+
 function toSource(input: string | LocalFontSource): LocalFontSource {
   if (typeof input === "string") {
     const format = inferFormat(input);
@@ -37,6 +48,47 @@ function _buildFaceDecl(source: LocalFontSource): string {
   return `url("${source.path}") format("${format}")`;
 }
 
+function localFamilyCss(
+  family: string,
+  className: string,
+  sources: ReadonlyArray<LocalFontSource>,
+  display: FontOptions["display"] = "swap",
+  declarations: LocalFontOptions["declarations"] = [],
+): string {
+  const faces = sources
+    .map(
+      (source) => `@font-face {
+  font-family: "${family}";
+  src: ${_buildFaceDecl(source)};
+  font-weight: ${source.weight ?? 400};
+  font-style: ${source.style ?? "normal"};
+  font-display: ${display};
+${declarations.map(({ prop, value }) => `  ${prop}: ${value};`).join("\n")}
+}`,
+    )
+    .join("\n");
+  const value = `'${family}', system-ui, sans-serif`;
+  return `${faces}
+.${className}{font-family:${value}}.${className}_variable{--font-${className
+    .replace(/^__swift_rust_font_/, "")
+    .replace(/_/g, "-")}:${value}}`;
+}
+
+function registerLocalFontCss(key: string, css: string): void {
+  const globals = globalThis as unknown as {
+    __SR_LOCAL_FONT_CSS__?: Set<string>;
+    document?: BrowserDocument;
+  };
+  if (!globals.__SR_LOCAL_FONT_CSS__) globals.__SR_LOCAL_FONT_CSS__ = new Set<string>();
+  globals.__SR_LOCAL_FONT_CSS__.add(css);
+  const doc = globals.document;
+  if (!doc?.head || doc.querySelector(`style[data-swift-rust-local-font="${key}"]`)) return;
+  const style = doc.createElement("style");
+  style.textContent = css;
+  style.setAttribute("data-swift-rust-local-font", key);
+  doc.head.appendChild(style);
+}
+
 export function localFont(options: LocalFontOptions): LoadedFont {
   const sources = Array.isArray(options.src) ? options.src : [options.src];
   const parsed = sources.map(toSource);
@@ -52,14 +104,16 @@ export function localFont(options: LocalFontOptions): LoadedFont {
       .replace(/\b\w/g, (c) => c.toUpperCase()) ??
     "LocalFont";
 
-  const className = options.variable
-    ? `${normalizeClassName(family)} __swift_rust_local_${family.toLowerCase().replace(/\s+/g, "_")}`
-    : normalizeClassName(family);
+  const className = normalizeClassName(family);
+  registerLocalFontCss(
+    className,
+    localFamilyCss(family, className, parsed, options.display, options.declarations),
+  );
 
   return {
     className,
     style: { fontFamily: `'${family}'` },
-    variable: options.variable ? `--font-${family.toLowerCase().replace(/\s+/g, "-")}` : undefined,
+    variable: options.variable ? `${className}_variable` : undefined,
   };
 }
 
@@ -124,17 +178,23 @@ export const ZIMULA_PATHS = {
 
 function buildLocalFamily(
   family: string,
-  _sources: ReadonlyArray<{ path: string; weight: number; style: "normal" | "italic" }>,
+  sources: ReadonlyArray<{ path: string; weight: number; style: "normal" | "italic" }>,
   variable: boolean,
+  cssFamily = family,
 ): LoadedFont {
   const fallback = ["system-ui", "sans-serif"];
-  const className = variable
-    ? `${normalizeClassName(family)} __swift_rust_local_${family.toLowerCase().replace(/\s+/g, "_")}`
-    : normalizeClassName(family);
+  const first = sources[0];
+  const className = normalizeClassName(family);
+  registerLocalFontCss(className, localFamilyCss(cssFamily, className, sources));
   return {
     className,
-    style: { fontFamily: `'${family}', ${fallback.join(", ")}` },
-    variable: variable ? `--font-${family.toLowerCase().replace(/\s+/g, "-")}` : undefined,
+    style: {
+      fontFamily: `'${cssFamily}', ${fallback.join(", ")}`,
+      ...(sources.length === 1 && first
+        ? { fontWeight: String(first.weight), fontStyle: first.style }
+        : {}),
+    },
+    variable: variable ? `${normalizeClassName(family)}_variable` : undefined,
   };
 }
 
@@ -160,6 +220,7 @@ export const DxSlightMediumUltra = (options: FontOptions = {}): LoadedFont =>
     "DxSlight Medium Ultra",
     [{ path: DX_SLIGHT_PATHS.mediumultra, weight: 500, style: "normal" }],
     options.variable ?? false,
+    "DxSlight",
   );
 
 export const DxSlightExtBdUltraSlant = (options: FontOptions = {}): LoadedFont =>
@@ -167,6 +228,7 @@ export const DxSlightExtBdUltraSlant = (options: FontOptions = {}): LoadedFont =
     "DxSlight ExtBd UltraSlant",
     [{ path: DX_SLIGHT_PATHS.extbdultraslant, weight: 800, style: "italic" }],
     options.variable ?? false,
+    "DxSlight",
   );
 
 export const VarentGrotesk = (options: FontOptions = {}): LoadedFont =>
@@ -184,6 +246,7 @@ export const VarentGroteskBold = (options: FontOptions = {}): LoadedFont =>
     "Varent Grotesk Bold",
     [{ path: VARENT_PATHS.bold, weight: 700, style: "normal" }],
     options.variable ?? false,
+    "Varent Grotesk",
   );
 
 export const VarentGroteskExtLtIta = (options: FontOptions = {}): LoadedFont =>
@@ -191,6 +254,7 @@ export const VarentGroteskExtLtIta = (options: FontOptions = {}): LoadedFont =>
     "Varent Grotesk ExtLtIta",
     [{ path: VARENT_PATHS.extLtIta, weight: 200, style: "italic" }],
     options.variable ?? false,
+    "Varent Grotesk",
   );
 
 export const Zimula = (options: FontOptions = {}): LoadedFont =>
@@ -272,7 +336,7 @@ export function localFontCss(): string {
     .map(([key, path]) => {
       const match = key.match(/^(\d+)(-(ink-(trap|spot)))?$/);
       const weight = match?.[1] ? match[1] : "400";
-      const variant = match?.[3] ?? null;
+      const variant = match?.[4] ?? null;
       const variantLabel = variant === "trap" ? " Ink Trap" : variant === "spot" ? " Ink Spot" : "";
       return `
 @font-face {
@@ -285,6 +349,28 @@ export function localFontCss(): string {
     })
     .join("\n");
   decls.push(zimulaDecls);
+
+  const families = [
+    ["Lausanne", "Lausanne"],
+    ["DxSlight", "DxSlight"],
+    ["DxSlight Medium Ultra", "DxSlight"],
+    ["DxSlight ExtBd UltraSlant", "DxSlight"],
+    ["Varent Grotesk", "Varent Grotesk"],
+    ["Varent Grotesk Bold", "Varent Grotesk"],
+    ["Varent Grotesk ExtLtIta", "Varent Grotesk"],
+    ["Zimula", "Zimula"],
+  ] as const;
+  decls.push(
+    families
+      .map(([name, cssFamily]) => {
+        const className = normalizeClassName(name);
+        const value = `'${cssFamily}', system-ui, sans-serif`;
+        return `.${className}{font-family:${value}}.${className}_variable{--font-${name
+          .toLowerCase()
+          .replace(/\s+/g, "-")}:${value}}`;
+      })
+      .join("\n"),
+  );
 
   return decls.join("\n\n");
 }

@@ -10,10 +10,9 @@ const bricolage = BricolageGrotesque({ variable: true, subsets: ["latin"] });
 export const metadata = {
   title: {
     template: "%s — swift-rust ui",
-    default: "swift-rust ui — a better shadcn, with a third dimension",
+    default: "swift-rust ui — open-code components for swift-rust",
   },
-  description:
-    "An open-code component registry for swift-rust. Every component composes variant × size × design — 3D, glass, neumorphic, brutalist, gradient. Built for Tailwind v4.",
+  description: "A professional open-code component registry for swift-rust, built for Tailwind v4.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

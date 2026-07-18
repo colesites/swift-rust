@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function IntroductionPage() {
   return (
-    <article className="max-w-3xl">
+    <article className="mx-auto max-w-3xl">
       <DocHeader
         eyebrow="Docs"
         title="Introduction"
@@ -26,7 +26,10 @@ export default function IntroductionPage() {
         {[
           ["variant", "What it means — default, outline, secondary, ghost, destructive, link."],
           ["size", "How dense it is — xs through lg, plus five icon sizes."],
-          ["design", "How it looks — flat, 3d, glass, neo, brutal, gradient. The axis shadcn doesn't have."],
+          [
+            "design",
+            "How it looks — flat, 3d, glass, neo, brutal, gradient. The axis shadcn doesn't have.",
+          ],
         ].map(([k, v]) => (
           <div key={k} className="rounded-xl border border-border bg-surface p-4">
             <code className="font-mono text-sm text-accent">{k}</code>
@@ -38,8 +41,8 @@ export default function IntroductionPage() {
       <DocH2>Open code</DocH2>
       <DocP>
         There's no opaque dependency to upgrade and fight. The component source lands in your repo
-        under <InlineCode>components/ui</InlineCode>; change a class, a token, or the whole API — it's
-        yours.
+        under <InlineCode>components/ui</InlineCode>; change a class, a token, or the whole API —
+        it's yours.
       </DocP>
 
       <DocPager next={{ href: "/docs/installation", label: "Installation" }} />

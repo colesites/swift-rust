@@ -14,6 +14,7 @@ import {
 import { delimiter, join, resolve, dirname, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 
 const cwd = process.cwd();
 const APP_DIR_CANDIDATES = [resolve(cwd, "src", "app"), resolve(cwd, "app")];
@@ -616,7 +617,8 @@ async function main() {
   process.stdout.write(`  ${paint("dim", "starting dev server on " + HOST + ":" + PORT_START + "…")}\n`);
   PORT = await findFreePort(PORT_START);
   process.stdout.write(`  ${paint("dim", "using port " + PORT + "\n")}\n`);
-  activeLogFile = process.env.SWIFT_RUST_BUILD_LOG || "/tmp/swift-rust-build-dev.log";
+  activeLogFile =
+    process.env.SWIFT_RUST_BUILD_LOG || join(tmpdir(), "swift-rust-build-dev.log");
   try { unlinkSync(activeLogFile); } catch {}
   const proc = startDevServer(PORT, activeLogFile);
   let okCount = 0;
@@ -806,8 +808,11 @@ async function main() {
     const treatFailuresAsWarning = okCount > 0;
     process.exit(treatFailuresAsWarning || failCount === 0 ? 0 : 1);
   } finally {
-    try { proc.kill("SIGTERM"); } catch {}
-    setTimeout(() => { try { proc.kill("SIGKILL"); } catch {} process.exit(0); }, 2000).unref();
+    try { proc.kill(process.platform === "win32" ? undefined : "SIGTERM"); } catch {}
+    setTimeout(() => {
+      try { proc.kill(process.platform === "win32" ? undefined : "SIGKILL"); } catch {}
+      process.exit(0);
+    }, 2000).unref();
   }
 }
 

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function ThemingPage() {
   return (
-    <article className="max-w-3xl">
+    <article className="mx-auto max-w-3xl">
       <DocHeader
         eyebrow="Docs"
         title="Theming"

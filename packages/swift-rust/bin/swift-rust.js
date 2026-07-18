@@ -1,8 +1,12 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { delimiter, dirname, join, resolve } from "node:path";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import {
+  isSupportedBunVersion,
+  unsupportedBunMessage,
+} from "./runtime/bun-version.mjs";
 
 const here = dirname(realpathSync(fileURLToPath(import.meta.url)));
 const packageRoot = resolve(here, "..");
@@ -33,43 +37,49 @@ function findBun() {
   return null;
 }
 
-if (cmd === "dev") {
-  const devScript = join(here, "dev-server.mjs");
+function checkBun(runtime) {
+  const version =
+    runtime === process.execPath && process.versions?.bun
+      ? process.versions.bun
+      : spawnSync(runtime, ["--version"], { encoding: "utf8" }).stdout?.trim();
+  if (!isSupportedBunVersion(version)) {
+    process.stderr.write(`${unsupportedBunMessage(version)}\n`);
+    return false;
+  }
+  return true;
+}
+
+async function runBunScript(script, args, command) {
   const runtime = findBun();
   if (!runtime) {
     process.stderr.write(
-      "swift-rust dev requires Bun to compile TS/TSX. Install Bun from https://bun.sh and make sure `bun` is on PATH.\n",
+      `swift-rust ${command} requires Bun. Install Bun from https://bun.sh and make sure \`bun\` is on PATH.\n`,
     );
-    process.exit(1);
+    return 1;
   }
-  const child = spawn(runtime, [devScript, ...process.argv.slice(3)], {
+  if (!checkBun(runtime)) return 1;
+  const child = spawn(runtime, [script, ...args], {
     stdio: "inherit",
     env: process.env,
   });
-  const code = await new Promise((r) => {
-    child.on("exit", (c) => r(c ?? 1));
-    child.on("error", () => r(1));
+  return await new Promise((resolveExit) => {
+    child.on("exit", (code) => resolveExit(code ?? 1));
+    child.on("error", (error) => {
+      process.stderr.write(
+        `swift-rust ${command}: could not start Bun at ${runtime} (${error.message}).\n`,
+      );
+      resolveExit(1);
+    });
   });
+}
+
+if (cmd === "dev") {
+  const code = await runBunScript(join(here, "dev-server.mjs"), process.argv.slice(3), "dev");
   process.exit(code);
 }
 
 if (cmd === "build") {
-  const buildScript = join(here, "build.mjs");
-  const runtime = findBun();
-  if (!runtime) {
-    process.stderr.write(
-      "swift-rust build requires Bun to compile TS/TSX. Install Bun from https://bun.sh and make sure `bun` is on PATH.\n",
-    );
-    process.exit(1);
-  }
-  const child = spawn(runtime, [buildScript, ...process.argv.slice(3)], {
-    stdio: "inherit",
-    env: process.env,
-  });
-  const code = await new Promise((r) => {
-    child.on("exit", (c) => r(c ?? 1));
-    child.on("error", () => r(1));
-  });
+  const code = await runBunScript(join(here, "build.mjs"), process.argv.slice(3), "build");
   process.exit(code);
 }
 
@@ -180,7 +190,10 @@ function cargoRun() {
   );
   return new Promise((resolveExit) => {
     child.on("exit", (c) => resolveExit(c ?? 1));
-    child.on("error", () => resolveExit(1));
+    child.on("error", (error) => {
+      process.stderr.write(`swift-rust: failed to start Cargo (${error.message}).\n`);
+      resolveExit(1);
+    });
   });
 }
 
@@ -189,7 +202,10 @@ if (bin) {
   const child = spawn(bin, process.argv.slice(2), { stdio: "inherit", env: process.env });
   const code = await new Promise((r) => {
     child.on("exit", (c) => r(c ?? 1));
-    child.on("error", () => r(1));
+    child.on("error", (error) => {
+      process.stderr.write(`swift-rust: failed to start ${bin} (${error.message}).\n`);
+      r(1);
+    });
   });
   process.exit(code);
 }

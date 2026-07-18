@@ -26,6 +26,6 @@ src/
 
 ## Learn more
 
-- [Documentation](https://swift-rust.dev/docs)
-- [Examples](https://github.com/swift-rust/swift-rust/tree/main/examples)
+- [Documentation](https://docs-swift-rust.vercel.app/)
+- [Examples](https://github.com/colesites/swift-rust/tree/main/examples)
 - [Discord](https://discord.gg/swift-rust)

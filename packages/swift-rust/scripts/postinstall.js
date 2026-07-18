@@ -1,16 +1,21 @@
-import { existsSync, mkdirSync, createWriteStream, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { pipeline } from "node:stream/promises";
-import { createGunzip } from "node:zlib";
-import { execSync } from "node:child_process";
+import { gunzipSync } from "node:zlib";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import https from "node:https";
-import { readFileSync } from "node:fs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const packageRoot = resolve(here, "..");
-const RELEASES_URL = process.env.SWIFT_RUST_RELEASES_URL ?? "https://github.com/swift-rust/swift-rust/releases";
+const RELEASES_URL = process.env.SWIFT_RUST_RELEASES_URL ?? "https://github.com/colesites/swift-rust/releases";
 const pkg = JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8"));
 const VERSION = process.env.SWIFT_RUST_VERSION ?? pkg.version;
 
@@ -23,19 +28,22 @@ const PLATFORM_TARGETS = {
   "win32-x64": "x86_64-pc-windows-msvc",
 };
 
-function getPlatform() {
-  const p = `${process.platform}-${process.arch}`;
+export function getPlatform(platform = process.platform, arch = process.arch) {
+  const p = `${platform}-${arch}`;
   if (p in PLATFORM_TARGETS) return p;
   throw new Error(`swift-rust: unsupported platform ${p}`);
 }
 
-function binaryName() {
-  return process.platform === "win32" ? "swift-rust.exe" : "swift-rust";
+export function binaryName(platform) {
+  return platform.startsWith("win32") ? "swift-rust.exe" : "swift-rust";
 }
 
-function assetName(platform) {
+export function assetName(platform) {
   const target = PLATFORM_TARGETS[platform];
-  return process.platform === "win32" ? `swift-rust-${target}.exe.zip` : `swift-rust-${target}.tar.gz`;
+  if (!target) throw new Error(`swift-rust: unsupported platform ${platform}`);
+  return platform.startsWith("win32")
+    ? `swift-rust-${target}.exe`
+    : `swift-rust-${target}.tar.gz`;
 }
 
 function nativeDir(platform) {
@@ -46,13 +54,13 @@ function getSha256(buf) {
   return createHash("sha256").update(buf).digest("hex");
 }
 
-function fetch(url) {
+function fetchAsset(url) {
   return new Promise((resolveFetch, rejectFetch) => {
     https.get(url, (res) => {
       if (res.statusCode === 302 || res.statusCode === 301) {
         const next = res.headers.location;
         if (!next) return rejectFetch(new Error("redirect without location"));
-        return resolveFetch(fetch(next));
+        return resolveFetch(fetchAsset(next));
       }
       if (res.statusCode !== 200) {
         return rejectFetch(new Error(`HTTP ${res.statusCode} fetching ${url}`));
@@ -65,6 +73,24 @@ function fetch(url) {
   });
 }
 
+export function extractTarBinary(archive, name = "swift-rust") {
+  const tar = gunzipSync(archive);
+  for (let offset = 0; offset + 512 <= tar.length; ) {
+    const header = tar.subarray(offset, offset + 512);
+    const entryName = header.subarray(0, 100).toString("utf8").replace(/\0.*$/, "");
+    if (!entryName) break;
+    const sizeText = header.subarray(124, 136).toString("ascii").replace(/\0.*$/, "").trim();
+    const size = Number.parseInt(sizeText || "0", 8);
+    const start = offset + 512;
+    const end = start + size;
+    if (entryName === name || entryName.endsWith(`/${name}`)) {
+      return tar.subarray(start, end);
+    }
+    offset = start + Math.ceil(size / 512) * 512;
+  }
+  throw new Error(`swift-rust: ${name} was not found in the downloaded archive`);
+}
+
 function tryCargoBuildFallback(platform) {
   const workspaceRoot = resolve(packageRoot, "../..");
   if (!existsSync(join(workspaceRoot, "Cargo.toml"))) {
@@ -72,22 +98,27 @@ function tryCargoBuildFallback(platform) {
   }
   console.log(`swift-rust: no prebuilt binary for ${platform}, attempting cargo build from ${workspaceRoot}...`);
   try {
-    execSync("cargo build --release -p swift-rust --bin swift-rust", {
-      stdio: "inherit",
-      cwd: workspaceRoot,
-    });
+    const build = spawnSync(
+      "cargo",
+      ["build", "--release", "-p", "swift-rust", "--bin", "swift-rust"],
+      {
+        stdio: "inherit",
+        cwd: workspaceRoot,
+      },
+    );
+    if (build.error || build.status !== 0) {
+      return false;
+    }
   } catch {
     return false;
   }
-  const built = join(workspaceRoot, "target", "release", binaryName());
+  const built = join(workspaceRoot, "target", "release", binaryName(platform));
   if (!existsSync(built)) return false;
-  const target = join(nativeDir(platform), binaryName());
+  const target = join(nativeDir(platform), binaryName(platform));
   mkdirSync(dirname(target), { recursive: true });
   try {
-    execSync(`cp ${built} ${target}`);
-    if (process.platform !== "win32") {
-      execSync(`chmod +x ${target}`);
-    }
+    copyFileSync(built, target);
+    if (!platform.startsWith("win32")) chmodSync(target, 0o755);
     console.log(`swift-rust: installed ${target} (from cargo build)`);
     return true;
   } catch (e) {
@@ -105,7 +136,7 @@ export async function install() {
   }
   const platform = getPlatform();
   const dir = nativeDir(platform);
-  const target = join(dir, binaryName());
+  const target = join(dir, binaryName(platform));
   if (existsSync(target)) return;
 
   mkdirSync(dir, { recursive: true });
@@ -114,7 +145,7 @@ export async function install() {
 
   let archive;
   try {
-    archive = await fetch(url);
+    archive = await fetchAsset(url);
   } catch (e) {
     if (tryCargoBuildFallback(platform)) return;
     console.warn(`swift-rust: postinstall could not fetch binary: ${e.message}`);
@@ -127,23 +158,17 @@ export async function install() {
     throw new Error("swift-rust: downloaded archive hash mismatch");
   }
 
-  if (archive[0] === 0x1f && archive[1] === 0x8b) {
-    const out = join(dir, "extract");
-    mkdirSync(out, { recursive: true });
-    await pipeline(Buffer.from(archive), createGunzip(), createWriteStream(join(out, "asset.tar")));
-    execSync(`tar -xf ${join(out, "asset.tar")} -C ${out}`);
-    execSync(`mv ${join(out, "swift-rust")} ${target}`);
-  } else {
-    writeFileSync(target, archive);
-  }
+  const binary =
+    archive[0] === 0x1f && archive[1] === 0x8b
+      ? extractTarBinary(archive, binaryName(platform))
+      : archive;
+  writeFileSync(target, binary);
 
-  if (process.platform !== "win32") {
-    execSync(`chmod +x ${target}`);
-  }
+  if (!platform.startsWith("win32")) chmodSync(target, 0o755);
   console.log(`swift-rust: installed ${target}`);
 }
 
-if (import.meta.main) {
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   install().catch((e) => {
     console.error(e);
     process.exit(1);

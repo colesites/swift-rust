@@ -5,6 +5,16 @@ import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
 import { performance } from "node:perf_hooks";
 import { errorOverlayHTML as renderErrorOverlay } from "./error-overlay.mjs";
+import {
+  isSupportedBunVersion,
+  unsupportedBunMessage,
+} from "./runtime/bun-version.mjs";
+import { FRAMEWORK_VERSION } from "./runtime/framework-version.mjs";
+
+if (!isSupportedBunVersion(process.versions?.bun)) {
+  process.stderr.write(`${unsupportedBunMessage(process.versions?.bun)}\n`);
+  process.exit(1);
+}
 
 // Locate the bundled local fonts. Prefers the installed @swift-rust/font
 // package (so it works when swift-rust is installed from npm), falling back to
@@ -21,6 +31,14 @@ export function resolveLocalFontDir() {
   candidates.push(join(import.meta.dirname, "..", "..", "..", "packages", "font", "src", "local"));
   _localFontDir = candidates.find((d) => existsSync(d)) ?? candidates[candidates.length - 1];
   return _localFontDir;
+}
+
+function resolveLocalFontPath(pathname) {
+  const fontName = decodeURIComponent(pathname.replace("/_swift-rust/fonts/", ""));
+  const fontDir = resolve(resolveLocalFontDir());
+  const fontPath = resolve(fontDir, fontName);
+  if (!fontName || !fontPath.startsWith(`${fontDir}${sep}`)) return null;
+  return fontPath;
 }
 
 const cwd = process.cwd();
@@ -53,7 +71,7 @@ const c = {
 const useColor = process.stdout.isTTY !== false && !process.env.NO_COLOR;
 const paint = (color, s) => (useColor ? `${c[color]}${s}${c.reset}` : s);
 
-const VERSION = "0.1.0";
+const VERSION = FRAMEWORK_VERSION;
 const APP_DIR_CANDIDATES = [resolve(cwd, "src", "app"), resolve(cwd, "app")];
 const APP_DIR = APP_DIR_CANDIDATES.find((p) => existsSync(p)) ?? resolve(cwd, "app");
 const PUBLIC_DIR = resolve(cwd, "public");
@@ -951,13 +969,24 @@ function buildGoogleFontsLinkTag() {
   const registered = globalThis.__SR_GOOGLE_FONTS__ instanceof Set ? globalThis.__SR_GOOGLE_FONTS__ : null;
   const all = registered ? new Set([...GOOGLE_FONT_FAMILIES, ...registered]) : GOOGLE_FONT_FAMILIES;
   if (all.size === 0) return "";
-  const families = Array.from(all)
-    .map((f) => `family=${encodeGoogleFontFamily(f)}:wght@300..900`)
-    .join("&");
+  const stylesheets = Array.from(all)
+    .map((family) => {
+      const encodedFamily = encodeGoogleFontFamily(family);
+      const key = normalizeGoogleFontClass(family);
+      return `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${encodedFamily}&display=swap" data-swift-rust-google-font="${key}" />`;
+    })
+    .join("\n");
   return `<link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${families}&display=swap" />
+${stylesheets}
 <style data-swift-rust-google-fonts>${escapeForStyleTag(googleFontClassRules(all))}</style>`;
+}
+
+function buildLocalFontsStyleTag() {
+  const registered =
+    globalThis.__SR_LOCAL_FONT_CSS__ instanceof Set ? globalThis.__SR_LOCAL_FONT_CSS__ : null;
+  if (!registered || registered.size === 0) return "";
+  return `<style data-swift-rust-local-fonts>${escapeForStyleTag(Array.from(registered).join("\n"))}</style>`;
 }
 
 function encodeGoogleFontFamily(family) {
@@ -1840,6 +1869,9 @@ async function renderRoute(urlPath, req) {
   // Reset per-render Google font registry so each page only requests the
   // families it actually uses (factories re-register during render).
   globalThis.__SR_GOOGLE_FONTS__ = new Set();
+  if (!(globalThis.__SR_LOCAL_FONT_CSS__ instanceof Set)) {
+    globalThis.__SR_LOCAL_FONT_CSS__ = new Set();
+  }
 
   try {
     const React = await import("react");
@@ -2145,10 +2177,12 @@ function buildAppIconsLinkTags() {
 async function buildHead(head) {
   const css = await getProcessedGlobalsCss();
   const fontLink = buildGoogleFontsLinkTag();
+  const localFontStyles = buildLocalFontsStyleTag();
   return [
     head || "",
     buildAppIconsLinkTags(),
     fontLink,
+    localFontStyles,
     css ? `<style data-swift-rust-globals>${escapeForStyleTag(css)}</style>` : "",
   ].filter(Boolean).join("\n");
 }
@@ -2491,12 +2525,6 @@ async function handleRequest(req, res) {
     return;
   }
 
-  if (pathname.startsWith("/_swift-rust/")) {
-    res.writeHead(404);
-    res.end("Not found");
-    return;
-  }
-
   if (pathname === "/_swift-rust/hmr-client.js") {
     const client = await tryHmrClient();
     if (client) {
@@ -2510,11 +2538,8 @@ async function handleRequest(req, res) {
   }
 
   if (pathname.startsWith("/_swift-rust/fonts/")) {
-    const fontPath = join(
-      resolveLocalFontDir(),
-      decodeURIComponent(pathname.replace("/_swift-rust/fonts/", "")),
-    );
-    if (existsSync(fontPath) && statSync(fontPath).isFile()) {
+    const fontPath = resolveLocalFontPath(pathname);
+    if (fontPath && existsSync(fontPath) && statSync(fontPath).isFile()) {
       const ext = extname(fontPath).toLowerCase();
       const mime = { ".woff2": "font/woff2", ".woff": "font/woff", ".ttf": "font/ttf", ".otf": "font/otf" }[ext] ?? "application/octet-stream";
       res.writeHead(200, { "Content-Type": mime, "Cache-Control": "public, max-age=31536000, immutable" });
@@ -2554,6 +2579,12 @@ async function handleRequest(req, res) {
     }
     res.writeHead(404);
     res.end("Image not found");
+    return;
+  }
+
+  if (pathname.startsWith("/_swift-rust/")) {
+    res.writeHead(404);
+    res.end("Not found");
     return;
   }
 
@@ -2719,6 +2750,22 @@ async function handleFetch(req) {
       return new Response(client, { headers: { "Content-Type": "application/javascript" } });
     }
     return new Response("Not found", { status: 404 });
+  }
+
+  if (pathname.startsWith("/_swift-rust/fonts/")) {
+    const fontPath = resolveLocalFontPath(pathname);
+    if (fontPath && existsSync(fontPath) && statSync(fontPath).isFile()) {
+      const ext = extname(fontPath).toLowerCase();
+      const mime = { ".woff2": "font/woff2", ".woff": "font/woff", ".ttf": "font/ttf", ".otf": "font/otf" }[ext] ?? "application/octet-stream";
+      const file = Bun?.file ? Bun.file(fontPath) : readFileSync(fontPath);
+      return new Response(file, {
+        headers: {
+          "Content-Type": mime,
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
+      });
+    }
+    return new Response("Font not found", { status: 404 });
   }
 
   if (pathname === "/_swift-rust/navigator.js") {

@@ -1,179 +1,125 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { DesignMorph } from "@/components/site/design-morph";
+import { Button } from "@/components/ui/button";
 import { COMPONENT_COUNTS } from "@/lib/components";
 
 const DIMENSIONS = [
   {
     name: "variant",
-    desc: "Intent — default, outline, secondary, ghost, destructive, link.",
-    chips: ["default", "outline", "ghost", "destructive"],
+    description: "Set the component's intent with familiar defaults.",
+    values: ["default", "outline", "secondary", "ghost"],
   },
   {
     name: "size",
-    desc: "Density — xs through lg, plus five icon sizes.",
-    chips: ["xs", "sm", "default", "lg", "icon"],
+    description: "Move from compact controls to spacious calls to action.",
+    values: ["xs", "sm", "default", "lg", "icon"],
   },
   {
     name: "design",
-    desc: "Surface — the axis shadcn doesn't have.",
-    chips: ["flat", "3d", "glass", "neo", "brutal", "gradient"],
-    accent: true,
+    description: "Change the surface treatment without changing the API.",
+    values: ["flat", "soft", "3d", "glass", "neo", "brutal"],
   },
 ];
 
 export default function Home() {
   return (
     <div>
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 hero-glow" />
-        <div className="absolute inset-0 -z-10 bg-grid opacity-50" />
-
-        <div className="container-page flex flex-col items-center pt-24 pb-16 text-center sm:pt-32">
-          <a
-            href="/docs/components"
-            className="rise inline-flex items-center gap-2 rounded-full border border-border bg-surface/70 px-3.5 py-1.5 text-sm text-fg-muted backdrop-blur transition-colors hover:border-border-strong hover:text-fg"
-          >
-            <span className="inline-block size-1.5 rounded-full bg-accent" />
-            {COMPONENT_COUNTS.total} components · Tailwind v4
-            <span aria-hidden>→</span>
-          </a>
-
-          <h1
-            className="rise mt-7 max-w-4xl font-display text-5xl font-semibold leading-[1.02] tracking-tight sm:text-7xl"
-            style={{ animationDelay: "60ms" }}
-          >
-            Components with a<br />
-            <span className="text-accent">third dimension.</span>
-          </h1>
-
-          <p
-            className="rise mt-6 max-w-xl text-pretty text-lg leading-relaxed text-fg-muted"
-            style={{ animationDelay: "120ms" }}
-          >
-            Everything you know from shadcn — variants and sizes — plus a{" "}
-            <code className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[0.85em] text-fg">
-              design
-            </code>{" "}
-            prop: 3D, glass, neumorphic, brutalist, gradient. Open code, you own every line.
-          </p>
-
-          <div
-            className="rise mt-9 flex flex-col items-center gap-4"
-            style={{ animationDelay: "180ms" }}
-          >
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <Button asChild design="3d" size="lg">
-                <a href="/docs">Get started</a>
-              </Button>
-              <Button asChild variant="outline" size="lg">
-                <a href="/docs/components">Browse components</a>
-              </Button>
-            </div>
-            <code className="rounded-xl border border-border bg-surface/70 px-4 py-2.5 font-mono text-sm text-fg-muted">
-              <span className="text-fg-subtle select-none">$ </span>
-              bunx @swift-rust/ui add button
-            </code>
-          </div>
+      <section className="border-b border-border px-6 py-24 text-center sm:px-8 sm:py-32 lg:px-12">
+        <a
+          href="/docs/components"
+          className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-sm text-fg-muted transition-colors hover:border-border-strong hover:text-fg"
+        >
+          <span className="size-1.5 rounded-full bg-accent" />
+          {COMPONENT_COUNTS.total} components for Tailwind v4
+          <span aria-hidden>→</span>
+        </a>
+        <h1 className="mx-auto mt-8 max-w-5xl font-display text-5xl font-semibold leading-[1.02] tracking-[-0.04em] sm:text-7xl lg:text-8xl">
+          The component library for swift-rust.
+        </h1>
+        <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-fg-muted sm:text-xl">
+          Beautifully designed, accessible components you can copy, customize, and make your own.
+          Open code, built for the framework.
+        </p>
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+          <Button asChild size="lg">
+            <a href="/docs">Get started</a>
+          </Button>
+          <Button asChild variant="outline" size="lg">
+            <a href="/docs/components">Browse components</a>
+          </Button>
         </div>
+        <code className="mt-5 inline-flex rounded-md border border-border bg-surface px-3 py-2 font-mono text-sm text-fg-muted">
+          <span className="mr-2 select-none text-fg-subtle">$</span>
+          bunx @swift-rust/ui add button
+        </code>
       </section>
 
-      {/* ── Live design morph ────────────────────────────────────────────── */}
-      <section className="container-page pb-8">
+      <section className="border-b border-border p-4 sm:p-6 lg:p-8">
         <DesignMorph />
       </section>
 
-      {/* ── Three dimensions ─────────────────────────────────────────────── */}
-      <section className="container-page py-20">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-            Three independent axes
-          </h2>
-          <p className="mt-3 text-fg-muted">
-            Compose them freely. The same component spans dozens of looks without a single
-            override.
-          </p>
-        </div>
-
-        <div className="mt-12 grid gap-4 md:grid-cols-3">
-          {DIMENSIONS.map((dim) => (
-            <Card
-              key={dim.name}
-              design={dim.accent ? "gradient" : "flat"}
-              className={dim.accent ? "" : "bg-surface"}
-            >
-              <CardContent className="flex flex-col gap-4 p-6">
-                <div className="flex items-baseline gap-2">
-                  <code
-                    className={
-                      "font-mono text-sm " + (dim.accent ? "text-white" : "text-accent")
-                    }
-                  >
-                    {dim.name}
-                  </code>
-                  {dim.accent && (
-                    <span className="rounded-full bg-white/20 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-white">
-                      ours
-                    </span>
-                  )}
-                </div>
-                <p className={"text-sm " + (dim.accent ? "text-white/85" : "text-fg-muted")}>
-                  {dim.desc}
+      <section className="border-b border-border">
+        <div className="grid lg:grid-cols-[0.7fr_1.3fr]">
+          <div className="border-b border-border p-8 sm:p-12 lg:border-r lg:border-b-0">
+            <span className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
+              One API
+            </span>
+            <h2 className="mt-4 max-w-md font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+              More range without more complexity.
+            </h2>
+            <p className="mt-4 max-w-md leading-relaxed text-fg-muted">
+              Every component shares the same predictable axes, so your interface stays consistent
+              as it grows.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-3">
+            {DIMENSIONS.map((dimension, index) => (
+              <div
+                key={dimension.name}
+                className="border-b border-border p-8 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0"
+              >
+                <span className="font-mono text-xs text-fg-subtle">0{index + 1}</span>
+                <h3 className="mt-8 font-mono text-sm text-accent">{dimension.name}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-fg-muted">
+                  {dimension.description}
                 </p>
-                <div className="mt-auto flex flex-wrap gap-1.5">
-                  {dim.chips.map((chip) => (
+                <div className="mt-6 flex flex-wrap gap-1.5">
+                  {dimension.values.map((value) => (
                     <span
-                      key={chip}
-                      className={
-                        "rounded-md px-2 py-0.5 font-mono text-xs " +
-                        (dim.accent
-                          ? "bg-white/15 text-white"
-                          : "bg-surface-2 text-fg-muted")
-                      }
+                      key={value}
+                      className="rounded-md border border-border bg-surface px-2 py-1 font-mono text-xs text-fg-muted"
                     >
-                      {chip}
+                      {value}
                     </span>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Components CTA ───────────────────────────────────────────────── */}
-      <section className="container-page pb-28">
-        <div className="relative overflow-hidden rounded-3xl border border-border bg-surface px-8 py-14 text-center">
-          <div className="absolute inset-0 -z-10 bg-grid opacity-40" />
-          <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-            {COMPONENT_COUNTS.total} components, growing
-          </h2>
-          <p className="mx-auto mt-3 max-w-lg text-fg-muted">
-            Install only what you need with the CLI. Every one is open code, copied into your
-            project, yours to edit.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Button asChild design="glass" size="lg">
-              <a href="/docs/components">View all components</a>
-            </Button>
-            <Button asChild variant="ghost" size="lg">
-              <a href="/docs">Read the docs</a>
-            </Button>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      <footer className="border-t border-border">
-        <div className="container-page flex flex-col items-center justify-between gap-3 py-8 text-sm text-fg-subtle sm:flex-row">
-          <span>
-            swift<span className="text-fg-muted">·</span>rust ui — built on swift-rust, the React
-            framework powered with Rust + Bun.
-          </span>
-          <a className="hover:text-fg" href="https://github.com/colesites/swift-rust">
-            GitHub →
-          </a>
+      <section className="flex flex-col items-start justify-between gap-8 px-6 py-16 sm:px-8 md:flex-row md:items-center lg:px-12 lg:py-20">
+        <div>
+          <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+            Start with the components you need.
+          </h2>
+          <p className="mt-3 max-w-2xl text-fg-muted">
+            Copy them into your project, keep every line, and shape the system around your product.
+          </p>
         </div>
+        <Button asChild size="lg" className="shrink-0">
+          <a href="/docs/components">Explore all {COMPONENT_COUNTS.total}</a>
+        </Button>
+      </section>
+
+      <footer className="flex flex-col gap-3 border-t border-border px-6 py-8 text-sm text-fg-subtle sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
+        <span>swift-rust ui — open code for the swift-rust framework.</span>
+        <a
+          className="transition-colors hover:text-fg"
+          href="https://github.com/colesites/swift-rust"
+        >
+          GitHub →
+        </a>
       </footer>
     </div>
   );

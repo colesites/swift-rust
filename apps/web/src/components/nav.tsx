@@ -1,10 +1,10 @@
 import { Link } from "swift-rust";
+import { useRouteRequest } from "swift-rust/router";
 import { siteConfig } from "@/lib/site.config";
 import { Logo } from "./logo";
 
 const NAV = [
   { href: "/", label: "Home" },
-  { href: "/ui", label: "UI" },
   { href: "/blog", label: "Blog" },
   { href: "/fonts", label: "Fonts" },
   { href: "/images", label: "Images" },
@@ -19,7 +19,15 @@ const GitHubIcon = () => (
   </svg>
 );
 
+function isActivePath(pathname: string | undefined, href: string) {
+  if (!pathname) return false;
+  if (href === "/") return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function Nav() {
+  const pathname = useRouteRequest()?.url.pathname;
+
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-bg/80 backdrop-blur-md">
       {/* CSS-only mobile menu toggle: no client JS required (these pages are
@@ -32,15 +40,23 @@ export function Nav() {
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-md px-3 py-1.5 text-[0.875rem] text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
-            >
-              {item.label}
-            </Link>
-          ))}
+          {NAV.map((item) => {
+            const active = isActivePath(pathname, item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={`rounded-md px-3 py-1.5 text-[0.875rem] transition-colors ${
+                  active
+                    ? "bg-accent-soft font-medium text-accent"
+                    : "text-fg-muted hover:bg-surface-2 hover:text-fg"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="flex items-center gap-2">
@@ -63,7 +79,14 @@ export function Nav() {
             aria-label="Toggle navigation menu"
             className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-border text-fg md:hidden"
           >
-            <svg viewBox="0 0 24 24" className="h-5 w-5 peer-checked:hidden" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5 peer-checked:hidden"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden
+            >
               <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
             </svg>
           </label>
@@ -73,15 +96,23 @@ export function Nav() {
       {/* Mobile dropdown panel — shown only when the checkbox is checked. */}
       <nav className="hidden border-t border-border bg-bg px-4 py-3 peer-checked:block md:!hidden">
         <div className="flex flex-col gap-1">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-md px-3 py-2 text-[0.95rem] text-fg-muted hover:bg-surface-2 hover:text-fg"
-            >
-              {item.label}
-            </Link>
-          ))}
+          {NAV.map((item) => {
+            const active = isActivePath(pathname, item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={`rounded-md px-3 py-2 text-[0.95rem] transition-colors ${
+                  active
+                    ? "bg-accent-soft font-medium text-accent"
+                    : "text-fg-muted hover:bg-surface-2 hover:text-fg"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
           <div className="mt-2 flex gap-2 border-t border-border pt-3">
             <a
               href={siteConfig.githubUrl}

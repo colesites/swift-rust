@@ -42,8 +42,18 @@ describe("static rendering", () => {
 });
 
 describe("fonts", () => {
-  test("Google font <link> is injected from the layout", () => {
-    expect(readStatic("index.html")).toContain("fonts.googleapis.com/css2");
+  test("Google fonts are isolated into independent stylesheet links", () => {
+    const html = readStatic("index.html");
+    expect(html).toContain("fonts.googleapis.com/css2?family=Geist&display=swap");
+    expect(html).toContain("fonts.googleapis.com/css2?family=Roboto&display=swap");
+    expect(html).not.toContain("family=Geist&family=Roboto");
+    expect(html).not.toContain(":wght@300..900");
+  });
+  test("local font classes and variables are injected from the layout", () => {
+    const html = readStatic("index.html");
+    expect(html).toContain("data-swift-rust-local-fonts");
+    expect(html).toContain(".__swift_rust_font_lausanne");
+    expect(html).toContain(".__swift_rust_font_lausanne_variable");
   });
   test("bundled local fonts are emitted to the output", () => {
     expect(existsSync(join(STATIC, "_swift-rust", "fonts", "Lausanne.otf"))).toBe(true);

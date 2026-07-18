@@ -74,7 +74,7 @@ describe("google font helpers", () => {
 
   test("encodes Google Fonts CSS2 URLs", () => {
     expect(googleFontsUrl(["Geist Mono", "Bricolage Grotesque"])).toBe(
-      "https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300..900&family=Bricolage+Grotesque:wght@300..900&display=swap",
+      "https://fonts.googleapis.com/css2?family=Geist+Mono&family=Bricolage+Grotesque&display=swap",
     );
   });
 
@@ -82,7 +82,7 @@ describe("google font helpers", () => {
     const doc = fakeDocument();
     globals.document = doc;
     Geist({ variable: true });
-    expect(doc.nodes.some((node) => node.href?.includes("family=Geist:wght@300..900"))).toBe(true);
+    expect(doc.nodes.some((node) => node.href?.includes("family=Geist&display=swap"))).toBe(true);
     expect(
       doc.nodes.some((node) =>
         node.textContent?.includes(".__swift_rust_font_geist_variable{--font-geist:"),

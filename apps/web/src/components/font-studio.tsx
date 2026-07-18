@@ -12,6 +12,7 @@ import {
   FiraCode,
   Geist,
   GeistMono,
+  googleFontsUrl,
   IbmPlexMono,
   IbmPlexSans,
   IbmPlexSerif,
@@ -44,28 +45,113 @@ type StudioFont = {
 
 const STUDIO_FONTS: StudioFont[] = [
   { name: "Geist", importName: "Geist", factory: Geist as Factory, blurb: "Default UI font" },
-  { name: "Geist Mono", importName: "GeistMono", factory: GeistMono as Factory, blurb: "Default monospace" },
+  {
+    name: "Geist Mono",
+    importName: "GeistMono",
+    factory: GeistMono as Factory,
+    blurb: "Default monospace",
+  },
   { name: "Inter", importName: "Inter", factory: Inter as Factory, blurb: "Designed for screens" },
   { name: "Roboto", importName: "Roboto", factory: Roboto as Factory, blurb: "Modern, friendly" },
   { name: "Poppins", importName: "Poppins", factory: Poppins as Factory, blurb: "Geometric, warm" },
-  { name: "Manrope", importName: "Manrope", factory: Manrope as Factory, blurb: "Clean sans for editorial" },
-  { name: "IBM Plex Sans", importName: "IbmPlexSans", factory: IbmPlexSans as Factory, blurb: "Corporate sans" },
-  { name: "Space Grotesk", importName: "SpaceGrotesk", factory: SpaceGrotesk as Factory, blurb: "Quirky display" },
-  { name: "Plus Jakarta Sans", importName: "PlusJakartaSans", factory: PlusJakartaSans as Factory, blurb: "Elegant, modern" },
-  { name: "Outfit", importName: "Outfit", factory: Outfit as Factory, blurb: "Geometric for branding" },
-  { name: "Figtree", importName: "Figtree", factory: Figtree as Factory, blurb: "Friendly, approachable" },
+  {
+    name: "Manrope",
+    importName: "Manrope",
+    factory: Manrope as Factory,
+    blurb: "Clean sans for editorial",
+  },
+  {
+    name: "IBM Plex Sans",
+    importName: "IbmPlexSans",
+    factory: IbmPlexSans as Factory,
+    blurb: "Corporate sans",
+  },
+  {
+    name: "Space Grotesk",
+    importName: "SpaceGrotesk",
+    factory: SpaceGrotesk as Factory,
+    blurb: "Quirky display",
+  },
+  {
+    name: "Plus Jakarta Sans",
+    importName: "PlusJakartaSans",
+    factory: PlusJakartaSans as Factory,
+    blurb: "Elegant, modern",
+  },
+  {
+    name: "Outfit",
+    importName: "Outfit",
+    factory: Outfit as Factory,
+    blurb: "Geometric for branding",
+  },
+  {
+    name: "Figtree",
+    importName: "Figtree",
+    factory: Figtree as Factory,
+    blurb: "Friendly, approachable",
+  },
   { name: "Sora", importName: "Sora", factory: Sora as Factory, blurb: "Clean, made for UI" },
-  { name: "DM Sans", importName: "DmSans", factory: DmSans as Factory, blurb: "Low-contrast geometric" },
-  { name: "Playfair Display", importName: "PlayfairDisplay", factory: PlayfairDisplay as Factory, blurb: "Editorial elegance" },
+  {
+    name: "DM Sans",
+    importName: "DmSans",
+    factory: DmSans as Factory,
+    blurb: "Low-contrast geometric",
+  },
+  {
+    name: "Playfair Display",
+    importName: "PlayfairDisplay",
+    factory: PlayfairDisplay as Factory,
+    blurb: "Editorial elegance",
+  },
   { name: "Lora", importName: "Lora", factory: Lora as Factory, blurb: "Balanced serif" },
-  { name: "DM Serif Display", importName: "DmSerifDisplay", factory: DmSerifDisplay as Factory, blurb: "Editorial display" },
-  { name: "IBM Plex Serif", importName: "IbmPlexSerif", factory: IbmPlexSerif as Factory, blurb: "Corporate serif" },
-  { name: "JetBrains Mono", importName: "JetbrainsMono", factory: JetbrainsMono as Factory, blurb: "Code editor" },
-  { name: "Fira Code", importName: "FiraCode", factory: FiraCode as Factory, blurb: "Monospace ligatures" },
-  { name: "Source Code Pro", importName: "SourceCodePro", factory: SourceCodePro as Factory, blurb: "Adobe monospace" },
-  { name: "IBM Plex Mono", importName: "IbmPlexMono", factory: IbmPlexMono as Factory, blurb: "Corporate mono" },
-  { name: "Bricolage Grotesque", importName: "BricolageGrotesque", factory: BricolageGrotesque as Factory, blurb: "Bold display sans" },
-  { name: "Bebas Neue", importName: "BebasNeue", factory: BebasNeue as Factory, blurb: "All-caps display" },
+  {
+    name: "DM Serif Display",
+    importName: "DmSerifDisplay",
+    factory: DmSerifDisplay as Factory,
+    blurb: "Editorial display",
+  },
+  {
+    name: "IBM Plex Serif",
+    importName: "IbmPlexSerif",
+    factory: IbmPlexSerif as Factory,
+    blurb: "Corporate serif",
+  },
+  {
+    name: "JetBrains Mono",
+    importName: "JetbrainsMono",
+    factory: JetbrainsMono as Factory,
+    blurb: "Code editor",
+  },
+  {
+    name: "Fira Code",
+    importName: "FiraCode",
+    factory: FiraCode as Factory,
+    blurb: "Monospace ligatures",
+  },
+  {
+    name: "Source Code Pro",
+    importName: "SourceCodePro",
+    factory: SourceCodePro as Factory,
+    blurb: "Adobe monospace",
+  },
+  {
+    name: "IBM Plex Mono",
+    importName: "IbmPlexMono",
+    factory: IbmPlexMono as Factory,
+    blurb: "Corporate mono",
+  },
+  {
+    name: "Bricolage Grotesque",
+    importName: "BricolageGrotesque",
+    factory: BricolageGrotesque as Factory,
+    blurb: "Bold display sans",
+  },
+  {
+    name: "Bebas Neue",
+    importName: "BebasNeue",
+    factory: BebasNeue as Factory,
+    blurb: "All-caps display",
+  },
   { name: "Cinzel", importName: "Cinzel", factory: Cinzel as Factory, blurb: "Roman capitals" },
   { name: "Caveat", importName: "Caveat", factory: Caveat as Factory, blurb: "Casual handwriting" },
 ];
@@ -106,10 +192,9 @@ export function FontStudio() {
   useEffect(() => {
     const trimmed = customFont.trim();
     if (!trimmed) return;
-    const family = trimmed.replace(/\s+/g, "+");
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = `https://fonts.googleapis.com/css2?family=${family}:wght@100;200;300;400;500;600;700;800;900&display=swap`;
+    link.href = googleFontsUrl([trimmed]);
     link.dataset.swiftRustDynamicFont = trimmed;
     document.head.appendChild(link);
     return () => {
@@ -118,9 +203,10 @@ export function FontStudio() {
   }, [customFont]);
 
   const entry = useMemo(
-    () => STUDIO_FONTS.find((f) => f.name === fontName) ?? STUDIO_FONTS[0]!,
+    () => STUDIO_FONTS.find((f) => f.name === fontName) ?? STUDIO_FONTS[0],
     [fontName],
   );
+  if (!entry) return null;
   const loadedFont = entry.factory();
 
   const activeFontFamily = customFont.trim()
@@ -179,9 +265,7 @@ export function FontStudio() {
               <select
                 id="studio-weight"
                 value={weight}
-                onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-                  setWeight(Number(e.target.value))
-                }
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => setWeight(Number(e.target.value))}
                 className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-fg focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-soft"
               >
                 {WEIGHTS.map((w) => (
@@ -238,9 +322,7 @@ export function FontStudio() {
                 min={16}
                 max={160}
                 value={size}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setSize(Number(e.target.value))
-                }
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setSize(Number(e.target.value))}
                 className="w-full accent-accent"
               />
             </div>
@@ -264,9 +346,7 @@ export function FontStudio() {
                 min={-10}
                 max={20}
                 value={tracking}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setTracking(Number(e.target.value))
-                }
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setTracking(Number(e.target.value))}
                 className="w-full accent-accent"
               />
             </div>
@@ -279,9 +359,7 @@ export function FontStudio() {
                 >
                   Line height
                 </label>
-                <span className="font-mono text-xs text-fg-muted">
-                  {leading.toFixed(2)}
-                </span>
+                <span className="font-mono text-xs text-fg-muted">{leading.toFixed(2)}</span>
               </div>
               <input
                 id="studio-leading"
@@ -290,9 +368,7 @@ export function FontStudio() {
                 max={2}
                 step={0.05}
                 value={leading}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setLeading(Number(e.target.value))
-                }
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setLeading(Number(e.target.value))}
                 className="w-full accent-accent"
               />
             </div>
@@ -370,7 +446,7 @@ export function FontStudio() {
         <span className="text-fg">{activeImportName}</span>
         {" } "}
         <span className="text-accent">from</span>
-        <span className="text-success">{" "}&quot;swift-rust/font/google&quot;</span>
+        <span className="text-success"> &quot;swift-rust/font/google&quot;</span>
         <span className="text-fg-muted">;</span>
       </div>
     </div>

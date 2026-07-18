@@ -6,6 +6,9 @@ import { join } from "node:path";
 const ROOT = join(import.meta.dir, "..", "..");
 const FIX = join(import.meta.dir, "..", "fixtures", "app");
 const DEV = join(ROOT, "packages", "swift-rust", "bin", "dev-server.mjs");
+const FRAMEWORK_VERSION = JSON.parse(
+  readFileSync(join(ROOT, "packages", "swift-rust", "package.json"), "utf8"),
+).version;
 const PORT = 41987;
 const BASE = `http://127.0.0.1:${PORT}`;
 
@@ -38,6 +41,12 @@ afterAll(() => {
 const get = (path: string) => fetch(`${BASE}${path}`, { redirect: "manual" });
 
 describe("dev server route pipeline", () => {
+  test("health reports the installed framework version", async () => {
+    const response = await get("/_swift-rust/health");
+    expect(response.status).toBe(200);
+    expect((await response.json()).version).toBe(FRAMEWORK_VERSION);
+  });
+
   test("default route resolves to the bun runtime", async () => {
     const r = await get("/");
     expect(r.status).toBe(200);
@@ -72,6 +81,18 @@ describe("dev server route pipeline", () => {
     const r = await get("/_swift-rust/navigator.js");
     expect(r.status).toBe(200);
     expect(await r.text()).toContain("__SR_NAV__");
+  });
+
+  test("local font assets are served from root and nested directories", async () => {
+    const lausanne = await get("/_swift-rust/fonts/Lausanne.otf");
+    expect(lausanne.status).toBe(200);
+    expect(lausanne.headers.get("content-type")).toBe("font/otf");
+
+    const varent = await get(
+      "/_swift-rust/fonts/varent-font-family/VarentGrotesk-Bold.otf",
+    );
+    expect(varent.status).toBe(200);
+    expect(varent.headers.get("content-type")).toBe("font/otf");
   });
 
   // Regression guard for the stale-until-restart bug: editing a file under
@@ -168,6 +189,7 @@ describe("dev server route pipeline", () => {
       const body = await res.text();
       expect(body).toContain("use server");
       expect(body).toContain("use client");
+      expect(body).toContain(`Swift Rust v${FRAMEWORK_VERSION} · dev mode`);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }

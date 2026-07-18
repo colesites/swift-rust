@@ -71,6 +71,9 @@ async function main() {
     },
     dependencies: { ...demoPkg.dependencies },
     devDependencies: { ...demoPkg.devDependencies },
+    engines: {
+      bun: ">=1.3.0",
+    },
   };
   await writeFile(join(out, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
 

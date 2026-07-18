@@ -1,6 +1,6 @@
 {
   "name": "swift-rust-docs",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "description": "Documentation site for the swift-rust framework.",
   "type": "module",

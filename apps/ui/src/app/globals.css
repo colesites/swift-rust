@@ -1,8 +1,5 @@
 @import "tailwindcss";
 
-/* shadcn-style theming: :root is light, .dark is dark. The site defaults to
-   .dark (set on <html>). Component dark: variants key off the same .dark class,
-   and any subtree can be forced dark by adding the class locally. */
 @variant dark (&:where(.dark, .dark *));
 
 @theme {
@@ -16,8 +13,6 @@
   --radius-xl: 20px;
 }
 
-/* All color tokens resolve through raw vars so the .dark class toggles the
-   theme. Chrome (--sr-*) drives the site; ui (--ui-*) drives the components. */
 @theme inline {
   --color-bg: var(--sr-bg);
   --color-surface: var(--sr-surface);
@@ -48,7 +43,6 @@
   --color-foreground: var(--ui-foreground);
 }
 
-/* ── Light (neutral zinc/white) ───────────────────────────────────────────── */
 :root {
   --sr-bg: #ffffff;
   --sr-surface: #ffffff;
@@ -81,10 +75,9 @@
   color-scheme: light;
 }
 
-/* ── Dark (neutral black/zinc — shadcn) ───────────────────────────────────── */
 .dark {
-  --sr-bg: #09090b;
-  --sr-surface: #101012;
+  --sr-bg: #080808;
+  --sr-surface: #111111;
   --sr-surface-2: #18181b;
   --sr-border: #27272a;
   --sr-border-strong: #3f3f46;
@@ -100,7 +93,7 @@
   --ui-secondary-fg: #fafafa;
   --ui-muted: #1c1c1f;
   --ui-muted-fg: #a1a1aa;
-  --ui-card: #101012;
+  --ui-card: #111111;
   --ui-card-fg: #fafafa;
   --ui-popover: #18181b;
   --ui-popover-fg: #fafafa;
@@ -148,35 +141,12 @@
 
 @utility container-page {
   width: 100%;
-  max-width: 84rem;
-  margin-inline: auto;
-  padding-inline: 1.5rem;
+  padding-inline: clamp(1.5rem, 2vw, 2rem);
 }
 
-/* Blueprint grid texture for hero / section backdrops. */
-@utility bg-grid {
-  background-image:
-    linear-gradient(to right, var(--sr-border) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--sr-border) 1px, transparent 1px);
-  background-size: 56px 56px;
-  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
-}
-
-/* Subtle warm glow behind the hero — orange only, no blue/purple. */
-@utility hero-glow {
-  background: radial-gradient(
-    44rem 26rem at 50% -6rem,
-    color-mix(in oklab, var(--sr-accent) 22%, transparent),
-    transparent 70%
-  );
-}
-
-/* A locally-forced dark surface (used by the showcase, which always sits on a
-   dark backdrop regardless of the site theme). */
 @utility force-dark {
-  --sr-bg: #09090b;
-  --sr-surface: #101012;
+  --sr-bg: #080808;
+  --sr-surface: #111111;
   --sr-surface-2: #18181b;
   --sr-border: #27272a;
   --sr-border-strong: #3f3f46;
@@ -189,7 +159,7 @@
   --ui-secondary-fg: #fafafa;
   --ui-muted: #1c1c1f;
   --ui-muted-fg: #a1a1aa;
-  --ui-card: #101012;
+  --ui-card: #111111;
   --ui-card-fg: #fafafa;
   --ui-popover: #18181b;
   --ui-popover-fg: #fafafa;
@@ -200,18 +170,4 @@
   --ui-background: #09090b;
   --ui-foreground: #fafafa;
   color-scheme: dark;
-}
-
-@keyframes sr-rise {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.rise {
-  animation: sr-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }

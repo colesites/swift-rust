@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { FRAMEWORK_VERSION } from "./runtime/framework-version.mjs";
 
 function escapeHtml(s) {
   if (s == null) return "";
@@ -515,8 +516,8 @@ export function errorOverlayHTML({ message, stack, hint, file, line, column, kin
   </div>
 
   <div class="footer">
-    <div>Swift Rust v0.1.0 · dev mode</div>
-    <div><a href="https://github.com/swift-rust/swift-rust/issues">Report this error</a></div>
+    <div>Swift Rust v${escapeHtml(FRAMEWORK_VERSION)} · dev mode</div>
+    <div><a href="https://github.com/colesites/swift-rust/issues">Report this error</a></div>
   </div>
 </div>
 <script>
