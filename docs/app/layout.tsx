@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { ReactNode } from "react";
 import { Geist, GeistMono } from "swift-rust/font/google";
+import { CodeCopyButtons } from "./components/code-copy-buttons";
 import { Header } from "./components/header";
 import { Sidebar } from "./components/sidebar";
 
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body>
+        <CodeCopyButtons />
         <Header />
         <div className="docs-shell">
           <Sidebar />

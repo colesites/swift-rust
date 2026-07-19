@@ -13,7 +13,10 @@ export default function InstallationPage() {
           Create a new swift-rust project named <code>my-app</code>.
         </li>
         <li>
-          <code>cd my-app</code> and start the dev server.
+          <code>cd my-app</code> and install the dependencies.
+        </li>
+        <li>
+          Start the dev server with <code>bun run dev</code>.
         </li>
         <li>
           Visit <code>http://localhost:3210</code>.
@@ -26,7 +29,8 @@ export default function InstallationPage() {
         <pre>
           <code>{`bun create swift-rust@latest my-app --yes
 cd my-app
-bun dev`}</code>
+bun install
+bun run dev`}</code>
         </pre>
       </div>
       <p>
@@ -75,6 +79,7 @@ bun dev`}</code>
         <pre>
           <code>{`bun create swift-rust@latest my-app
 cd my-app
+bun install
 bun run dev`}</code>
         </pre>
       </div>
@@ -112,7 +117,8 @@ Would you like to include AGENTS.md to guide coding agents to write up-to-date s
       </div>
       <p>
         After the prompts, <code>create-swift-rust</code> will create a folder with your project
-        name and install the required dependencies.
+        files. Enter that folder and run <code>bun install</code> before starting the development
+        server.
       </p>
 
       <h2>Non-interactive mode</h2>
@@ -135,8 +141,8 @@ Would you like to include AGENTS.md to guide coding agents to write up-to-date s
         </pre>
       </div>
 
-      <h2>What gets installed</h2>
-      <p>The scaffolder creates a project with these dependencies:</p>
+      <h2>Project dependencies</h2>
+      <p>The scaffolder adds these dependencies to the new project's package manifest:</p>
       <ul>
         <li>
           <code>swift-rust</code> — the framework

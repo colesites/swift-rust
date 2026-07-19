@@ -1,18 +1,17 @@
+import { DocArticle } from "@/app/components/doc-article";
+
 export default function DocsIndexPage() {
   return (
-    <article>
-      <div className="badge" style={{ marginBottom: "1rem" }}>
-        Introduction
-      </div>
-      <h1 style={{ fontSize: "3rem", marginBottom: "1rem" }}>Welcome to Swift Rust</h1>
-      <p style={{ fontSize: "1.125rem", color: "var(--fg-muted)" }}>
+    <DocArticle>
+      <h1>Introduction</h1>
+      <p>
         Swift Rust is a full-stack React framework powered with Rust + Bun that combines the
         developer experience of Next.js with the performance and safety of Rust. Write your app in
         TSX, render with a Rust core, and ship a single statically-linked binary — 10x faster than
         Next.js.
       </p>
 
-      <h2 style={{ marginTop: "3rem" }}>What you'll build</h2>
+      <h2>What you'll build</h2>
       <p>
         This is a complete framework, not a renderer. It includes routing, layouts, data fetching,
         image and font optimization, video embeds, PDF generation, error handling, metadata, code
@@ -32,7 +31,7 @@ export default function DocsIndexPage() {
         </a>
       </div>
 
-      <h2 style={{ marginTop: "3rem" }}>Why a new framework?</h2>
+      <h2>Why a new framework?</h2>
       <p>
         We love Next.js's developer experience — the file-based routing, the layout system, the data
         fetching primitives. But we wanted to ship a single binary with no Node.js runtime, and we
@@ -77,6 +76,6 @@ export default function DocsIndexPage() {
         Continue to <a href="/docs/getting-started/installation">Installation</a> to scaffold your
         first project.
       </p>
-    </article>
+    </DocArticle>
   );
 }
