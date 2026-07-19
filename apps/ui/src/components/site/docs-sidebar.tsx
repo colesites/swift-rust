@@ -2,7 +2,7 @@
 import * as React from "react";
 import { COMPONENTS } from "@/lib/components";
 
-const SECTIONS = [
+export const DOCS_SECTIONS = [
   { href: "/docs", label: "Introduction" },
   { href: "/docs/components", label: "Components" },
   { href: "/docs/installation", label: "Installation" },
@@ -30,23 +30,37 @@ const linkClass = (active: boolean, dim = false) =>
       ? "text-fg-subtle/60 hover:text-fg-muted"
       : "text-fg-muted hover:bg-surface-2 hover:text-fg");
 
-export function DocsSidebar() {
+export function DocsSidebar({
+  variant = "desktop",
+  onNavigate,
+}: {
+  variant?: "desktop" | "mobile";
+  onNavigate?: () => void;
+}) {
   const path = React.useSyncExternalStore(subscribeToPathname, getPathname, getServerPathname);
+  const mobile = variant === "mobile";
 
   return (
     <div
-      className="docs-sidebar-scroll sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto px-4 py-8"
-      data-sr-scroll-preserve="ui-docs-sidebar"
+      className={
+        mobile
+          ? "pb-12"
+          : "docs-sidebar-scroll sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto px-4 py-8"
+      }
+      data-sr-scroll-preserve={mobile ? undefined : "ui-docs-sidebar"}
     >
       <p className="px-3 text-[0.7rem] font-semibold uppercase tracking-widest text-fg-subtle">
-        Get started
+        {mobile ? "Sections" : "Get started"}
       </p>
       <nav className="mt-2 flex flex-col">
-        {SECTIONS.map((s) => (
+        {DOCS_SECTIONS.map((s) => (
           <a
             key={s.href}
             href={s.href}
-            className={linkClass(path === s.href)}
+            onClick={onNavigate}
+            className={
+              mobile ? `${linkClass(path === s.href)} py-2 text-base` : linkClass(path === s.href)
+            }
             aria-current={path === s.href ? "page" : undefined}
           >
             {s.label}
@@ -64,7 +78,12 @@ export function DocsSidebar() {
             <a
               key={c.slug}
               href={href}
-              className={linkClass(path === href, c.status === "soon")}
+              onClick={onNavigate}
+              className={
+                mobile
+                  ? `${linkClass(path === href, c.status === "soon")} py-2 text-base`
+                  : linkClass(path === href, c.status === "soon")
+              }
               aria-current={path === href ? "page" : undefined}
             >
               {c.name}

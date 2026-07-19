@@ -155,7 +155,7 @@ function ExamplePreview({
       <p className="mt-2 text-fg-muted">{description}</p>
       {/* Transparent preview surface — border only, no fill. */}
       <div className="mt-4 overflow-hidden rounded-2xl border border-border">
-        <div className="flex min-h-56 items-center justify-center p-8">{children}</div>
+        <div className="flex min-h-56 items-center justify-center p-4 sm:p-8">{children}</div>
         {/* Code: a faded teaser with a centered "View Code" button; expands on click. */}
         <div className="relative border-t border-border">
           <div className={cn("overflow-hidden", !open && "max-h-32")}>
@@ -1245,7 +1245,7 @@ export function ComponentPreview({ slug }: { slug: string }) {
   if (!preview) return null;
   if (FULL_BLEED.has(slug)) return <>{preview}</>;
   return (
-    <div className="flex min-h-48 items-center justify-center rounded-2xl border border-border bg-surface p-8">
+    <div className="flex min-h-48 items-center justify-center rounded-2xl border border-border bg-surface p-4 sm:p-8">
       {preview}
     </div>
   );

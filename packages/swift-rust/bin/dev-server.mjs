@@ -58,7 +58,7 @@ function getArg(name, fallback) {
   return fallback;
 }
 
-const port = parseInt(getArg("port", process.env.PORT || "3210"), 10);
+let port = parseInt(getArg("port", process.env.PORT || "3210"), 10);
 const hostname = getArg("hostname", "0.0.0.0");
 
 const c = {
@@ -75,6 +75,23 @@ const c = {
 };
 const useColor = process.stdout.isTTY !== false && !process.env.NO_COLOR;
 const paint = (color, s) => (useColor ? `${c[color]}${s}${c.reset}` : s);
+
+async function findFreePort(start) {
+  const { createServer } = await import("node:net");
+  const end = Math.min(start + 50, 65_536);
+  for (let candidate = start; candidate < end; candidate++) {
+    const available = await new Promise((resolveAvailable) => {
+      const probe = createServer();
+      probe.once("error", () => resolveAvailable(false));
+      probe.once("listening", () => {
+        probe.close(() => resolveAvailable(true));
+      });
+      probe.listen(candidate, hostname);
+    });
+    if (available) return candidate;
+  }
+  throw new Error(`No free port found between ${start} and ${end - 1}`);
+}
 
 const VERSION = FRAMEWORK_VERSION;
 const APP_DIR_CANDIDATES = [resolve(cwd, "src", "app"), resolve(cwd, "app")];
@@ -3214,6 +3231,13 @@ const MIME = {
 
 await checkAppDir();
 try { validateRoutingConventions(); } catch {}
+const requestedPort = port;
+port = await findFreePort(requestedPort);
+if (port !== requestedPort) {
+  logLine([
+    ` ${paint("yellow", "⚠")} Port ${requestedPort} is in use; using ${paint("cyan", String(port))} instead.`,
+  ]);
+}
 await detectNetworkUrls();
 logStartupBanner(`http://localhost:${port}`, networkUrls);
 logLine([` ${paint("dim", "› setupWatcher…")}`]);

@@ -1,5 +1,6 @@
 import { DocsSearch } from "./docs-search";
 import { Logo } from "./logo";
+import { MobileMenu } from "./mobile-menu";
 import { NavLinks } from "./nav-links";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -9,10 +10,11 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-bg/95">
       <div className="flex h-14 w-full items-center gap-6 px-4 sm:px-6 lg:px-8">
+        <MobileMenu />
         <a
           href="/"
           aria-label="swift-rust ui home"
-          className="inline-flex h-9 shrink-0 items-center"
+          className="hidden h-9 shrink-0 items-center xl:inline-flex"
         >
           <Logo />
         </a>

@@ -34,7 +34,7 @@ export function NavLinks() {
   const path = React.useSyncExternalStore(subscribeToPathname, getPathname, getServerPathname);
 
   return (
-    <nav className="hidden items-center gap-1 md:flex">
+    <nav className="hidden items-center gap-1 xl:flex">
       {LINKS.map((link) => {
         const active = isActive(path, link.href);
         return (

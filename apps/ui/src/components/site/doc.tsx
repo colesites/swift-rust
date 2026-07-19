@@ -4,8 +4,8 @@ export function DocHeader({ eyebrow, title, lead }: { eyebrow: string; title: st
   return (
     <div className="mb-10">
       <p className="text-[0.7rem] font-semibold uppercase tracking-widest text-accent">{eyebrow}</p>
-      <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight">{title}</h1>
-      <p className="mt-4 text-lg leading-relaxed text-fg-muted">{lead}</p>
+      <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
+      <p className="mt-4 text-base leading-relaxed text-fg-muted sm:text-lg">{lead}</p>
     </div>
   );
 }

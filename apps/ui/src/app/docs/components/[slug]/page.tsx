@@ -18,10 +18,18 @@ export function generateMetadata({ params }: { params: { slug: string } }) {
   };
 }
 
-function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+function Section({
+  id,
+  title,
+  children,
+}: {
+  id: string;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section id={id} className="scroll-mt-24 pt-10">
-      <h2 className="font-display text-2xl font-semibold tracking-tight">{title}</h2>
+    <section id={id} className="scroll-mt-24 pt-8 sm:pt-10">
+      <h2 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">{title}</h2>
       <div className="mt-4">{children}</div>
     </section>
   );
@@ -72,8 +80,8 @@ export default function ComponentPage({ params }: { params: { slug: string } }) 
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-5xl gap-12 xl:grid-cols-[minmax(0,1fr)_12rem]">
-      <article className="min-w-0">
+    <div className="grid w-full gap-12 xl:grid-cols-[minmax(0,1fr)_12rem]">
+      <article className="mx-auto w-full min-w-0 max-w-3xl">
         <div className="mb-6 flex items-center gap-2 text-sm text-fg-subtle">
           <a href="/docs/components" className="hover:text-fg">
             Components
@@ -82,8 +90,10 @@ export default function ComponentPage({ params }: { params: { slug: string } }) 
           <span className="text-fg-muted">{entry.name}</span>
         </div>
 
-        <div className="flex items-center gap-3">
-          <h1 className="font-display text-4xl font-semibold tracking-tight">{entry.name}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+            {entry.name}
+          </h1>
           {entry.original && entry.status !== "soon" && (
             <span className="rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
               New
@@ -95,7 +105,9 @@ export default function ComponentPage({ params }: { params: { slug: string } }) 
             </span>
           )}
         </div>
-        <p className="mt-4 max-w-2xl text-lg leading-relaxed text-fg-muted">{description}</p>
+        <p className="mt-4 max-w-2xl text-base leading-relaxed text-fg-muted sm:text-lg">
+          {description}
+        </p>
 
         {installable && (
           <Section id="installation" title="Installation">
@@ -131,7 +143,11 @@ export default function ComponentPage({ params }: { params: { slug: string } }) 
         )}
 
         <DocPager
-          prev={prev ? { href: `/docs/components/${prev.slug}`, label: prev.name } : { href: "/docs/components", label: "All components" }}
+          prev={
+            prev
+              ? { href: `/docs/components/${prev.slug}`, label: prev.name }
+              : { href: "/docs/components", label: "All components" }
+          }
           next={next ? { href: `/docs/components/${next.slug}`, label: next.name } : undefined}
         />
       </article>

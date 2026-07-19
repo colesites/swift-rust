@@ -74,15 +74,15 @@ export function DocsSearch() {
             event.preventDefault();
             close();
           }}
-          onClick={(event) => {
-            if (event.target === event.currentTarget) close();
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") close();
-          }}
         >
-          <div className="flex h-full items-start justify-center px-4 pt-[10vh] sm:pt-[14vh]">
-            <div className="w-full max-w-[34rem] overflow-hidden rounded-lg border border-border-strong bg-bg shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
+          <button
+            type="button"
+            aria-label="Close search"
+            className="absolute inset-0 size-full cursor-default"
+            onClick={close}
+          />
+          <div className="pointer-events-none relative z-10 flex h-full items-start justify-center px-4 pt-[10vh] sm:pt-[14vh]">
+            <div className="pointer-events-auto w-full max-w-[34rem] overflow-hidden rounded-lg border border-border-strong bg-bg shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
               <div className="flex items-center gap-3 border-b border-border px-3">
                 <SearchIcon />
                 <input
