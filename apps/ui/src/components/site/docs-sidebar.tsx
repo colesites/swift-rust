@@ -12,7 +12,11 @@ const SECTIONS = [
 
 const subscribeToPathname = (callback: () => void) => {
   window.addEventListener("popstate", callback);
-  return () => window.removeEventListener("popstate", callback);
+  window.addEventListener("sr:navigate-end", callback);
+  return () => {
+    window.removeEventListener("popstate", callback);
+    window.removeEventListener("sr:navigate-end", callback);
+  };
 };
 
 const getPathname = () => window.location.pathname;
@@ -30,13 +34,21 @@ export function DocsSidebar() {
   const path = React.useSyncExternalStore(subscribeToPathname, getPathname, getServerPathname);
 
   return (
-    <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-1">
+    <div
+      className="docs-sidebar-scroll sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto px-4 py-8"
+      data-sr-scroll-preserve="ui-docs-sidebar"
+    >
       <p className="px-3 text-[0.7rem] font-semibold uppercase tracking-widest text-fg-subtle">
         Get started
       </p>
       <nav className="mt-2 flex flex-col">
         {SECTIONS.map((s) => (
-          <a key={s.href} href={s.href} className={linkClass(path === s.href)}>
+          <a
+            key={s.href}
+            href={s.href}
+            className={linkClass(path === s.href)}
+            aria-current={path === s.href ? "page" : undefined}
+          >
             {s.label}
           </a>
         ))}
@@ -49,7 +61,12 @@ export function DocsSidebar() {
         {COMPONENTS.map((c) => {
           const href = `/docs/components/${c.slug}`;
           return (
-            <a key={c.slug} href={href} className={linkClass(path === href, c.status === "soon")}>
+            <a
+              key={c.slug}
+              href={href}
+              className={linkClass(path === href, c.status === "soon")}
+              aria-current={path === href ? "page" : undefined}
+            >
               {c.name}
               {c.original ? (
                 <span className="rounded-full border border-accent/40 bg-accent/10 px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-wide text-accent">

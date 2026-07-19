@@ -15,3 +15,7 @@ Read the framework version from the installed `swift-rust` package everywhere it
 including the startup banner, health endpoint, and development error overlay.
 Keep private documentation and example apps out of the npm release build gate so a site prerender
 failure cannot block publishing the framework packages.
+Preserve documentation sidebar positions during client navigation, mark the active page in desktop
+and mobile navigation, synchronize route-specific font assets without a reload, and normalize the
+UI documentation search, page widths, scrollbar treatment, and statically generated component
+routes.

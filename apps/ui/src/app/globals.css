@@ -137,6 +137,12 @@
   ::-webkit-scrollbar-thumb:hover {
     background: var(--sr-fg-subtle);
   }
+  .docs-sidebar-scroll {
+    scrollbar-width: none;
+  }
+  .docs-sidebar-scroll::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @utility container-page {

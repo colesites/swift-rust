@@ -6,6 +6,10 @@ import { OnThisPage, type TocItem } from "@/components/site/on-this-page";
 import { COMPONENT_DOCS } from "@/lib/component-docs";
 import { ALL_COMPONENTS } from "@/lib/components";
 
+export function generateStaticParams() {
+  return ALL_COMPONENTS.map((component) => ({ slug: component.slug }));
+}
+
 export function generateMetadata({ params }: { params: { slug: string } }) {
   const entry = ALL_COMPONENTS.find((c) => c.slug === params.slug);
   return {
@@ -68,7 +72,7 @@ export default function ComponentPage({ params }: { params: { slug: string } }) 
   }
 
   return (
-    <div className="grid gap-12 xl:grid-cols-[minmax(0,1fr)_12rem]">
+    <div className="mx-auto grid w-full max-w-5xl gap-12 xl:grid-cols-[minmax(0,1fr)_12rem]">
       <article className="min-w-0">
         <div className="mb-6 flex items-center gap-2 text-sm text-fg-subtle">
           <a href="/docs/components" className="hover:text-fg">

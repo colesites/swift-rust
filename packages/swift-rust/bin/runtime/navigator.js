@@ -114,11 +114,55 @@
   function syncHead(doc) {
     const title = doc.querySelector("title");
     if (title) document.title = title.textContent || document.title;
-    const selectors = ['meta[name="description"]', 'meta[property^="og:"]', 'meta[name^="twitter:"]', 'link[rel="canonical"]'];
+    const selectors = [
+      'meta[name="description"]',
+      'meta[property^="og:"]',
+      'meta[name^="twitter:"]',
+      'link[rel="canonical"]',
+      'link[data-swift-rust-google-font]',
+      'style[data-swift-rust-google-font]',
+      'style[data-swift-rust-google-fonts]',
+      'style[data-swift-rust-local-font]',
+      'style[data-swift-rust-local-fonts]',
+    ];
     for (const sel of selectors) {
       document.head.querySelectorAll(sel).forEach((m) => m.remove());
       doc.head.querySelectorAll(sel).forEach((m) => document.head.appendChild(m.cloneNode(true)));
     }
+  }
+
+  function preservedScrollElements(root = document) {
+    return Array.from(root.querySelectorAll("[data-sr-scroll-preserve]"));
+  }
+
+  function scrollStorageKey(element, index) {
+    const name = element.getAttribute("data-sr-scroll-preserve") || String(index);
+    return `__sr_scroll_${name}`;
+  }
+
+  function capturePreservedScroll() {
+    const positions = new Map();
+    preservedScrollElements().forEach((element, index) => {
+      const key = scrollStorageKey(element, index);
+      positions.set(key, element.scrollTop);
+      try {
+        sessionStorage.setItem(key, String(element.scrollTop));
+      } catch {}
+    });
+    return positions;
+  }
+
+  function restorePreservedScroll(positions = new Map()) {
+    preservedScrollElements().forEach((element, index) => {
+      const key = scrollStorageKey(element, index);
+      let value = positions.get(key);
+      if (value == null) {
+        try {
+          value = Number(sessionStorage.getItem(key));
+        } catch {}
+      }
+      if (Number.isFinite(value)) element.scrollTop = value;
+    });
   }
 
   // pending.tsx overlay: revealed only if a navigation outlasts the threshold,
@@ -156,10 +200,12 @@
       location.href = href;
       return;
     }
+    const preservedScroll = capturePreservedScroll();
     const apply = () => {
       document.body.replaceWith(doc.body);
-      runScripts(document.body);
       syncHead(doc);
+      restorePreservedScroll(preservedScroll);
+      runScripts(document.body);
     };
     await withTransition(apply);
     if (push) {
@@ -241,8 +287,16 @@
   }
   window.addEventListener("sr:navigate-end", scanViewport);
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", scanViewport, { once: true });
+    document.addEventListener(
+      "DOMContentLoaded",
+      () => {
+        restorePreservedScroll();
+        scanViewport();
+      },
+      { once: true },
+    );
   } else {
+    restorePreservedScroll();
     scanViewport();
   }
 

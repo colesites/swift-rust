@@ -7,7 +7,7 @@ const GITHUB_URL = "https://github.com/colesites/swift-rust";
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-bg/95 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-border bg-bg/95">
       <div className="flex h-14 w-full items-center gap-6 px-4 sm:px-6 lg:px-8">
         <a
           href="/"

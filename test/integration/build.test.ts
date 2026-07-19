@@ -64,6 +64,10 @@ describe("client runtime", () => {
   test("the navigator script is emitted and injected", () => {
     expect(existsSync(join(STATIC, "_swift-rust", "navigator.js"))).toBe(true);
     expect(readStatic("index.html")).toContain("/_swift-rust/navigator.js");
+    const navigator = readStatic("_swift-rust/navigator.js");
+    expect(navigator).toContain("data-sr-scroll-preserve");
+    expect(navigator).toContain("data-swift-rust-google-font");
+    expect(navigator).toContain("data-swift-rust-local-fonts");
   });
 });
 

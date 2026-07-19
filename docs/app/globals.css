@@ -332,10 +332,21 @@ button.outline:hover {
   position: fixed;
   inset: 0;
   z-index: 100;
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding: 14vh 1rem 1rem;
+  border: 0;
+  background: transparent;
+}
+
+.docs-search-overlay::backdrop {
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .docs-search-dialog {
@@ -346,18 +357,6 @@ button.outline:hover {
   border-radius: 0.625rem;
   background: var(--bg-elevated);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
-}
-
-.docs-search-backdrop {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: rgba(0, 0, 0, 0.5);
-  cursor: default;
 }
 
 .docs-search-input-row {
@@ -592,10 +591,15 @@ button.outline:hover {
   transition: all 0.15s ease;
 }
 
-.docs-sidebar a:hover {
+.docs-sidebar a:hover,
+.docs-sidebar a.is-active {
   background: var(--surface-2);
   color: var(--fg);
   text-decoration: none;
+}
+
+.docs-sidebar a.is-active {
+  font-weight: 600;
 }
 
 .docs-main {

@@ -2514,8 +2514,8 @@ async function handleRequest(req, res) {
   }
 
   if (pathname === "/_swift-rust/health") {
-    res.writeHead(200, { "Content-Type": "text/plain" });
-    res.end("ok");
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ status: "ok", version: VERSION }));
     return;
   }
 
@@ -2741,7 +2741,7 @@ async function handleFetch(req) {
   }
 
   if (pathname === "/_swift-rust/health") {
-    return new Response("ok", { headers: { "Content-Type": "text/plain" } });
+    return Response.json({ status: "ok", version: VERSION });
   }
 
   if (pathname === "/_swift-rust/hmr-client.js") {

@@ -41,7 +41,7 @@ function ComponentLink({ c }: { c: ComponentEntry }) {
 
 export default function ComponentsIndexPage() {
   return (
-    <article>
+    <article className="mx-auto w-full max-w-5xl">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-[0.7rem] font-semibold uppercase tracking-widest text-accent">

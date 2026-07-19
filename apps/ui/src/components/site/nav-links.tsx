@@ -9,7 +9,11 @@ const LINKS = [
 
 const subscribeToPathname = (callback: () => void) => {
   window.addEventListener("popstate", callback);
-  return () => window.removeEventListener("popstate", callback);
+  window.addEventListener("sr:navigate-end", callback);
+  return () => {
+    window.removeEventListener("popstate", callback);
+    window.removeEventListener("sr:navigate-end", callback);
+  };
 };
 
 const getPathname = () => window.location.pathname;
