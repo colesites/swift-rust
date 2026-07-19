@@ -29,7 +29,14 @@ function setIcon(button: HTMLButtonElement, copied: boolean) {
 }
 
 function addCopyButton(pre: HTMLPreElement) {
-  if (!pre.querySelector(":scope > .code-copy-button")) {
+  const header =
+    pre.previousElementSibling instanceof HTMLDivElement &&
+    pre.previousElementSibling.classList.contains("code-block-header")
+      ? pre.previousElementSibling
+      : null;
+  const target = header ?? pre;
+
+  if (!target.querySelector(":scope > .code-copy-button")) {
     const button = document.createElement("button");
     let resetTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -61,7 +68,7 @@ function addCopyButton(pre: HTMLPreElement) {
       }
     });
 
-    pre.prepend(button);
+    target.append(button);
   }
 }
 

@@ -85,23 +85,40 @@ pre {
 }
 
 .code-copy-button {
-  position: sticky;
+  position: absolute;
   z-index: 1;
-  top: 0;
-  left: 100%;
+  top: 0.625rem;
+  right: 0.625rem;
   display: flex;
   width: 2rem;
   height: 2rem;
   align-items: center;
   justify-content: center;
-  float: right;
-  margin: -0.375rem -0.375rem 0.25rem 0.75rem;
+  margin: 0;
   padding: 0;
   border: 1px solid var(--border-strong);
   border-radius: 0.375rem;
   background: color-mix(in srgb, var(--code-bg) 88%, var(--bg-elevated) 12%);
   color: var(--fg-muted);
   box-shadow: 0 1px 2px color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+pre:has(> .code-copy-button) {
+  padding-right: 3.5rem;
+}
+
+.code-block-header .code-copy-button {
+  position: static;
+  flex: 0 0 auto;
+  margin-left: auto;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.code-block-header .code-copy-button:hover {
+  border-color: var(--border-strong);
+  background: color-mix(in srgb, var(--code-bg) 82%, var(--bg-elevated) 18%);
 }
 
 .code-copy-button:hover {
