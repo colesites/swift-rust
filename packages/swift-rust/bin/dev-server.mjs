@@ -10,6 +10,11 @@ import {
   unsupportedBunMessage,
 } from "./runtime/bun-version.mjs";
 import { FRAMEWORK_VERSION } from "./runtime/framework-version.mjs";
+import {
+  isAbsoluteBuildPath,
+  isLocalBuildSpecifier,
+  shouldExternalizeBuildSpecifier,
+} from "./runtime/path-specifier.mjs";
 
 if (!isSupportedBunVersion(process.versions?.bun)) {
   process.stderr.write(`${unsupportedBunMessage(process.versions?.bun)}\n`);
@@ -374,9 +379,7 @@ const externalizeDepsPlugin = {
   setup(build) {
     build.onResolve({ filter: /.*/ }, (args) => {
       const p = args.path;
-      // App's own source (relative, absolute, or the @/ alias) → bundle fresh.
-      if (p.startsWith(".") || p.startsWith("/") || p.startsWith("@/")) return undefined;
-      // Everything else (react, swift-rust, node:*, @scope/*) → keep external.
+      if (!shouldExternalizeBuildSpecifier(p, args.kind)) return undefined;
       return { path: p, external: true };
     });
   },
@@ -401,7 +404,7 @@ const ISLAND_EXTS = [".tsx", ".ts", ".jsx", ".js", ".mjs"];
 function resolveIslandSpecifier(spec, importer) {
   let base;
   if (spec.startsWith("@/")) base = resolve(cwd, "src", spec.slice(2));
-  else if (spec.startsWith("/")) base = spec;
+  else if (isAbsoluteBuildPath(spec)) base = spec;
   else if (spec.startsWith(".")) base = resolve(dirname(importer || cwd), spec);
   else return null;
   const candidates = [base, ...ISLAND_EXTS.map((e) => base + e), ...ISLAND_EXTS.map((e) => join(base, "index" + e))];
@@ -549,7 +552,7 @@ function makeUseCachePlugin(temps) {
     setup(build) {
       build.onResolve({ filter: /.*/ }, (args) => {
         const p = args.path;
-        if (!(p.startsWith(".") || p.startsWith("/") || p.startsWith("@/"))) return undefined;
+        if (!isLocalBuildSpecifier(p)) return undefined;
         // Our own raw temp copy: resolve it explicitly into the file namespace.
         // (Deferring to Bun's default resolver fails from a virtual namespace.)
         if (/\.__sr_raw_/.test(p)) return { path: p, namespace: "file" };
@@ -574,7 +577,7 @@ function makeClientIslandPlugin(temps) {
     setup(build) {
       build.onResolve({ filter: /.*/ }, (args) => {
         const p = args.path;
-        if (!(p.startsWith(".") || p.startsWith("/") || p.startsWith("@/"))) return undefined;
+        if (!isLocalBuildSpecifier(p)) return undefined;
         // Never wrap our own temp raw copies, and don't wrap when the importer is
         // itself a client module — nested client components belong to that
         // island's bundle, not a new boundary.
@@ -706,7 +709,14 @@ async function buildSsrModule(filePath, gen) {
   if (!result.success) {
     throw new Error(result.logs.map((l) => l.message).join("\n"));
   }
-  const code = await result.outputs[0].text();
+  const output = result.outputs[0];
+  if (!output) {
+    throw new Error(
+      `Bun.build produced no SSR output for ${relative(cwd, filePath)}. ` +
+        "The application entry point may have been externalized.",
+    );
+  }
+  const code = await output.text();
   const tmp = join(dirname(filePath), `.__sr_ssr_${gen}_${Math.random().toString(36).slice(2)}.mjs`);
   writeFileSync(tmp, code);
   try {

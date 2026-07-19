@@ -6,6 +6,11 @@ import {
   isSupportedBunVersion,
   MINIMUM_BUN_VERSION,
 } from "../../packages/swift-rust/bin/runtime/bun-version.mjs";
+import {
+  isAbsoluteBuildPath,
+  isLocalBuildSpecifier,
+  shouldExternalizeBuildSpecifier,
+} from "../../packages/swift-rust/bin/runtime/path-specifier.mjs";
 import { packageAssetName, TARGETS } from "../../packages/swift-rust/scripts/package-native";
 import {
   assetName,
@@ -71,5 +76,35 @@ describe("Windows framework compatibility", () => {
     expect(creatorCli.startsWith("#!/usr/bin/env bun")).toBe(true);
     expect(buildScript).toContain("tmpdir()");
     expect(buildScript).not.toContain('"/tmp/swift-rust-build-dev.log"');
+  });
+
+  test("keeps Windows and POSIX application paths inside the SSR bundle", () => {
+    const applicationPaths = [
+      String.raw`C:\Users\Daniel\Documents\Projects\test\src\app\page.tsx`,
+      "C:/Users/Daniel/Documents/Projects/test/src/app/page.tsx",
+      String.raw`\\server\share\project\src\app\page.tsx`,
+      "/home/daniel/project/src/app/page.tsx",
+      "/Users/daniel/project/src/app/page.tsx",
+    ];
+
+    for (const pathname of applicationPaths) {
+      expect(isAbsoluteBuildPath(pathname)).toBe(true);
+      expect(isLocalBuildSpecifier(pathname)).toBe(true);
+      expect(shouldExternalizeBuildSpecifier(pathname, "entry-point-build")).toBe(false);
+      expect(shouldExternalizeBuildSpecifier(pathname, "import-statement")).toBe(false);
+    }
+  });
+
+  test("externalizes dependencies but never externalizes an entry point", () => {
+    for (const dependency of ["react", "swift-rust/router", "node:fs", "@scope/package"]) {
+      expect(isLocalBuildSpecifier(dependency)).toBe(false);
+      expect(shouldExternalizeBuildSpecifier(dependency, "import-statement")).toBe(true);
+      expect(shouldExternalizeBuildSpecifier(dependency, "entry-point-build")).toBe(false);
+    }
+
+    for (const local of ["./component", "../lib/helper", "@/components/card"]) {
+      expect(isLocalBuildSpecifier(local)).toBe(true);
+      expect(shouldExternalizeBuildSpecifier(local, "import-statement")).toBe(false);
+    }
   });
 });
