@@ -26,13 +26,13 @@ function swiftRustVersion(): string {
 const GITHUB = process.env.SWIFT_RUST_GITHUB_URL ?? "https://github.com/colesites/swift-rust";
 const UI =
   process.env.SWIFT_RUST_UI_URL ??
-  (process.env.VERCEL ? "https://ui-swift-rust.vercel.app/" : "http://localhost:3211/");
+  (process.env.VERCEL ? "https://ui.multivrs.space/" : "http://localhost:3211/");
 
 export const siteConfig = {
   /** Marketing / main site. */
-  url: process.env.SWIFT_RUST_SITE_URL ?? "https://swift-rust-self.vercel.app",
+  url: process.env.SWIFT_RUST_SITE_URL ?? "https://swift-rust.multivrs.space/",
   /** Documentation site. */
-  docsUrl: process.env.SWIFT_RUST_DOCS_URL ?? "https://docs-swift-rust.vercel.app",
+  docsUrl: process.env.SWIFT_RUST_DOCS_URL ?? "https://docs.multivrs.space/",
   /** Component library site. */
   uiUrl: UI,
   /** Source repository. */
