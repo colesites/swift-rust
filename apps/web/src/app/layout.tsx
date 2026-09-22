@@ -4,6 +4,7 @@ import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
 import { siteConfig } from "@/lib/site.config";
 import { Geist, GeistMono } from "swift-rust/font/google";
+import { Analytics } from "@vercel/analytics/next";
 
 const OG_IMAGE = `${siteConfig.url}/og-image.png`;
 
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <Nav />
         <main className="min-h-[calc(100vh-3.5rem)]">{children}</main>
         <Footer />
+        <Analytics />
       </body>
     </html>
   );
