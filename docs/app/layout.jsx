@@ -2,8 +2,11 @@ import "./globals.css";
 import { Geist, GeistMono } from "swift-rust/font/google";
 import { Header } from "./components/header";
 import { Sidebar } from "./components/sidebar";
+import { Analytics } from "@vercel/analytics/react"
+
 const geist = Geist({ subsets: ["latin"], display: "swap", variable: true });
 const geistMono = GeistMono({ subsets: ["latin"], display: "swap", variable: true });
+
 export const metadata = {
     title: {
         template: "%s · Swift Rust",
@@ -23,6 +26,7 @@ export default function RootLayout({ children }) {
           <Sidebar />
           <main className="docs-main">{children}</main>
         </div>
+        <Analytics />
       </body>
     </html>);
 }

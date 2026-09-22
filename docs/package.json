@@ -14,6 +14,7 @@
     "clean": "rm -rf .swift-rust .vercel .turbo dist"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "swift-rust": "workspace:*"
