@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { BricolageGrotesque, Geist, GeistMono } from "swift-rust/font/google";
 import { SiteHeader } from "@/components/site/header";
-import { Analytics } from "@vercel/analytics/react";
+import { Analytics } from "@/components/analytics";
 
 const geist = Geist({ variable: true, subsets: ["latin"] });
 const geistMono = GeistMono({ variable: true, subsets: ["latin"] });

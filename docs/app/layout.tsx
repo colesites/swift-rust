@@ -4,6 +4,7 @@ import { Geist, GeistMono } from "swift-rust/font/google";
 import { CodeCopyButtons } from "./components/code-copy-buttons";
 import { Header } from "./components/header";
 import { Sidebar } from "./components/sidebar";
+import { Analytics } from "./components/analytics";
 
 const geist = Geist({ subsets: ["latin"], display: "swap", variable: true });
 const geistMono = GeistMono({ subsets: ["latin"], display: "swap", variable: true });
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <Sidebar />
           <main className="docs-main">{children}</main>
         </div>
+        <Analytics />
       </body>
     </html>
   );
