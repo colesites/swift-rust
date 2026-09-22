@@ -4,7 +4,7 @@ import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
 import { siteConfig } from "@/lib/site.config";
 import { Geist, GeistMono } from "swift-rust/font/google";
-import { Analytics } from "@vercel/analytics/next";
+import { Analytics } from "@vercel/analytics/react";
 
 const OG_IMAGE = `${siteConfig.url}/og-image.png`;
 
